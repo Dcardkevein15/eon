@@ -13,11 +13,18 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LogIn, LogOut, User } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 export default function UserButton() {
   const { user, loading, signInWithGoogle, signOut } = useAuth();
+  const [isClient, setIsClient] = useState(false);
 
-  if (loading) {
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+
+  if (!isClient || loading) {
     return <Skeleton className="h-10 w-full" />;
   }
 

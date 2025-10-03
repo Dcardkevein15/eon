@@ -83,7 +83,7 @@ export default function ChatSidebar({
       </SidebarHeader>
       <SidebarContent className="flex-1">
         <ScrollArea className="h-full p-2">
-          {isLoading || !isClient ? (
+          {!isClient || isLoading ? (
             <div className="space-y-2">
               <SidebarMenuSkeleton showIcon />
               <SidebarMenuSkeleton showIcon />
@@ -158,7 +158,7 @@ export default function ChatSidebar({
             </AlertDialogContent>
           </AlertDialog>
         )}
-        <UserButton />
+        {isClient && <UserButton />}
       </SidebarFooter>
     </>
   );
