@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   collection,
@@ -46,15 +46,6 @@ export default function ChatLayout({ chatId }: ChatLayoutProps) {
   const loading = authLoading || chatsLoading;
 
   const activeChat = useMemo(() => chats?.find((chat) => chat.id === chatId), [chats, chatId]);
-  const [messages, setMessages] = useState<Message[]>([]);
-
-  useEffect(() => {
-    if (activeChat) {
-      setMessages(activeChat.messages || []);
-    } else {
-      setMessages([]);
-    }
-  }, [activeChat]);
 
   const createChat = useCallback(
     async (input: string) => {
@@ -138,8 +129,6 @@ export default function ChatLayout({ chatId }: ChatLayoutProps) {
   if (error) {
     return <p>Error: {error.message}</p>;
   }
-  
-  const chatWithLocalMessages = activeChat ? { ...activeChat, messages } : undefined;
 
   return (
     <SidebarProvider>
@@ -154,9 +143,9 @@ export default function ChatLayout({ chatId }: ChatLayoutProps) {
           />
         </Sidebar>
         <SidebarInset>
-          {chatWithLocalMessages ? (
+          {activeChat ? (
             <ChatPanel 
-              chat={chatWithLocalMessages} 
+              chat={activeChat} 
               appendMessage={appendMessage} 
             />
           ) : (

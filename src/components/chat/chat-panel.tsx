@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Chat, Message } from '@/lib/types';
 import { getAIResponse } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
@@ -17,63 +17,72 @@ export default function ChatPanel({ chat, appendMessage }: ChatPanelProps) {
   const { toast } = useToast();
   const [localMessages, setLocalMessages] = useState<Message[]>(chat.messages);
 
+  // Sync local state with props from parent.
+  // This is crucial to see updates from Firestore.
+  useEffect(() => {
+    setLocalMessages(chat.messages);
+  }, [chat.messages]);
+
   const handleSendMessage = async (input: string) => {
     if (!input.trim() || isResponding) return;
 
     const userMessage: Message = {
-      id: `user-${Date.now()}`,
+      id: `user-${Date.now()}`, // Temporary local ID
       role: 'user',
       content: input,
       timestamp: Date.now(),
     };
 
-    // Optimistic UI update
-    setLocalMessages((prevMessages) => [...prevMessages, userMessage]);
+    // 1. Optimistic UI update: show user message immediately
+    const newMessages = [...localMessages, userMessage];
+    setLocalMessages(newMessages);
     setIsResponding(true);
 
     try {
-      await appendMessage(chat.id, userMessage);
+      // 2. Persist user message to Firestore
+      await appendMessage(chat.id, {
+        role: userMessage.role,
+        content: userMessage.content,
+        timestamp: userMessage.timestamp,
+      });
       
-      const aiResponseContent = await getAIResponse([...localMessages, userMessage]);
+      // 3. Get AI response based on the updated history
+      const aiResponseContent = await getAIResponse(newMessages);
 
       const aiMessage: Omit<Message, 'id'> = {
         role: 'assistant',
         content: aiResponseContent,
         timestamp: Date.now(),
       };
-      // The new AI message will be added via Firestore snapshot listener
+      
+      // 4. Persist AI message. The listener in ChatLayout will update the UI.
       await appendMessage(chat.id, aiMessage);
 
     } catch (error) {
-      console.error('Error getting AI response:', error);
+      console.error('Error handling message:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
         description: 'No se pudo obtener una respuesta de la IA. Por favor, inténtalo de nuevo.',
       });
-      // Revert user message if AI fails
+      // Revert optimistic update on error
       setLocalMessages((prevMessages) => prevMessages.filter(m => m.id !== userMessage.id));
     } finally {
       setIsResponding(false);
     }
   };
 
-  // Sync local state with props from parent
-  useState(() => {
-    setLocalMessages(chat.messages);
-  }, [chat.messages]);
-
 
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto">
-        <ChatMessages messages={chat.messages} isResponding={isResponding} />
+        <ChatMessages messages={localMessages} isResponding={isResponding} />
       </div>
       <div className="p-4 border-t bg-background/80 backdrop-blur-sm">
         <ChatInput
           onSendMessage={handleSendMessage}
           isLoading={isResponding}
-          chatHistory={chat.messages}
+          chatHistory={localMessages}
         />
       </div>
     </div>
