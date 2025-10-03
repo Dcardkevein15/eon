@@ -24,12 +24,11 @@ function initializeFirebase() {
   const auth = getAuth(app);
   const firestore = getFirestore(app);
 
-  // Note: App Hosting emulators are not currently supported
-  // if (process.env.NEXT_PUBLIC_EMULATOR_HOST) {
-  //   const host = process.env.NEXT_PUBLIC_EMULATOR_HOST;
-  //   connectAuthEmulator(auth, `http://${host}:9099`, { disableWarnings: true });
-  //   connectFirestoreEmulator(firestore, host, 8080);
-  // }
+  if (process.env.NEXT_PUBLIC_EMULATOR_HOST) {
+    const host = process.env.NEXT_PUBLIC_EMULATOR_HOST;
+    connectAuthEmulator(auth, `http://${host}:9099`, { disableWarnings: true });
+    connectFirestoreEmulator(firestore, host, 8080);
+  }
 
   return { app, auth, firestore };
 }
