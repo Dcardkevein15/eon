@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   collection,
@@ -12,7 +12,7 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 
-import { useAuth } from '@/components/providers';
+import { useAuth, useFirestore, useCollection } from '@/firebase';
 import type { Chat, Message } from '@/lib/types';
 import {
   Sidebar,
@@ -24,8 +24,6 @@ import {
 import ChatSidebar from '@/components/chat/chat-sidebar';
 import ChatPanel from '@/components/chat/chat-panel';
 import EmptyChat from '@/components/chat/empty-chat';
-import { useCollection } from '@/hooks/use-collection';
-import { useFirestore } from '@/hooks/use-firebase';
 
 interface ChatLayoutProps {
   chatId?: string;
@@ -40,7 +38,7 @@ export default function ChatLayout({ chatId }: ChatLayoutProps) {
     loading: chatsLoading,
     error,
   } = useCollection<Chat>(
-    user?.uid ? `users/${user.uid}/chats` : undefined
+    user?.uid ? collection(firestore, `users/${user.uid}/chats`) : undefined
   );
   const loading = authLoading || chatsLoading;
 

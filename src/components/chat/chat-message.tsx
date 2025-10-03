@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import type { Message } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { User, Sparkles } from 'lucide-react';
-import { useAuth } from '@/components/providers';
+import { useAuth } from '@/firebase';
 
 interface ChatMessageProps {
   message: Message;
