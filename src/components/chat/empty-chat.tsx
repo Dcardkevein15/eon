@@ -32,7 +32,7 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
 
         if (cachedData) {
           const { pool, fetchedAt } = JSON.parse(cachedData);
-          if (now - fetchedAt < CACHE_TTL) {
+          if (pool && Array.isArray(pool) && now - fetchedAt < CACHE_TTL) {
             setSuggestionsPool(pool);
             return;
           }
