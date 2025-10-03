@@ -37,7 +37,7 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
         
         <Card className="mt-8 text-left">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
+            <CardTitle className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-accent" />
               <span>Para empezar</span>
             </CardTitle>

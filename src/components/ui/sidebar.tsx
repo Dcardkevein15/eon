@@ -650,13 +650,6 @@ const SidebarMenuSkeleton = React.forwardRef<
     showIcon?: boolean
   }
 >(({ className, showIcon = false, ...props }, ref) => {
-  const [width, setWidth] = React.useState('90%');
-
-  React.useEffect(() => {
-    // Random width between 50 to 90%.
-    setWidth(`${Math.floor(Math.random() * 40) + 50}%`);
-  }, []);
-
   return (
     <div
       ref={ref}
@@ -671,13 +664,8 @@ const SidebarMenuSkeleton = React.forwardRef<
         />
       )}
       <Skeleton
-        className="h-4 flex-1 max-w-[--skeleton-width]"
+        className="h-4 w-4/5"
         data-sidebar="menu-skeleton-text"
-        style={
-          {
-            "--skeleton-width": width,
-          } as React.CSSProperties
-        }
       />
     </div>
   )
