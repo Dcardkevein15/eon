@@ -9,7 +9,6 @@ import { getInitialPrompts } from '@/ai/flows/initial-prompt-suggestion';
 const getAIResponseSchema = z.object({
   history: z.array(
     z.object({
-      id: z.string(),
       role: z.enum(['user', 'assistant']),
       content: z.string(),
       timestamp: z.number(),
@@ -17,13 +16,13 @@ const getAIResponseSchema = z.object({
   ),
 });
 
-export async function getAIResponse(history: Message[]): Promise<string> {
+export async function getAIResponse(history: Omit<Message, 'id'>[]): Promise<string> {
   const validatedHistory = getAIResponseSchema.parse({ history });
 
   const prompt =
     'Eres ¡tu-psicologo-ya!, un asistente profesional y psicólogo virtual. Tu objetivo es brindar un espacio de desahogo para llevar un control emocional. Basado en la conversación, puedes realizar diagnósticos psicológicos y, si es apropiado, recomendar contactar a un psicólogo profesional. Responde siempre de manera empática, profesional y conversacional.\n\n' +
     validatedHistory.history
-      .map((m: Message) => `${m.role === 'user' ? 'Usuario' : 'Asistente'}: ${m.content}`)
+      .map((m) => `${m.role === 'user' ? 'Usuario' : 'Asistente'}: ${m.content}`)
       .join('\n') +
     '\nAsistente:';
 

@@ -28,9 +28,7 @@ export default function ChatPanel({ chat, appendMessage }: ChatPanelProps) {
     setIsResponding(true);
 
     try {
-      // Create a message with a temporary ID for display
-      const displayUserMessage: Message = { ...userMessage, id: 'temp-user' };
-      const updatedHistory = [...chat.messages, displayUserMessage];
+      const updatedHistory = [...chat.messages, userMessage];
       const aiResponseContent = await getAIResponse(updatedHistory);
 
       const aiMessage: Omit<Message, 'id'> = {
