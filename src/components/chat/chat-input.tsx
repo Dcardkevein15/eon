@@ -81,7 +81,7 @@ export default function ChatInput({ onSendMessage, isLoading, chatHistory }: Cha
   }, [form.watch('message')]);
 
   return (
-    <div className="space-y-4 max-w-4xl mx-auto">
+    <div className="space-y-4 max-w-4xl mx-auto w-full">
       {suggestions.length > 0 && !isLoading && (
         <div className="flex flex-wrap gap-2">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -94,7 +94,7 @@ export default function ChatInput({ onSendMessage, isLoading, chatHistory }: Cha
               variant="outline"
               size="sm"
               onClick={() => handleSuggestion(s)}
-              className="rounded-full"
+              className="rounded-full text-xs md:text-sm"
             >
               {s}
             </Button>
@@ -116,7 +116,7 @@ export default function ChatInput({ onSendMessage, isLoading, chatHistory }: Cha
                     {...field}
                     ref={textareaRef}
                     placeholder="Cuéntame cómo te sientes..."
-                    className="pr-16 resize-none max-h-40"
+                    className="pr-12 md:pr-16 resize-none max-h-40 text-sm md:text-base"
                     onKeyDown={handleKeyDown}
                     rows={1}
                   />
@@ -130,7 +130,7 @@ export default function ChatInput({ onSendMessage, isLoading, chatHistory }: Cha
                 <span className='text-base'>⇧</span> + <CornerDownLeft className="h-3 w-3" />
               </kbd> para nueva línea
             </p>
-            <Button type="submit" size="icon" disabled={isLoading || !form.formState.isValid}>
+            <Button type="submit" size="icon" className="h-8 w-8 md:h-10 md:w-10" disabled={isLoading || !form.formState.isValid}>
               <Send className="w-4 h-4" />
               <span className="sr-only">Enviar mensaje</span>
             </Button>

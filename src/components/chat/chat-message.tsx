@@ -17,7 +17,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
   return (
     <div
       className={cn(
-        'flex items-start space-x-4 animate-in fade-in duration-300',
+        'flex items-start space-x-2 md:space-x-4 animate-in fade-in duration-300',
         isUser ? 'justify-end' : 'justify-start'
       )}
     >
@@ -31,7 +31,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
 
       <div
         className={cn(
-          'px-4 py-3 rounded-2xl max-w-md md:max-w-lg lg:max-w-2xl',
+          'px-4 py-3 rounded-2xl max-w-xs sm:max-w-md md:max-w-lg lg:max-w-2xl',
           isUser
             ? 'bg-primary text-primary-foreground rounded-br-none'
             : 'bg-card border rounded-bl-none'

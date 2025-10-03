@@ -29,17 +29,17 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center h-full p-4">
-      <div className="max-w-2xl w-full text-center">
-        <AppLogo className="w-20 h-20 mx-auto text-primary" />
-        <h1 className="text-4xl font-bold mt-4">Bienvenido a ¡tu-psicologo-ya!</h1>
-        <p className="text-muted-foreground mt-2">
+    <div className="flex flex-col items-center justify-center h-full p-4 text-center">
+      <div className="max-w-2xl w-full">
+        <AppLogo className="w-16 h-16 md:w-20 md:h-20 mx-auto text-primary" />
+        <h1 className="text-3xl md:text-4xl font-bold mt-4">Bienvenido a ¡tu-psicologo-ya!</h1>
+        <p className="text-muted-foreground mt-2 text-sm md:text-base">
           Tu asistente profesional para el desahogo y control emocional.
         </p>
         
         <Card className="mt-8 text-left">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <Sparkles className="w-5 h-5 text-accent" />
               <h3>Para empezar</h3>
             </CardTitle>
@@ -49,10 +49,11 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
               <div className="space-y-3">
                 <Skeleton className="h-12 w-full" />
                 <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
                 <Skeleton className="h-12 w-4/5" />
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {prompts.slice(0, 4).map((prompt, index) => (
                   <Button
                     key={index}
