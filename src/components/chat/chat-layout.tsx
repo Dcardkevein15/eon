@@ -69,21 +69,25 @@ export default function ChatLayout({ chatId }: ChatLayoutProps) {
         timestamp: createdAt,
       };
 
-      const newChatRef = await addDoc(
-        collection(firestore, `users/${user.uid}/chats`),
-        {
-          title,
-          userId: user.uid,
-          createdAt: serverTimestamp(),
-          path: '', // Will be updated below
-          messages: [newMessage],
-        }
-      );
+      try {
+        const newChatRef = await addDoc(
+          collection(firestore, `users/${user.uid}/chats`),
+          {
+            title,
+            userId: user.uid,
+            createdAt: serverTimestamp(),
+            path: '', // Will be updated below
+            messages: [newMessage],
+          }
+        );
 
-      const path = `/c/${newChatRef.id}`;
-      await updateDoc(newChatRef, { path });
+        const path = `/c/${newChatRef.id}`;
+        await updateDoc(newChatRef, { path });
 
-      router.push(path);
+        router.push(path);
+      } catch (e) {
+        console.error("Error creating chat:", e);
+      }
     },
     [user, firestore, router]
   );
@@ -154,7 +158,6 @@ export default function ChatLayout({ chatId }: ChatLayoutProps) {
             <ChatPanel 
               chat={chatWithLocalMessages} 
               appendMessage={appendMessage} 
-              setMessages={setMessages}
             />
           ) : (
             <EmptyChat createChat={createChat} />

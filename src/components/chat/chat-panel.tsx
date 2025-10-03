@@ -10,12 +10,12 @@ import ChatInput from './chat-input';
 interface ChatPanelProps {
   chat: Chat;
   appendMessage: (chatId: string, message: Omit<Message, 'id'>) => Promise<void>;
-  setMessages: (messages: Message[]) => void;
 }
 
-export default function ChatPanel({ chat, appendMessage, setMessages }: ChatPanelProps) {
+export default function ChatPanel({ chat, appendMessage }: ChatPanelProps) {
   const [isResponding, setIsResponding] = useState(false);
   const { toast } = useToast();
+  const [localMessages, setLocalMessages] = useState<Message[]>(chat.messages);
 
   const handleSendMessage = async (input: string) => {
     if (!input.trim() || isResponding) return;
@@ -27,21 +27,23 @@ export default function ChatPanel({ chat, appendMessage, setMessages }: ChatPane
       timestamp: Date.now(),
     };
 
-    const updatedMessages = [...chat.messages, userMessage];
-    setMessages(updatedMessages);
+    // Optimistic UI update
+    setLocalMessages((prevMessages) => [...prevMessages, userMessage]);
     setIsResponding(true);
 
     try {
       await appendMessage(chat.id, userMessage);
       
-      const aiResponseContent = await getAIResponse(updatedMessages);
+      const aiResponseContent = await getAIResponse([...localMessages, userMessage]);
 
       const aiMessage: Omit<Message, 'id'> = {
         role: 'assistant',
         content: aiResponseContent,
         timestamp: Date.now(),
       };
+      // The new AI message will be added via Firestore snapshot listener
       await appendMessage(chat.id, aiMessage);
+
     } catch (error) {
       console.error('Error getting AI response:', error);
       toast({
@@ -50,11 +52,17 @@ export default function ChatPanel({ chat, appendMessage, setMessages }: ChatPane
         description: 'No se pudo obtener una respuesta de la IA. Por favor, inténtalo de nuevo.',
       });
       // Revert user message if AI fails
-      setMessages(chat.messages);
+      setLocalMessages((prevMessages) => prevMessages.filter(m => m.id !== userMessage.id));
     } finally {
       setIsResponding(false);
     }
   };
+
+  // Sync local state with props from parent
+  useState(() => {
+    setLocalMessages(chat.messages);
+  }, [chat.messages]);
+
 
   return (
     <div className="flex flex-col h-full">
