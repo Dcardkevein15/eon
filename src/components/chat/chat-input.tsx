@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/form';
 import { getSmartComposeSuggestions } from '@/app/actions';
 import type { Message } from '@/lib/types';
+import { useFormField } from '../ui/form';
 
 const chatSchema = z.object({
   message: z.string().min(1, 'El mensaje no puede estar vacío'),
@@ -80,7 +81,7 @@ export default function ChatInput({ onSendMessage, isLoading, chatHistory }: Cha
   }, [form.watch('message')]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-w-4xl mx-auto">
       {suggestions.length > 0 && !isLoading && (
         <div className="flex flex-wrap gap-2">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -126,10 +127,10 @@ export default function ChatInput({ onSendMessage, isLoading, chatHistory }: Cha
           <div className="absolute right-2 bottom-2 flex items-center gap-1">
             <p className="text-xs text-muted-foreground hidden md:block">
               <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
-                <CornerDownLeft className="h-3 w-3" />
+                <span className='text-base'>⇧</span> + <CornerDownLeft className="h-3 w-3" />
               </kbd> para nueva línea
             </p>
-            <Button type="submit" size="icon" disabled={isLoading}>
+            <Button type="submit" size="icon" disabled={isLoading || !form.formState.isValid}>
               <Send className="w-4 h-4" />
               <span className="sr-only">Enviar mensaje</span>
             </Button>

@@ -6,6 +6,13 @@ import { getAIResponse } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import ChatMessages from './chat-messages';
 import ChatInput from './chat-input';
+import { SidebarTrigger } from '../ui/sidebar';
+import { AppLogo } from '../logo';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Button } from '../ui/button';
+import { PanelLeft } from 'lucide-react';
+import { useSidebar } from '@/components/ui/sidebar';
+
 
 interface ChatPanelProps {
   chat: Chat;
@@ -15,6 +22,9 @@ interface ChatPanelProps {
 export default function ChatPanel({ chat, appendMessages }: ChatPanelProps) {
   const [isResponding, setIsResponding] = useState(false);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
+  const { toggleSidebar } = useSidebar();
+
 
   const handleSendMessage = async (input: string) => {
     if (!input.trim() || isResponding) return;
@@ -26,6 +36,9 @@ export default function ChatPanel({ chat, appendMessages }: ChatPanelProps) {
       content: input,
       timestamp: Date.now(),
     };
+
+    // Optimistically update UI with user message
+    await appendMessages(chat.id, [userMessage]);
   
     try {
       // Create a temporary history for the AI that includes the new user message
@@ -40,10 +53,7 @@ export default function ChatPanel({ chat, appendMessages }: ChatPanelProps) {
         timestamp: Date.now(),
       };
   
-      // Persist both user and AI messages to Firestore in one go.
-      // The `useCollection` hook in ChatLayout will then receive the update
-      // and re-render the chat with both new messages.
-      await appendMessages(chat.id, [userMessage, aiMessage]);
+      await appendMessages(chat.id, [aiMessage]);
   
     } catch (error) {
       console.error('Error handling message:', error);
@@ -59,6 +69,17 @@ export default function ChatPanel({ chat, appendMessages }: ChatPanelProps) {
 
   return (
     <div className="flex flex-col h-full">
+       <header className="flex items-center justify-between p-4 border-b">
+        <div className="flex items-center gap-2">
+          {isMobile && (
+            <Button variant="ghost" size="icon" onClick={toggleSidebar}>
+              <PanelLeft />
+              <span className="sr-only">Toggle Sidebar</span>
+            </Button>
+          )}
+          <h2 className="text-lg font-semibold truncate">{chat.title}</h2>
+        </div>
+      </header>
       <div className="flex-1 overflow-y-auto">
         <ChatMessages messages={chat.messages} isResponding={isResponding} />
       </div>

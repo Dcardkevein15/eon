@@ -31,7 +31,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
 
       <div
         className={cn(
-          'px-4 py-3 rounded-2xl max-w-md lg:max-w-2xl',
+          'px-4 py-3 rounded-2xl max-w-md md:max-w-lg lg:max-w-2xl',
           isUser
             ? 'bg-primary text-primary-foreground rounded-br-none'
             : 'bg-card border rounded-bl-none'
