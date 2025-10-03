@@ -37,10 +37,12 @@ export default function ChatInput({ onSendMessage, isLoading, chatHistory }: Cha
   });
 
   const handleSuggestion = (suggestion: string) => {
-    form.setValue('message', suggestion);
-    handleSubmit();
+    if (isLoading) return;
+    onSendMessage(suggestion);
+    form.reset();
+    setSuggestions([]);
   };
-  
+
   const handleSubmit: SubmitHandler<ChatFormValues> = (data) => {
     if(isLoading) return;
     onSendMessage(data.message);
