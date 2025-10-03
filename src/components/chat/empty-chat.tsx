@@ -15,8 +15,10 @@ interface EmptyChatProps {
 export default function EmptyChat({ createChat }: EmptyChatProps) {
   const [prompts, setPrompts] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     async function fetchPrompts() {
       setLoading(true);
       const suggestedPrompts = await getSuggestedPrompts();
@@ -37,13 +39,15 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
         
         <Card className="mt-8 text-left">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-accent" />
-              <span>Para empezar</span>
+            <CardTitle>
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-accent" />
+                <span>Para empezar</span>
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {loading ? (
+            {loading || !isClient ? (
               <div className="space-y-3">
                 <Skeleton className="h-12 w-full" />
                 <Skeleton className="h-12 w-full" />

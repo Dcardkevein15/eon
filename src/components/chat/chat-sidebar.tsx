@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { Plus, MessageSquare, Trash2 } from 'lucide-react';
 import {
   SidebarContent,
-  SidebarGroup,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
@@ -33,6 +32,7 @@ import { AppLogo } from '@/components/logo';
 import UserButton from '@/components/chat/user-button';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import React from 'react';
 
 interface ChatSidebarProps {
   chats: Chat[];
@@ -49,11 +49,15 @@ export default function ChatSidebar({
   removeChat,
   clearChats
 }: ChatSidebarProps) {
+  const [isClient, setIsClient] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const getFormattedDate = (timestamp: any) => {
     if (!timestamp) return '';
     try {
-      // The 'timestamp' from Firestore can be an object with toDate() method.
       const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
       return formatDistanceToNow(date, { addSuffix: true, locale: es });
     } catch (e) {
@@ -85,7 +89,7 @@ export default function ChatSidebar({
               <SidebarMenuSkeleton showIcon />
               <SidebarMenuSkeleton showIcon />
             </div>
-          ) : chats.length > 0 ? (
+          ) : isClient && chats.length > 0 ? (
             <SidebarMenu>
               {chats.map((chat) => (
                 <SidebarMenuItem key={chat.id}>
