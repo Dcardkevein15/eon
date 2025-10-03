@@ -9,27 +9,32 @@ import ChatInput from './chat-input';
 
 interface ChatPanelProps {
   chat: Chat;
-  appendMessage: (chatId: string, message: Omit<Message, 'id'>) => void;
+  appendMessage: (chatId: string, message: Omit<Message, 'id'>) => Promise<void>;
+  setMessages: (messages: Message[]) => void;
 }
 
-export default function ChatPanel({ chat, appendMessage }: ChatPanelProps) {
+export default function ChatPanel({ chat, appendMessage, setMessages }: ChatPanelProps) {
   const [isResponding, setIsResponding] = useState(false);
   const { toast } = useToast();
 
   const handleSendMessage = async (input: string) => {
     if (!input.trim() || isResponding) return;
 
-    const userMessage: Omit<Message, 'id'> = {
+    const userMessage: Message = {
+      id: `user-${Date.now()}`,
       role: 'user',
       content: input,
       timestamp: Date.now(),
     };
-    await appendMessage(chat.id, userMessage);
+
+    const updatedMessages = [...chat.messages, userMessage];
+    setMessages(updatedMessages);
     setIsResponding(true);
 
     try {
-      const updatedHistory = [...chat.messages, userMessage];
-      const aiResponseContent = await getAIResponse(updatedHistory);
+      await appendMessage(chat.id, userMessage);
+      
+      const aiResponseContent = await getAIResponse(updatedMessages);
 
       const aiMessage: Omit<Message, 'id'> = {
         role: 'assistant',
@@ -44,7 +49,8 @@ export default function ChatPanel({ chat, appendMessage }: ChatPanelProps) {
         title: 'Error',
         description: 'No se pudo obtener una respuesta de la IA. Por favor, inténtalo de nuevo.',
       });
-      // Optionally handle removing the user message if AI fails
+      // Revert user message if AI fails
+      setMessages(chat.messages);
     } finally {
       setIsResponding(false);
     }

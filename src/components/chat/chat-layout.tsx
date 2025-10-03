@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   collection,
@@ -33,16 +33,28 @@ export default function ChatLayout({ chatId }: ChatLayoutProps) {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const firestore = useFirestore();
+  
+  const chatsCollection = useMemo(() => 
+    user?.uid ? collection(firestore, `users/${user.uid}/chats`) : undefined
+  , [user?.uid, firestore]);
+
   const {
     data: chats,
     loading: chatsLoading,
     error,
-  } = useCollection<Chat>(
-    user?.uid ? collection(firestore, `users/${user.uid}/chats`) : undefined
-  );
+  } = useCollection<Chat>(chatsCollection);
   const loading = authLoading || chatsLoading;
 
-  const activeChat = chats?.find((chat) => chat.id === chatId);
+  const activeChat = useMemo(() => chats?.find((chat) => chat.id === chatId), [chats, chatId]);
+  const [messages, setMessages] = useState<Message[]>([]);
+
+  useEffect(() => {
+    if (activeChat) {
+      setMessages(activeChat.messages || []);
+    } else {
+      setMessages([]);
+    }
+  }, [activeChat]);
 
   const createChat = useCallback(
     async (input: string) => {
@@ -79,16 +91,18 @@ export default function ChatLayout({ chatId }: ChatLayoutProps) {
   const appendMessage = useCallback(
     async (chatId: string, message: Omit<Message, 'id'>) => {
       if (!user || !firestore) return;
-      if (!activeChat) return;
+      
+      const currentChat = chats?.find(c => c.id === chatId);
+      if (!currentChat) return;
 
       const chatRef = doc(firestore, `users/${user.uid}/chats`, chatId);
-      const updatedMessages = [...activeChat.messages, message];
+      const updatedMessages = [...currentChat.messages, message as Message];
 
       await updateDoc(chatRef, {
         messages: updatedMessages,
       });
     },
-    [user, firestore, activeChat]
+    [user, firestore, chats]
   );
 
   const removeChat = useCallback(
@@ -120,6 +134,8 @@ export default function ChatLayout({ chatId }: ChatLayoutProps) {
   if (error) {
     return <p>Error: {error.message}</p>;
   }
+  
+  const chatWithLocalMessages = activeChat ? { ...activeChat, messages } : undefined;
 
   return (
     <SidebarProvider>
@@ -134,8 +150,12 @@ export default function ChatLayout({ chatId }: ChatLayoutProps) {
           />
         </Sidebar>
         <SidebarInset>
-          {activeChat ? (
-            <ChatPanel chat={activeChat} appendMessage={appendMessage} />
+          {chatWithLocalMessages ? (
+            <ChatPanel 
+              chat={chatWithLocalMessages} 
+              appendMessage={appendMessage} 
+              setMessages={setMessages}
+            />
           ) : (
             <EmptyChat createChat={createChat} />
           )}
