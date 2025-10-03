@@ -21,7 +21,7 @@ export default function UserButton() {
     return <Skeleton className="h-10 w-full" />;
   }
 
-  if (user?.isAnonymous) {
+  if (!user) {
     return (
       <Button onClick={signInWithGoogle} className="w-full">
         <LogIn className="mr-2 h-4 w-4" />

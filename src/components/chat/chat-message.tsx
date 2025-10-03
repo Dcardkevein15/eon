@@ -40,7 +40,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
         <p className="text-sm break-words whitespace-pre-wrap">{message.content}</p>
       </div>
 
-      {isUser && (
+      {isUser && authUser && (
         <Avatar className="h-8 w-8">
           <AvatarImage src={authUser?.photoURL ?? ''} alt={authUser?.displayName ?? 'User'} />
           <AvatarFallback>

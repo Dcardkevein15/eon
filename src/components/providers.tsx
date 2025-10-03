@@ -9,7 +9,6 @@ import {
 } from 'react';
 import {
   onAuthStateChanged,
-  signInAnonymously,
   GoogleAuthProvider,
   signInWithPopup,
   signOut as firebaseSignOut,
@@ -37,20 +36,9 @@ export function AuthProvider({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        setUser(firebaseUser);
-        setLoading(false);
-      } else {
-        try {
-          const userCredential = await signInAnonymously(auth);
-          setUser(userCredential.user);
-        } catch (error) {
-          console.error('Anonymous sign-in failed:', error);
-        } finally {
-          setLoading(false);
-        }
-      }
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -68,8 +56,6 @@ export function AuthProvider({
   const signOut = async () => {
     try {
       await firebaseSignOut(auth);
-      // Auth state change will be handled by onAuthStateChanged,
-      // which will then trigger an anonymous sign-in.
     } catch (error) {
       console.error('Sign-out failed:', error);
     }

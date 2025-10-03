@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { Providers } from '@/components/providers';
 import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 import { FirebaseProvider } from '@/components/firebase-provider';
@@ -27,10 +26,8 @@ export default function RootLayout({
       </head>
       <body className={cn('font-body antialiased')}>
         <FirebaseProvider>
-          <Providers>
-            {children}
-            <Toaster />
-          </Providers>
+          {children}
+          <Toaster />
         </FirebaseProvider>
       </body>
     </html>
