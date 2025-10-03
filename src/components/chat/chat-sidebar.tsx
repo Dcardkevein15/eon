@@ -32,7 +32,7 @@ import { AppLogo } from '@/components/logo';
 import UserButton from '@/components/chat/user-button';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface ChatSidebarProps {
   chats: Chat[];
@@ -49,9 +49,9 @@ export default function ChatSidebar({
   removeChat,
   clearChats
 }: ChatSidebarProps) {
-  const [isClient, setIsClient] = React.useState(false);
+  const [isClient, setIsClient] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setIsClient(true);
   }, []);
 
@@ -83,13 +83,13 @@ export default function ChatSidebar({
       </SidebarHeader>
       <SidebarContent className="flex-1">
         <ScrollArea className="h-full p-2">
-          {isLoading ? (
+          {isLoading || !isClient ? (
             <div className="space-y-2">
               <SidebarMenuSkeleton showIcon />
               <SidebarMenuSkeleton showIcon />
               <SidebarMenuSkeleton showIcon />
             </div>
-          ) : isClient && chats.length > 0 ? (
+          ) : chats.length > 0 ? (
             <SidebarMenu>
               {chats.map((chat) => (
                 <SidebarMenuItem key={chat.id}>
@@ -136,7 +136,7 @@ export default function ChatSidebar({
       </SidebarContent>
       <SidebarSeparator />
       <SidebarFooter className="p-2">
-        {chats.length > 0 && (
+        {isClient && chats.length > 0 && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="ghost" className="w-full justify-start">
