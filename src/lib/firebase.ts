@@ -22,6 +22,10 @@ function initializeFirebase() {
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
+  // This is a workaround for the unauthorized-domain error in some development environments.
+  if (process.env.NODE_ENV === 'development' && !auth.emulatorConfig) {
+    auth.tenantId = 'emulator';
+  }
   const firestore = getFirestore(app);
 
   // Note: App Hosting emulators are not currently supported
