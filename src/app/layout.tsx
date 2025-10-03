@@ -5,8 +5,8 @@ import { cn } from '@/lib/utils';
 import { FirebaseProvider } from '@/firebase/provider';
 
 export const metadata: Metadata = {
-  title: 'NimbusChat',
-  description: 'Una aplicación de chat impulsada por IA construida con Next.js y Google Cloud.',
+  title: '¡tu-psicologo-ya!',
+  description: 'Un asistente virtual profesional para brindar espacios de desahogo y control emocional.',
 };
 
 export default function RootLayout({

@@ -112,7 +112,7 @@ export default function ChatInput({ onSendMessage, isLoading, chatHistory }: Cha
                   <Textarea
                     {...field}
                     ref={textareaRef}
-                    placeholder="Pregúntale lo que sea a Nimbus..."
+                    placeholder="Cuéntame cómo te sientes..."
                     className="pr-16 resize-none max-h-40"
                     onKeyDown={handleKeyDown}
                     rows={1}

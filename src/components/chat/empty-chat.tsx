@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getSuggestedPrompts } from '@/app/actions';
-import { NimbusChatLogo } from '@/components/logo';
+import { AppLogo } from '@/components/logo';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -29,10 +29,10 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
   return (
     <div className="flex flex-col items-center justify-center h-full p-4">
       <div className="max-w-2xl w-full text-center">
-        <NimbusChatLogo className="w-20 h-20 mx-auto text-primary" />
-        <h1 className="text-4xl font-bold mt-4">Bienvenido a NimbusChat</h1>
+        <AppLogo className="w-20 h-20 mx-auto text-primary" />
+        <h1 className="text-4xl font-bold mt-4">Bienvenido a ¡tu-psicologo-ya!</h1>
         <p className="text-muted-foreground mt-2">
-          Tu amigable asistente de IA. Inicia una conversación o prueba una de las siguientes sugerencias.
+          Tu asistente profesional para el desahogo y control emocional.
         </p>
         
         <Card className="mt-8 text-left">

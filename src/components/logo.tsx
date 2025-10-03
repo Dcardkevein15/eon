@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-export function NimbusChatLogo({ className }: { className?: string }) {
+export function AppLogo({ className }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 100 100"

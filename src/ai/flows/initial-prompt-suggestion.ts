@@ -34,25 +34,22 @@ const initialPromptSuggestionFlow = ai.defineFlow(
 const initialPromptSuggestionPrompt = ai.definePrompt({
   name: 'initialPromptSuggestionPrompt',
   output: {schema: InitialPromptsOutputSchema},
-  prompt: `Eres un asistente de IA útil. Genera una lista de prompts diversos y atractivos que los nuevos usuarios pueden usar para explorar las capacidades de esta aplicación de chat de IA.
+  prompt: `Eres un asistente de IA útil. Genera una lista de prompts diversos y atractivos que los nuevos usuarios pueden usar para empezar a conversar con ¡tu-psicologo-ya!.
 
-Concéntrate en sugerir prompts que muestren una variedad de características y casos de uso, como escritura creativa, resolución de problemas, recuperación de información y conversación general. Los prompts deben ser claros, concisos y fáciles de entender.
+Concéntrate en sugerir prompts que inviten a la reflexión y al desahogo emocional. Los prompts deben ser claros, concisos y fáciles de entender.
 
 Devuelve los prompts como un array JSON de strings.
 
 Ejemplo:
 {
   "prompts": [
-    "Escribe un poema corto sobre el océano.",
-    "Resume la trama de Hamlet.",
-    "¿Cuáles son los beneficios de la meditación?",
-    "Cuéntame un chiste.",
-    "Compón un haiku sobre las hojas de otoño",
-    "Explica la teoría de la relatividad en términos simples",
-    "Dame cinco ideas diferentes para desayunos saludables",
+    "Últimamente me he sentido muy estresado, ¿qué puedo hacer?",
+    "¿Cómo puedo manejar la ansiedad en el trabajo?",
+    "No me siento motivado, ¿algún consejo?",
+    "Quiero mejorar mis hábitos de sueño.",
     "Escribe una historia de ficción sobre un viajero en el tiempo",
-    "Traduce 'Hola, ¿cómo estás?' al inglés",
-    "Enumera los elementos químicos de la tabla periódica"
+    "¿Cuáles son los beneficios de la meditación?",
+    "He tenido un mal día, necesito desahogarme."
   ]
 }
 

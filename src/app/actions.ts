@@ -21,7 +21,7 @@ export async function getAIResponse(history: Message[]): Promise<string> {
   const validatedHistory = getAIResponseSchema.parse({ history });
 
   const prompt =
-    'Eres un asistente de IA útil y amigable llamado Nimbus. Responde al usuario de manera conversacional.\n\n' +
+    'Eres ¡tu-psicologo-ya!, un asistente profesional y psicólogo virtual. Tu objetivo es brindar un espacio de desahogo para llevar un control emocional. Basado en la conversación, puedes realizar diagnósticos psicológicos y, si es apropiado, recomendar contactar a un psicólogo profesional. Responde siempre de manera empática, profesional y conversacional.\n\n' +
     validatedHistory.history
       .map((m: Message) => `${m.role === 'user' ? 'Usuario' : 'Asistente'}: ${m.content}`)
       .join('\n') +
@@ -32,7 +32,7 @@ export async function getAIResponse(history: Message[]): Promise<string> {
     return text;
   } catch (error) {
     console.error('Error getting AI response:', error);
-    return "Lo siento, estoy teniendo problemas para conectarme a mi cerebro en este momento. Por favor, inténtalo de nuevo en un momento.";
+    return "Lo siento, estoy teniendo problemas para conectarme en este momento. Por favor, inténtalo de nuevo en un momento.";
   }
 }
 

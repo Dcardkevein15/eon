@@ -29,7 +29,7 @@ import {
 
 import type { Chat } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { NimbusChatLogo } from '@/components/logo';
+import { AppLogo } from '@/components/logo';
 import UserButton from '@/components/chat/user-button';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -54,8 +54,8 @@ export default function ChatSidebar({
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center justify-between p-2">
           <div className="flex items-center gap-2">
-            <NimbusChatLogo className="w-8 h-8 text-primary" />
-            <span className="text-lg font-semibold">NimbusChat</span>
+            <AppLogo className="w-8 h-8 text-primary" />
+            <span className="text-lg font-semibold">¡tu-psicologo-ya!</span>
           </div>
           <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
             <Link href="/" aria-label="Nuevo chat">
@@ -129,7 +129,7 @@ export default function ChatSidebar({
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+                <AlertDialogTitle>¿Estás absolutely seguro?</AlertDialogTitle>
                 <AlertDialogDescription>
                   Esto eliminará permanentemente todas tus conversaciones de chat. Esta acción no se puede deshacer.
                 </AlertDialogDescription>
