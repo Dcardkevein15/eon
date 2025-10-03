@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -15,7 +15,6 @@ import {
 } from '@/components/ui/form';
 import { getSmartComposeSuggestions } from '@/app/actions';
 import type { Message } from '@/lib/types';
-import { useFormField } from '../ui/form';
 
 const chatSchema = z.object({
   message: z.string().min(1, 'El mensaje no puede estar vacío'),
@@ -29,9 +28,12 @@ interface ChatInputProps {
   chatHistory: Message[];
 }
 
-export default function ChatInput({ onSendMessage, isLoading, chatHistory }: ChatInputProps) {
+const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(({ onSendMessage, isLoading, chatHistory }, ref) => {
   const [suggestions, setSuggestions] = useState<string[]>([]);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const localTextareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  useImperativeHandle(ref, () => localTextareaRef.current as HTMLTextAreaElement);
+
   const form = useForm<ChatFormValues>({
     resolver: zodResolver(chatSchema),
     defaultValues: { message: '' },
@@ -74,9 +76,9 @@ export default function ChatInput({ onSendMessage, isLoading, chatHistory }: Cha
   };
   
   useEffect(() => {
-    if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
-        textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    if (localTextareaRef.current) {
+        localTextareaRef.current.style.height = 'auto';
+        localTextareaRef.current.style.height = `${localTextareaRef.current.scrollHeight}px`;
     }
   }, [form.watch('message')]);
 
@@ -114,7 +116,7 @@ export default function ChatInput({ onSendMessage, isLoading, chatHistory }: Cha
                 <FormControl>
                   <Textarea
                     {...field}
-                    ref={textareaRef}
+                    ref={localTextareaRef}
                     placeholder="Cuéntame cómo te sientes..."
                     className="pr-12 md:pr-16 resize-none max-h-40 text-sm md:text-base"
                     onKeyDown={handleKeyDown}
@@ -139,4 +141,8 @@ export default function ChatInput({ onSendMessage, isLoading, chatHistory }: Cha
       </Form>
     </div>
   );
-}
+});
+
+ChatInput.displayName = "ChatInput";
+
+export default ChatInput;
