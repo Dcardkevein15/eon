@@ -79,14 +79,14 @@ export default function ChatSidebar({
           <Button asChild className="w-full">
             <Link href="/">
               <Plus className="mr-2" />
-              INICIAR NUEVA CONVERSACION
+              NUEVA CONVERSACIÓN
             </Link>
           </Button>
         </div>
       </SidebarHeader>
       <SidebarContent className="flex-1">
         <ScrollArea className="h-full p-2">
-          {!isClient || isLoading ? (
+          {isLoading ? (
             <div className="space-y-2">
               <SidebarMenuSkeleton showIcon />
               <SidebarMenuSkeleton showIcon />
@@ -104,7 +104,7 @@ export default function ChatSidebar({
                     <Link href={chat.path} className="flex flex-col items-start">
                       <span className="truncate max-w-full">{chat.title}</span>
                       <span className="text-xs text-muted-foreground">
-                        {getFormattedDate(chat.createdAt)}
+                        {isClient ? getFormattedDate(chat.createdAt) : '...'}
                       </span>
                     </Link>
                   </SidebarMenuButton>
@@ -161,7 +161,7 @@ export default function ChatSidebar({
             </AlertDialogContent>
           </AlertDialog>
         )}
-        {isClient && <UserButton />}
+        <UserButton />
       </SidebarFooter>
     </>
   );
