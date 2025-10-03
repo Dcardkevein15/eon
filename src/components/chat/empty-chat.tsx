@@ -49,8 +49,10 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
       }
     };
 
-    fetchAndCacheSuggestions();
-  }, []);
+    if (isClient) {
+      fetchAndCacheSuggestions();
+    }
+  }, [isClient]);
 
   const selectCategorizedSuggestions = () => {
     if (suggestionsPool.length > 0) {
@@ -68,7 +70,7 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
   };
 
   useEffect(() => {
-    if(suggestionsPool.length > 0) {
+    if(suggestionsPool && suggestionsPool.length > 0) {
       selectCategorizedSuggestions();
     }
   }, [suggestionsPool]);
@@ -127,13 +129,13 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
           {displaySuggestions.length > 0 && (
             <div>
               <p className="text-sm text-muted-foreground mb-2">Para empezar, puedes probar con:</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                 {displaySuggestions.map((s, i) => (
                   <Button
                     key={i}
                     variant="outline"
                     onClick={() => handleSuggestionClick(s)}
-                    className="text-xs md:text-sm h-auto py-2"
+                    className="text-xs md:text-sm h-auto py-2 whitespace-normal text-center"
                   >
                     {s}
                   </Button>
