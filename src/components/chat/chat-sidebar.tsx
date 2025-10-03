@@ -49,6 +49,19 @@ export default function ChatSidebar({
   removeChat,
   clearChats
 }: ChatSidebarProps) {
+
+  const getFormattedDate = (timestamp: any) => {
+    if (!timestamp) return '';
+    try {
+      // The 'timestamp' from Firestore can be an object with toDate() method.
+      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      return formatDistanceToNow(date, { addSuffix: true, locale: es });
+    } catch (e) {
+      console.error("Error formatting date:", e);
+      return '';
+    }
+  };
+
   return (
     <>
       <SidebarHeader className="border-b border-sidebar-border">
@@ -84,7 +97,7 @@ export default function ChatSidebar({
                     <Link href={chat.path} className="flex flex-col items-start">
                       <span className="truncate max-w-full">{chat.title}</span>
                       <span className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(chat.createdAt, { addSuffix: true, locale: es })}
+                        {getFormattedDate(chat.createdAt)}
                       </span>
                     </Link>
                   </SidebarMenuButton>
