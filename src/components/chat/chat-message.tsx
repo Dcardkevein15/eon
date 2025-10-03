@@ -5,6 +5,8 @@ import type { Message } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { User, Sparkles } from 'lucide-react';
 import { useAuth } from '@/firebase';
+import ReactMarkdown from 'react-markdown';
+
 
 interface ChatMessageProps {
   message: Message;
@@ -31,13 +33,13 @@ export default function ChatMessage({ message }: ChatMessageProps) {
 
       <div
         className={cn(
-          'px-4 py-3 rounded-2xl max-w-xs sm:max-w-md md:max-w-lg lg:max-w-2xl',
+          'px-4 py-3 rounded-2xl max-w-xs sm:max-w-md md:max-w-lg lg:max-w-2xl prose prose-sm dark:prose-invert prose-headings:font-semibold prose-p:m-0 prose-headings:m-0 prose-ul:m-0 prose-ol:m-0',
           isUser
             ? 'bg-primary text-primary-foreground rounded-br-none'
             : 'bg-card border rounded-bl-none'
         )}
       >
-        <p className="text-sm break-words whitespace-pre-wrap">{message.content}</p>
+        <ReactMarkdown>{message.content}</ReactMarkdown>
       </div>
 
       {isUser && authUser && (
