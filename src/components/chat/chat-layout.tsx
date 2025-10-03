@@ -10,6 +10,7 @@ import {
   serverTimestamp,
   updateDoc,
   writeBatch,
+  arrayUnion,
 } from 'firebase/firestore';
 
 import { useAuth, useFirestore, useCollection } from '@/firebase';
@@ -83,21 +84,18 @@ export default function ChatLayout({ chatId }: ChatLayoutProps) {
     [user, firestore, router]
   );
 
-  const appendMessage = useCallback(
-    async (chatId: string, message: Omit<Message, 'id'>) => {
+  const appendMessages = useCallback(
+    async (chatId: string, messages: Omit<Message, 'id'>[]) => {
       if (!user || !firestore) return;
       
-      const currentChat = chats?.find(c => c.id === chatId);
-      if (!currentChat) return;
-
       const chatRef = doc(firestore, `users/${user.uid}/chats`, chatId);
-      const updatedMessages = [...currentChat.messages, message as Message];
-
+      
+      // Using arrayUnion is safer for concurrent updates
       await updateDoc(chatRef, {
-        messages: updatedMessages,
+        messages: arrayUnion(...messages),
       });
     },
-    [user, firestore, chats]
+    [user, firestore]
   );
 
   const removeChat = useCallback(
@@ -146,7 +144,7 @@ export default function ChatLayout({ chatId }: ChatLayoutProps) {
           {activeChat ? (
             <ChatPanel 
               chat={activeChat} 
-              appendMessage={appendMessage} 
+              appendMessages={appendMessages} 
             />
           ) : (
             <EmptyChat createChat={createChat} />

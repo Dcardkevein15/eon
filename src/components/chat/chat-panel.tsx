@@ -9,10 +9,10 @@ import ChatInput from './chat-input';
 
 interface ChatPanelProps {
   chat: Chat;
-  appendMessage: (chatId: string, message: Omit<Message, 'id'>) => Promise<void>;
+  appendMessages: (chatId: string, messages: Omit<Message, 'id'>[]) => Promise<void>;
 }
 
-export default function ChatPanel({ chat, appendMessage }: ChatPanelProps) {
+export default function ChatPanel({ chat, appendMessages }: ChatPanelProps) {
   const [isResponding, setIsResponding] = useState(false);
   const { toast } = useToast();
 
@@ -28,15 +28,11 @@ export default function ChatPanel({ chat, appendMessage }: ChatPanelProps) {
     };
   
     try {
-      // 1. Persist user message to Firestore
-      await appendMessage(chat.id, userMessage);
-  
-      // 2. The useCollection hook in ChatLayout will automatically update the chat.messages prop.
-      // We create a new history array that includes the user message for the AI.
-      const newHistoryForAI = [...chat.messages, { ...userMessage, id: 'temp-id' }];
-  
-      // 3. Get AI response
-      const aiResponseContent = await getAIResponse(newHistoryForAI);
+      // Create a temporary history for the AI that includes the new user message
+      const historyForAI = [...chat.messages, { ...userMessage, id: 'temp-user-id' }];
+      
+      // Get AI response based on the updated history
+      const aiResponseContent = await getAIResponse(historyForAI);
   
       const aiMessage: Omit<Message, 'id'> = {
         role: 'assistant',
@@ -44,8 +40,10 @@ export default function ChatPanel({ chat, appendMessage }: ChatPanelProps) {
         timestamp: Date.now(),
       };
   
-      // 4. Persist AI message. The listener in ChatLayout will update the UI again.
-      await appendMessage(chat.id, aiMessage);
+      // Persist both user and AI messages to Firestore in one go.
+      // The `useCollection` hook in ChatLayout will then receive the update
+      // and re-render the chat with both new messages.
+      await appendMessages(chat.id, [userMessage, aiMessage]);
   
     } catch (error) {
       console.error('Error handling message:', error);
