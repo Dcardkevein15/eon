@@ -3,6 +3,7 @@ import './globals.css';
 import { Providers } from '@/components/providers';
 import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
+import { FirebaseProvider } from '@/components/firebase-provider';
 
 export const metadata: Metadata = {
   title: 'NimbusChat',
@@ -25,10 +26,12 @@ export default function RootLayout({
         />
       </head>
       <body className={cn('font-body antialiased')}>
-        <Providers>
-          {children}
-          <Toaster />
-        </Providers>
+        <FirebaseProvider>
+          <Providers>
+            {children}
+            <Toaster />
+          </Providers>
+        </FirebaseProvider>
       </body>
     </html>
   );

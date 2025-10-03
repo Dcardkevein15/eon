@@ -2,7 +2,15 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { v4 as uuidv4 } from 'uuid';
+import {
+  collection,
+  addDoc,
+  deleteDoc,
+  doc,
+  serverTimestamp,
+  updateDoc,
+  writeBatch,
+} from 'firebase/firestore';
 
 import { useAuth } from '@/components/providers';
 import type { Chat, Message } from '@/lib/types';
@@ -16,6 +24,8 @@ import {
 import ChatSidebar from '@/components/chat/chat-sidebar';
 import ChatPanel from '@/components/chat/chat-panel';
 import EmptyChat from '@/components/chat/empty-chat';
+import { useCollection } from '@/hooks/use-collection';
+import { useFirestore } from '@/hooks/use-firebase';
 
 interface ChatLayoutProps {
   chatId?: string;
@@ -24,95 +34,101 @@ interface ChatLayoutProps {
 export default function ChatLayout({ chatId }: ChatLayoutProps) {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const [chats, setChats] = useState<Chat[]>([]);
-  const [loading, setLoading] = useState(true);
+  const firestore = useFirestore();
+  const {
+    data: chats,
+    loading: chatsLoading,
+    error,
+  } = useCollection<Chat>(
+    user?.uid ? `users/${user.uid}/chats` : undefined
+  );
+  const loading = authLoading || chatsLoading;
 
-  useEffect(() => {
-    if (!authLoading && user) {
-      try {
-        const storedChats = localStorage.getItem(`chats_${user.uid}`);
-        if (storedChats) {
-          setChats(JSON.parse(storedChats));
-        } else {
-          setChats([]);
-        }
-      } catch (error) {
-        console.error("Failed to parse chats from localStorage", error);
-        setChats([]);
-      } finally {
-        setLoading(false);
-      }
-    }
-  }, [user, authLoading]);
-
-  useEffect(() => {
-    if (!loading && user?.uid) {
-      localStorage.setItem(`chats_${user.uid}`, JSON.stringify(chats));
-    }
-  }, [chats, user?.uid, loading]);
-
-  const activeChat = chats.find((chat) => chat.id === chatId);
+  const activeChat = chats?.find((chat) => chat.id === chatId);
 
   const createChat = useCallback(
-    (input: string) => {
-      if (!user) return;
+    async (input: string) => {
+      if (!user || !firestore) return;
 
       const title = input.substring(0, 100);
-      const id = uuidv4();
       const createdAt = Date.now();
-      const path = `/c/${id}`;
 
-      const newMessage: Message = {
-        id: uuidv4(),
+      const newMessage: Omit<Message, 'id'> = {
         role: 'user',
         content: input,
         timestamp: createdAt,
       };
 
-      const newChat: Chat = {
-        id,
-        title,
-        userId: user.uid,
-        createdAt,
-        path,
-        messages: [newMessage],
-      };
+      const newChatRef = await addDoc(
+        collection(firestore, `users/${user.uid}/chats`),
+        {
+          title,
+          userId: user.uid,
+          createdAt: serverTimestamp(),
+          path: '', // Will be updated below
+          messages: [newMessage],
+        }
+      );
 
-      setChats((prev) => [newChat, ...prev]);
+      const path = `/c/${newChatRef.id}`;
+      await updateDoc(newChatRef, { path });
+
       router.push(path);
-      return newChat;
     },
-    [user, router]
+    [user, firestore, router]
   );
-  
-  const appendMessage = useCallback((chatId: string, message: Message) => {
-    setChats(prev => prev.map(chat => {
-      if (chat.id === chatId) {
-        const newMessages = [...chat.messages, message];
-        return { ...chat, messages: newMessages };
+
+  const appendMessage = useCallback(
+    async (chatId: string, message: Omit<Message, 'id'>) => {
+      if (!user || !firestore) return;
+      if (!activeChat) return;
+
+      const chatRef = doc(firestore, `users/${user.uid}/chats`, chatId);
+      const updatedMessages = [...activeChat.messages, message];
+
+      await updateDoc(chatRef, {
+        messages: updatedMessages,
+      });
+    },
+    [user, firestore, activeChat]
+  );
+
+  const removeChat = useCallback(
+    async (chatId: string) => {
+      if (!user || !firestore) return;
+      const chatRef = doc(firestore, `users/${user.uid}/chats`, chatId);
+      await deleteDoc(chatRef);
+
+      if (activeChat?.id === chatId) {
+        router.push('/');
       }
-      return chat;
-    }));
-  }, []);
+    },
+    [user, firestore, activeChat, router]
+  );
 
-  const removeChat = useCallback((chatId: string) => {
-    setChats(prev => prev.filter(chat => chat.id !== chatId));
-    if (activeChat?.id === chatId) {
-      router.push('/');
-    }
-  }, [activeChat, router]);
+  const clearChats = useCallback(async () => {
+    if (!user || !firestore || !chats) return;
 
-  const clearChats = useCallback(() => {
-    setChats([]);
+    const batch = writeBatch(firestore);
+    chats.forEach((chat) => {
+      const chatRef = doc(firestore, `users/${user.uid}/chats`, chat.id);
+      batch.delete(chatRef);
+    });
+    await batch.commit();
+
     router.push('/');
-  }, [router]);
+  }, [user, firestore, chats, router]);
+
+  if (error) {
+    return <p>Error: {error.message}</p>;
+  }
 
   return (
     <SidebarProvider>
       <div className="flex min-h-screen bg-background text-foreground">
         <Sidebar>
           <ChatSidebar
-            chats={chats}
+            chats={chats || []}
             activeChatId={chatId}
             isLoading={loading}
             removeChat={removeChat}
@@ -121,10 +137,7 @@ export default function ChatLayout({ chatId }: ChatLayoutProps) {
         </Sidebar>
         <SidebarInset>
           {activeChat ? (
-            <ChatPanel
-              chat={activeChat}
-              appendMessage={appendMessage}
-            />
+            <ChatPanel chat={activeChat} appendMessage={appendMessage} />
           ) : (
             <EmptyChat createChat={createChat} />
           )}

@@ -25,7 +25,7 @@ export default function ChatMessages({ messages, isResponding }: ChatMessagesPro
     <ScrollArea className="h-full" ref={scrollAreaRef} viewportRef={viewportRef}>
       <div className="p-4 md:p-6 space-y-6">
         {messages.map((message, index) => (
-          <ChatMessage key={message.id} message={message} />
+          <ChatMessage key={index} message={message} />
         ))}
         {isResponding && (
           <div className="flex items-start space-x-4">

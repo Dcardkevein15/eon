@@ -13,8 +13,8 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   signOut as firebaseSignOut,
+  type Auth,
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 import type { User } from '@/lib/types';
 
 interface AuthContextType {
@@ -26,7 +26,13 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function Providers({ children }: { children: ReactNode }) {
+export function AuthProvider({
+  children,
+  auth,
+}: {
+  children: ReactNode;
+  auth: Auth;
+}) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -48,7 +54,7 @@ export function Providers({ children }: { children: ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [auth]);
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { v4 as uuidv4 } from 'uuid';
 import type { Chat, Message } from '@/lib/types';
 import { getAIResponse } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
@@ -10,7 +9,7 @@ import ChatInput from './chat-input';
 
 interface ChatPanelProps {
   chat: Chat;
-  appendMessage: (chatId: string, message: Message) => void;
+  appendMessage: (chatId: string, message: Omit<Message, 'id'>) => void;
 }
 
 export default function ChatPanel({ chat, appendMessage }: ChatPanelProps) {
@@ -20,26 +19,26 @@ export default function ChatPanel({ chat, appendMessage }: ChatPanelProps) {
   const handleSendMessage = async (input: string) => {
     if (!input.trim() || isResponding) return;
 
-    const userMessage: Message = {
-      id: uuidv4(),
+    const userMessage: Omit<Message, 'id'> = {
       role: 'user',
       content: input,
       timestamp: Date.now(),
     };
-    appendMessage(chat.id, userMessage);
+    await appendMessage(chat.id, userMessage);
     setIsResponding(true);
 
     try {
-      const updatedHistory = [...chat.messages, userMessage];
+      // Create a message with a temporary ID for display
+      const displayUserMessage: Message = { ...userMessage, id: 'temp-user' };
+      const updatedHistory = [...chat.messages, displayUserMessage];
       const aiResponseContent = await getAIResponse(updatedHistory);
 
-      const aiMessage: Message = {
-        id: uuidv4(),
+      const aiMessage: Omit<Message, 'id'> = {
         role: 'assistant',
         content: aiResponseContent,
         timestamp: Date.now(),
       };
-      appendMessage(chat.id, aiMessage);
+      await appendMessage(chat.id, aiMessage);
     } catch (error) {
       console.error('Error getting AI response:', error);
       toast({
@@ -47,7 +46,7 @@ export default function ChatPanel({ chat, appendMessage }: ChatPanelProps) {
         title: 'Error',
         description: 'Failed to get a response from the AI. Please try again.',
       });
-      // Optionally remove the user message if AI fails
+      // Optionally handle removing the user message if AI fails
     } finally {
       setIsResponding(false);
     }

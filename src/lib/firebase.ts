@@ -1,7 +1,8 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { initializeApp, getApps, getApp, type FirebaseOptions } from 'firebase/app';
+import { getAuth, connectAuthEmulator } from 'firebase/auth';
+import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 
-const firebaseConfig = {
+const firebaseConfig: FirebaseOptions = {
   apiKey: "AIzaSyChzwHWlQOFkj_aU8j1KwFNw1UqQm6W9F0",
   authDomain: "studio-3422235219-dd152.firebaseapp.com",
   projectId: "studio-3422235219-dd152",
@@ -10,6 +11,19 @@ const firebaseConfig = {
   appId: "1:535414415577:web:eef956eb5c4c063892dec8",
 };
 
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+function initializeFirebase() {
+  const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+  const auth = getAuth(app);
+  const firestore = getFirestore(app);
 
-export const auth = getAuth(app);
+  // Note: App Hosting emulators are not currently supported
+  // if (process.env.NEXT_PUBLIC_EMULATOR_HOST) {
+  //   const host = process.env.NEXT_PUBLIC_EMULATOR_HOST;
+  //   connectAuthEmulator(auth, `http://${host}:9099`, { disableWarnings: true });
+  //   connectFirestoreEmulator(firestore, host, 8080);
+  // }
+
+  return { app, auth, firestore };
+}
+
+export { initializeFirebase };
