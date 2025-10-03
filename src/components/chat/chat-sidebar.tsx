@@ -74,9 +74,12 @@ export default function ChatSidebar({
             <AppLogo className="w-8 h-8 text-primary" />
             <span className="text-lg font-semibold">¡tu-psicologo-ya!</span>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-            <Link href="/" aria-label="Nuevo chat">
-              <Plus />
+        </div>
+        <div className="p-2">
+          <Button asChild className="w-full">
+            <Link href="/">
+              <Plus className="mr-2" />
+              INICIAR NUEVA CONVERSACION
             </Link>
           </Button>
         </div>
