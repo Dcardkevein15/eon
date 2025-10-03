@@ -87,9 +87,13 @@
         "text": {
           "type": "string",
           "description": "The suggested prompt text."
+        },
+        "category": {
+          "type": "string",
+          "description": "The category of the suggestion (e.g., ansiedad, estrés)."
         }
       },
-      "required": ["text"]
+      "required": ["text", "category"]
     }
   },
   "auth": {

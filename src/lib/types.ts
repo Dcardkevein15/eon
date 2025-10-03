@@ -20,4 +20,5 @@ export type Chat = {
 
 export type PromptSuggestion = {
   text: string;
+  category: string;
 }

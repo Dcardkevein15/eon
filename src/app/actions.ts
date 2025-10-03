@@ -1,7 +1,7 @@
 'use server';
 
 import { ai } from '@/ai/genkit';
-import type { Message } from '@/lib/types';
+import type { Message, PromptSuggestion } from '@/lib/types';
 import { z } from 'zod';
 import { smartComposeMessage } from '@/ai/flows/smart-compose-message';
 import { getInitialPrompts } from '@/ai/flows/initial-prompt-suggestion';
@@ -60,7 +60,7 @@ export async function getSuggestedPrompts() {
   }
 }
 
-export async function getSuggestions(): Promise<string[]> {
+export async function getSuggestions(): Promise<PromptSuggestion[]> {
   try {
     const suggestionsCollection = collection(firestore, 'promptSuggestions');
     const snapshot = await getDocs(suggestionsCollection);
@@ -70,7 +70,7 @@ export async function getSuggestions(): Promise<string[]> {
       return SUGGESTIONS_FALLBACK;
     }
     
-    const suggestions = snapshot.docs.map(doc => doc.data().text as string);
+    const suggestions = snapshot.docs.map(doc => doc.data() as PromptSuggestion);
     return suggestions;
 
   } catch (error) {
