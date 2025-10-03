@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Plus, MessageSquare, Trash2 } from 'lucide-react';
+import { Plus, MessageSquare, Trash2, History } from 'lucide-react';
 import {
   SidebarContent,
   SidebarHeader,
@@ -84,15 +84,21 @@ export default function ChatSidebar({
           </Button>
         </div>
       </SidebarHeader>
+      <div className='px-4 pt-4 pb-2'>
+          <h2 className='text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2'>
+            <History className="h-4 w-4" />
+            Historial
+          </h2>
+      </div>
       <SidebarContent className="flex-1">
         <ScrollArea className="h-full p-2">
-          {isLoading ? (
+          {isLoading && !isClient ? (
             <div className="space-y-2">
               <SidebarMenuSkeleton showIcon />
               <SidebarMenuSkeleton showIcon />
               <SidebarMenuSkeleton showIcon />
             </div>
-          ) : chats.length > 0 ? (
+          ) : isClient && chats.length > 0 ? (
             <SidebarMenu>
               {chats.map((chat) => (
                 <SidebarMenuItem key={chat.id}>
@@ -101,10 +107,10 @@ export default function ChatSidebar({
                     isActive={activeChatId === chat.id}
                     className="h-auto py-2"
                   >
-                    <Link href={chat.path} className="flex flex-col items-start">
-                      <span className="truncate max-w-full">{chat.title}</span>
+                    <Link href={chat.path} className="flex flex-col items-start w-full min-w-0">
+                      <span className="truncate max-w-full block">{chat.title}</span>
                       <span className="text-xs text-muted-foreground">
-                        {isClient ? getFormattedDate(chat.createdAt) : '...'}
+                        {getFormattedDate(chat.createdAt)}
                       </span>
                     </Link>
                   </SidebarMenuButton>
