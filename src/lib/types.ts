@@ -13,7 +13,7 @@ export type Chat = {
   id:string;
   title: string;
   messages: Message[];
-  createdAt: number;
+  createdAt: any;
   userId: string;
   path: string;
 };

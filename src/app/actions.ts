@@ -21,18 +21,18 @@ export async function getAIResponse(history: Message[]): Promise<string> {
   const validatedHistory = getAIResponseSchema.parse({ history });
 
   const prompt =
-    'You are a helpful and friendly AI assistant named Nimbus. Respond to the user in a conversational manner.\n\n' +
+    'Eres un asistente de IA útil y amigable llamado Nimbus. Responde al usuario de manera conversacional.\n\n' +
     validatedHistory.history
-      .map((m: Message) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
+      .map((m: Message) => `${m.role === 'user' ? 'Usuario' : 'Asistente'}: ${m.content}`)
       .join('\n') +
-    '\nAssistant:';
+    '\nAsistente:';
 
   try {
-    const { text } = await ai.model.generate(prompt);
-    return text();
+    const { text } = await ai.generate({prompt});
+    return text;
   } catch (error) {
     console.error('Error getting AI response:', error);
-    return "Sorry, I'm having trouble connecting to my brain right now. Please try again in a moment.";
+    return "Lo siento, estoy teniendo problemas para conectarme a mi cerebro en este momento. Por favor, inténtalo de nuevo en un momento.";
   }
 }
 

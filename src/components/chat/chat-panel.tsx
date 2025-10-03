@@ -44,7 +44,7 @@ export default function ChatPanel({ chat, appendMessage }: ChatPanelProps) {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to get a response from the AI. Please try again.',
+        description: 'No se pudo obtener una respuesta de la IA. Por favor, inténtalo de nuevo.',
       });
       // Optionally handle removing the user message if AI fails
     } finally {

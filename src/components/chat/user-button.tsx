@@ -25,7 +25,7 @@ export default function UserButton() {
     return (
       <Button onClick={signInWithGoogle} className="w-full">
         <LogIn className="mr-2 h-4 w-4" />
-        Sign in with Google
+        Iniciar sesión con Google
       </Button>
     );
   }
@@ -42,8 +42,8 @@ export default function UserButton() {
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
-              <span className="font-medium truncate">{user?.displayName ?? 'User'}</span>
-              <span className="text-xs text-muted-foreground truncate">{user?.email ?? 'Guest'}</span>
+              <span className="font-medium truncate">{user?.displayName ?? 'Usuario'}</span>
+              <span className="text-xs text-muted-foreground truncate">{user?.email ?? 'Invitado'}</span>
             </div>
           </div>
         </Button>
@@ -58,7 +58,7 @@ export default function UserButton() {
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={signOut}>
           <LogOut className="mr-2 h-4 w-4" />
-          <span>Log out</span>
+          <span>Cerrar sesión</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

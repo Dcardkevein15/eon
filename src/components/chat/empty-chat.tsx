@@ -30,16 +30,16 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
     <div className="flex flex-col items-center justify-center h-full p-4">
       <div className="max-w-2xl w-full text-center">
         <NimbusChatLogo className="w-20 h-20 mx-auto text-primary" />
-        <h1 className="text-4xl font-bold mt-4">Welcome to NimbusChat</h1>
+        <h1 className="text-4xl font-bold mt-4">Bienvenido a NimbusChat</h1>
         <p className="text-muted-foreground mt-2">
-          Your friendly AI assistant. Start a conversation or try one of the suggestions below.
+          Tu amigable asistente de IA. Inicia una conversación o prueba una de las siguientes sugerencias.
         </p>
         
         <Card className="mt-8 text-left">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-accent" />
-              <span>Get Started</span>
+              <span>Para empezar</span>
             </CardTitle>
           </CardHeader>
           <CardContent>

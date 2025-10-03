@@ -32,6 +32,7 @@ import { cn } from '@/lib/utils';
 import { NimbusChatLogo } from '@/components/logo';
 import UserButton from '@/components/chat/user-button';
 import { formatDistanceToNow } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 interface ChatSidebarProps {
   chats: Chat[];
@@ -57,7 +58,7 @@ export default function ChatSidebar({
             <span className="text-lg font-semibold">NimbusChat</span>
           </div>
           <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-            <Link href="/" aria-label="New chat">
+            <Link href="/" aria-label="Nuevo chat">
               <Plus />
             </Link>
           </Button>
@@ -83,7 +84,7 @@ export default function ChatSidebar({
                     <Link href={chat.path} className="flex flex-col items-start">
                       <span className="truncate max-w-full">{chat.title}</span>
                       <span className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(chat.createdAt, { addSuffix: true })}
+                        {formatDistanceToNow(chat.createdAt, { addSuffix: true, locale: es })}
                       </span>
                     </Link>
                   </SidebarMenuButton>
@@ -95,14 +96,14 @@ export default function ChatSidebar({
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This will permanently delete this chat. This action cannot be undone.
+                          Esto eliminará permanentemente este chat. Esta acción no se puede deshacer.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => removeChat(chat.id)}>Delete</AlertDialogAction>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => removeChat(chat.id)}>Eliminar</AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
@@ -111,7 +112,7 @@ export default function ChatSidebar({
             </SidebarMenu>
           ) : (
             <div className="p-4 text-center text-sm text-muted-foreground">
-              No chats yet. Start a new one!
+              Aún no hay chats. ¡Empieza uno nuevo!
             </div>
           )}
         </ScrollArea>
@@ -123,19 +124,19 @@ export default function ChatSidebar({
             <AlertDialogTrigger asChild>
               <Button variant="ghost" className="w-full justify-start">
                 <Trash2 className="mr-2 h-4 w-4" />
-                Clear conversations
+                Limpiar conversaciones
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will permanently delete all your chat conversations. This action cannot be undone.
+                  Esto eliminará permanentemente todas tus conversaciones de chat. Esta acción no se puede deshacer.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={clearChats}>Clear all</AlertDialogAction>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={clearChats}>Limpiar todo</AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>

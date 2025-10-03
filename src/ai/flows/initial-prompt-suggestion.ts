@@ -11,7 +11,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const InitialPromptsOutputSchema = z.object({
-  prompts: z.array(z.string()).describe('A list of suggested prompts to get the user started.'),
+  prompts: z.array(z.string()).describe('Una lista de sugerencias de prompts para que el usuario pueda empezar.'),
 });
 
 export type InitialPromptsOutput = z.infer<typeof InitialPromptsOutputSchema>;
@@ -34,28 +34,28 @@ const initialPromptSuggestionFlow = ai.defineFlow(
 const initialPromptSuggestionPrompt = ai.definePrompt({
   name: 'initialPromptSuggestionPrompt',
   output: {schema: InitialPromptsOutputSchema},
-  prompt: `You are a helpful AI assistant. Generate a list of diverse and engaging prompts that new users can use to explore the capabilities of this AI chat application.
+  prompt: `Eres un asistente de IA útil. Genera una lista de prompts diversos y atractivos que los nuevos usuarios pueden usar para explorar las capacidades de esta aplicación de chat de IA.
 
-Focus on suggesting prompts that showcase a range of features and use cases, such as creative writing, problem-solving, information retrieval, and general conversation. The prompts should be clear, concise, and easy to understand.
+Concéntrate en sugerir prompts que muestren una variedad de características y casos de uso, como escritura creativa, resolución de problemas, recuperación de información y conversación general. Los prompts deben ser claros, concisos y fáciles de entender.
 
-Return the prompts as a JSON array of strings.
+Devuelve los prompts como un array JSON de strings.
 
-Example:
+Ejemplo:
 {
   "prompts": [
-    "Write a short poem about the ocean.",
-    "Summarize the plot of Hamlet.",
-    "What are the benefits of meditation?",
-    "Tell me a joke.",
-    "Compose a haiku about autumn leaves",
-    "Explain the theory of relativity in simple terms",
-    "Give me five different ideas for healthy breakfasts",
-    "Write a fictional story about a time traveler",
-    "Translate 'Hello, how are you?' into Spanish",
-    "List the chemical elements of the periodic table"
+    "Escribe un poema corto sobre el océano.",
+    "Resume la trama de Hamlet.",
+    "¿Cuáles son los beneficios de la meditación?",
+    "Cuéntame un chiste.",
+    "Compón un haiku sobre las hojas de otoño",
+    "Explica la teoría de la relatividad en términos simples",
+    "Dame cinco ideas diferentes para desayunos saludables",
+    "Escribe una historia de ficción sobre un viajero en el tiempo",
+    "Traduce 'Hola, ¿cómo estás?' al inglés",
+    "Enumera los elementos químicos de la tabla periódica"
   ]
 }
 
-Ensure the array has at least 5 suggestions.
+Asegúrate de que el array tenga al menos 5 sugerencias.
 `,
 });

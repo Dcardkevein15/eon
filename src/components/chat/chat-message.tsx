@@ -42,7 +42,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
 
       {isUser && authUser && (
         <Avatar className="h-8 w-8">
-          <AvatarImage src={authUser?.photoURL ?? ''} alt={authUser?.displayName ?? 'User'} />
+          <AvatarImage src={authUser?.photoURL ?? ''} alt={authUser?.displayName ?? 'Usuario'} />
           <AvatarFallback>
             <User className="h-5 w-5" />
           </AvatarFallback>

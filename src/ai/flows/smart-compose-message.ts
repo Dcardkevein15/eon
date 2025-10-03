@@ -14,12 +14,12 @@ import {z} from 'genkit';
 const SmartComposeMessageInputSchema = z.object({
   conversationHistory: z
     .string()
-    .describe("The history of the conversation so far."),
+    .describe("El historial de la conversación hasta ahora."),
 });
 export type SmartComposeMessageInput = z.infer<typeof SmartComposeMessageInputSchema>;
 
 const SmartComposeMessageOutputSchema = z.object({
-  suggestions: z.array(z.string()).describe('Suggested next messages.'),
+  suggestions: z.array(z.string()).describe('Sugerencias de próximos mensajes.'),
 });
 export type SmartComposeMessageOutput = z.infer<typeof SmartComposeMessageOutputSchema>;
 
@@ -33,9 +33,9 @@ const prompt = ai.definePrompt({
   name: 'smartComposeMessagePrompt',
   input: {schema: SmartComposeMessageInputSchema},
   output: {schema: SmartComposeMessageOutputSchema},
-  prompt: `Given the following conversation history, suggest three possible next messages the user might want to send. Return the suggestions as a JSON array of strings.
+  prompt: `Dado el siguiente historial de conversación, sugiere tres posibles mensajes que el usuario podría querer enviar a continuación. Devuelve las sugerencias como un array JSON de strings.
 
-Conversation History:
+Historial de Conversación:
 {{conversationHistory}}`,
 });
 

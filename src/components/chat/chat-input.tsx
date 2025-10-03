@@ -17,7 +17,7 @@ import { getSmartComposeSuggestions } from '@/app/actions';
 import type { Message } from '@/lib/types';
 
 const chatSchema = z.object({
-  message: z.string().min(1, 'Message cannot be empty'),
+  message: z.string().min(1, 'El mensaje no puede estar vacío'),
 });
 
 type ChatFormValues = z.infer<typeof chatSchema>;
@@ -83,7 +83,7 @@ export default function ChatInput({ onSendMessage, isLoading, chatHistory }: Cha
         <div className="flex flex-wrap gap-2">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Sparkles className="w-4 h-4 text-accent" />
-            Suggestions:
+            Sugerencias:
           </div>
           {suggestions.map((s, i) => (
             <Button
@@ -112,7 +112,7 @@ export default function ChatInput({ onSendMessage, isLoading, chatHistory }: Cha
                   <Textarea
                     {...field}
                     ref={textareaRef}
-                    placeholder="Ask Nimbus anything..."
+                    placeholder="Pregúntale lo que sea a Nimbus..."
                     className="pr-16 resize-none max-h-40"
                     onKeyDown={handleKeyDown}
                     rows={1}
@@ -125,11 +125,11 @@ export default function ChatInput({ onSendMessage, isLoading, chatHistory }: Cha
             <p className="text-xs text-muted-foreground hidden md:block">
               <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
                 <CornerDownLeft className="h-3 w-3" />
-              </kbd> for new line
+              </kbd> para nueva línea
             </p>
             <Button type="submit" size="icon" disabled={isLoading}>
               <Send className="w-4 h-4" />
-              <span className="sr-only">Send message</span>
+              <span className="sr-only">Enviar mensaje</span>
             </Button>
           </div>
         </form>
