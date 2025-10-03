@@ -17,3 +17,7 @@ export type Chat = {
   userId: string;
   path: string;
 };
+
+export type PromptSuggestion = {
+  text: string;
+}

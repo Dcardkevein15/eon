@@ -78,6 +78,18 @@
         }
       },
       "required": ["role", "content", "timestamp"]
+    },
+    "promptSuggestion": {
+      "title": "Prompt Suggestion",
+      "description": "A suggestion for a conversation starter.",
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "The suggested prompt text."
+        }
+      },
+      "required": ["text"]
     }
   },
   "auth": {
@@ -95,6 +107,12 @@
         "$ref": "#/entities/chat"
       },
       "description": "Chat sessions for a user."
+    },
+    "/promptSuggestions": {
+      "schema": {
+        "$ref": "#/entities/promptSuggestion"
+      },
+      "description": "A pool of suggestions for starting a conversation."
     }
   }
 }
