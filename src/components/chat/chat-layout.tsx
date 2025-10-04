@@ -156,7 +156,7 @@ export default function ChatLayout({ chatId }: ChatLayoutProps) {
           />
         </Sidebar>
         <SidebarInset>
-          {activeChat ? (
+          {chatId && activeChat ? (
             <ChatPanel
               chat={activeChat}
               appendMessages={appendMessages}

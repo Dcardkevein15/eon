@@ -9,7 +9,7 @@ import ChatInput from './chat-input';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '../ui/button';
 import { PanelLeft } from 'lucide-react';
-import { useSidebar } from '@/components/ui/sidebar';
+import { useSidebar, SidebarTrigger } from '@/components/ui/sidebar';
 
 
 interface ChatPanelProps {
@@ -78,12 +78,7 @@ export default function ChatPanel({ chat, appendMessages, updateChatTitle }: Cha
     <div className="flex flex-col h-full">
        <header className="flex items-center justify-between p-2 md:p-4 border-b">
         <div className="flex items-center gap-2">
-          {isMobile && (
-            <Button variant="ghost" size="icon" onClick={toggleSidebar}>
-              <PanelLeft />
-              <span className="sr-only">Toggle Sidebar</span>
-            </Button>
-          )}
+          {isMobile && <SidebarTrigger />}
           <h2 className="text-base md:text-lg font-semibold truncate">{chat.title}</h2>
         </div>
       </header>
