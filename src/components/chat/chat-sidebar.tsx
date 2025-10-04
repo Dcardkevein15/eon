@@ -104,7 +104,7 @@ function ChatSidebar({
                     className="h-auto py-2 flex flex-col items-start w-full justify-start text-left"
                   >
                     <Link href={chat.path} className="w-full min-w-0">
-                      <span className="truncate block w-full">{chat.title}</span>
+                      <span className="truncate block w-[90%]">{chat.title}</span>
                       <span className="text-xs text-muted-foreground block w-full">
                         {getFormattedDate(chat.createdAt)}
                       </span>
