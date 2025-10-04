@@ -21,7 +21,7 @@ export function useCollection<T>(query: Query | undefined) {
   
   const queryMemo = useMemoCompare(query, (prev, next) => {
     // isEqual is a Firestore function to compare queries
-    return prev && next && isEqual(prev, next);
+    return prev && next ? isEqual(prev, next) : prev === next;
   });
 
   useEffect(() => {
