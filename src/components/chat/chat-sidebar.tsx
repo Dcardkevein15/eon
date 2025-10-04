@@ -1,19 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Plus, MessageSquare, Trash2, History } from 'lucide-react';
-import {
-  SidebarContent,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarFooter,
-  SidebarMenuSkeleton,
-  SidebarSeparator,
-} from '@/components/ui/sidebar';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Plus, Trash2, History } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,6 +21,14 @@ import UserButton from '@/components/chat/user-button';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import React, { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+} from '@/components/ui/sidebar';
 
 interface ChatSidebarProps {
   chats: Chat[];
@@ -93,27 +89,27 @@ export default function ChatSidebar({
       <SidebarContent className="flex-1">
         <ScrollArea className="h-full px-2">
           {isLoading ? (
-            <div className="space-y-2">
-              <SidebarMenuSkeleton showIcon />
-              <SidebarMenuSkeleton showIcon />
-              <SidebarMenuSkeleton showIcon />
+            <div className="space-y-2 p-2">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
             </div>
           ) : isClient && chats.length > 0 ? (
-            <SidebarMenu>
+            <ul className="space-y-1 p-2">
               {chats.map((chat) => (
-                <SidebarMenuItem key={chat.id}>
-                  <SidebarMenuButton
+                <li key={chat.id} className="relative group/menu-item">
+                  <Button
                     asChild
-                    isActive={activeChatId === chat.id}
-                    className="h-auto py-2 flex flex-col items-start"
+                    variant={activeChatId === chat.id ? 'secondary' : 'ghost'}
+                    className="h-auto py-2 flex flex-col items-start w-full justify-start text-left"
                   >
                     <Link href={chat.path} className="w-full min-w-0">
-                      <span className="truncate block w-full text-left">{chat.title}</span>
-                      <span className="text-xs text-muted-foreground block w-full text-left">
+                      <span className="truncate block w-full">{chat.title}</span>
+                      <span className="text-xs text-muted-foreground block w-full">
                         {getFormattedDate(chat.createdAt)}
                       </span>
                     </Link>
-                  </SidebarMenuButton>
+                  </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                        <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 opacity-0 group-hover/menu-item:opacity-100">
@@ -133,9 +129,9 @@ export default function ChatSidebar({
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
-                </SidebarMenuItem>
+                </li>
               ))}
-            </SidebarMenu>
+            </ul>
           ) : (
             <div className="p-4 text-center text-sm text-muted-foreground">
               Aún no hay chats. ¡Empieza uno nuevo!
@@ -143,8 +139,7 @@ export default function ChatSidebar({
           )}
         </ScrollArea>
       </SidebarContent>
-      <SidebarSeparator />
-      <SidebarFooter className="p-2">
+      <SidebarFooter>
         {isClient && chats.length > 0 && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
