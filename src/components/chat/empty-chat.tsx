@@ -10,7 +10,7 @@ import { HeartHandshake, MessageCircleHeart, Stethoscope } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { SidebarTrigger, useSidebar } from '../ui/sidebar';
+import { SidebarTrigger } from '../ui/sidebar';
 
 interface EmptyChatProps {
   createChat: (input: string) => void;
@@ -29,7 +29,6 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
 
   const chatInputRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
-  const { open } = useSidebar();
 
   useEffect(() => {
     setIsClient(true);
@@ -109,7 +108,7 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
       <div className="flex flex-col h-full">
         <header className="flex h-14 items-center justify-between p-2 md:p-4 border-b">
           <div className="flex items-center gap-2">
-            {isMobile && !open && <SidebarTrigger />}
+            {isMobile && <SidebarTrigger />}
           </div>
         </header>
         <div className="flex flex-col items-center justify-center flex-1 p-4 text-center">
@@ -131,8 +130,8 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
     <div className="flex flex-col h-full">
        <header className="flex h-14 items-center justify-between p-2 md:p-4 border-b">
         <div className="flex items-center gap-2">
-          {isMobile && !open && <SidebarTrigger />}
-          <h2 className="text-base md:text-lg font-semibold truncate">Nueva Conversación</h2>
+          {isMobile && <SidebarTrigger />}
+          <h2 className="text-base md:text-lg font-semibold truncate">MENÚ</h2>
         </div>
       </header>
       <div className="flex-1 overflow-y-auto p-4">
