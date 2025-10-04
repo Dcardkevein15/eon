@@ -1,12 +1,15 @@
+'use client';
 import {
   Query,
-  collection,
   onSnapshot,
+  isEqual,
 } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
+import { useMemoCompare } from './use-memo-compare';
+
 
 // Re-exporting from provider
-export { useAuth, useFirestore } from './provider';
+export { useAuth, useFirestore, useFirebaseApp } from './provider';
 
 // Collection Hook
 type DocumentWithId<T> = T & { id: string };
@@ -15,9 +18,13 @@ export function useCollection<T>(query: Query | undefined) {
   const [data, setData] = useState<DocumentWithId<T>[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  
+  const queryMemo = useMemoCompare(query, (prev, next) => {
+    return prev && next && isEqual(prev, next);
+  });
 
   useEffect(() => {
-    if (!query) {
+    if (!queryMemo) {
       setData([]);
       setLoading(false);
       return;
@@ -25,7 +32,7 @@ export function useCollection<T>(query: Query | undefined) {
 
     setLoading(true);
     const unsubscribe = onSnapshot(
-      query,
+      queryMemo,
       (snapshot) => {
         const docs = snapshot.docs.map(
           (doc) => ({ ...doc.data(), id: doc.id } as DocumentWithId<T>)
@@ -41,7 +48,7 @@ export function useCollection<T>(query: Query | undefined) {
     );
 
     return () => unsubscribe();
-  }, [query ? query.path : '']);
+  }, [queryMemo]);
 
   return { data, loading, error };
 }

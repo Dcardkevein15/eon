@@ -11,6 +11,7 @@ import {
   updateDoc,
   writeBatch,
   arrayUnion,
+  query,
 } from 'firebase/firestore';
 
 import { useAuth, useFirestore, useCollection } from '@/firebase';
@@ -34,26 +35,32 @@ export default function ChatLayout({ chatId }: ChatLayoutProps) {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const firestore = useFirestore();
-  
-  const chatsCollection = useMemo(() => 
-    user?.uid ? collection(firestore, `users/${user.uid}/chats`) : undefined
-  , [user?.uid, firestore]);
+
+  const chatsQuery = useMemo(
+    () =>
+      user?.uid && firestore
+        ? query(collection(firestore, `users/${user.uid}/chats`))
+        : undefined,
+    [user?.uid, firestore]
+  );
 
   const {
     data: chats,
     loading: chatsLoading,
     error,
-  } = useCollection<Chat>(chatsCollection);
+  } = useCollection<Chat>(chatsQuery);
   const loading = authLoading || chatsLoading;
 
-  const activeChat = useMemo(() => chats?.find((chat) => chat.id === chatId), [chats, chatId]);
+  const activeChat = useMemo(
+    () => chats?.find((chat) => chat.id === chatId),
+    [chats, chatId]
+  );
 
   const createChat = useCallback(
     async (input: string) => {
       if (!user || !firestore) return;
 
       const createdAt = Date.now();
-      const temporaryTitle = input.substring(0, 30) + '...';
 
       const newMessage: Omit<Message, 'id'> = {
         role: 'user',
@@ -65,7 +72,7 @@ export default function ChatLayout({ chatId }: ChatLayoutProps) {
         const newChatRef = await addDoc(
           collection(firestore, `users/${user.uid}/chats`),
           {
-            title: temporaryTitle,
+            title: 'Nuevo Chat', // Temporary title
             userId: user.uid,
             createdAt: serverTimestamp(),
             path: '', // Will be updated below
@@ -78,7 +85,7 @@ export default function ChatLayout({ chatId }: ChatLayoutProps) {
 
         router.push(path);
       } catch (e) {
-        console.error("Error creating chat:", e);
+        console.error('Error creating chat:', e);
       }
     },
     [user, firestore, router]
@@ -87,9 +94,9 @@ export default function ChatLayout({ chatId }: ChatLayoutProps) {
   const appendMessages = useCallback(
     async (chatId: string, messages: Omit<Message, 'id'>[]) => {
       if (!user || !firestore) return;
-      
+
       const chatRef = doc(firestore, `users/${user.uid}/chats`, chatId);
-      
+
       await updateDoc(chatRef, {
         messages: arrayUnion(...messages),
       });
@@ -150,8 +157,8 @@ export default function ChatLayout({ chatId }: ChatLayoutProps) {
         </Sidebar>
         <SidebarInset>
           {activeChat ? (
-            <ChatPanel 
-              chat={activeChat} 
+            <ChatPanel
+              chat={activeChat}
               appendMessages={appendMessages}
               updateChatTitle={updateChatTitle}
             />

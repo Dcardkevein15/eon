@@ -1,13 +1,20 @@
 import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
-import { FirebaseProvider } from '@/firebase/provider';
+import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 export const metadata: Metadata = {
   title: '¡tu-psicologo-ya!',
   description: 'Un asistente virtual profesional para brindar espacios de desahogo y control emocional.',
 };
+
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-body',
+});
 
 export default function RootLayout({
   children,
@@ -16,19 +23,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" suppressHydrationWarning>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body className={cn('font-body antialiased')}>
-        <FirebaseProvider>
+      <body className={cn(inter.variable, 'font-body antialiased')}>
+        <FirebaseClientProvider>
           {children}
           <Toaster />
-        </FirebaseProvider>
+        </FirebaseClientProvider>
       </body>
     </html>
   );

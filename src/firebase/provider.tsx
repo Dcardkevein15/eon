@@ -14,8 +14,17 @@ import {
   type Auth,
 } from 'firebase/auth';
 import { type Firestore } from 'firebase/firestore';
+import { type FirebaseApp } from 'firebase/app';
 import type { User } from '@/lib/types';
-import { auth as firebaseAuth, firestore as firebaseFirestore } from '@/lib/firebase';
+
+
+// Main Firebase Context
+interface FirebaseContextType {
+    auth: Auth;
+    firestore: Firestore;
+    app: FirebaseApp;
+}
+const FirebaseContext = createContext<FirebaseContextType | undefined>(undefined);
 
 // Auth Context
 interface AuthContextType {
@@ -78,39 +87,39 @@ export const useAuth = (): AuthContextType => {
   return context;
 };
 
-
-// Firestore Context
-const FirestoreContext = createContext<Firestore | null>(null);
-
-export function FirestoreProvider({
-  children,
-  firestore,
-}: {
-  children: ReactNode;
-  firestore: Firestore;
-}) {
-  return (
-    <FirestoreContext.Provider value={firestore}>
-      {children}
-    </FirestoreContext.Provider>
-  );
+// Generic Context Hook
+function createFirebaseHook<T>(context: React.Context<T | undefined>): () => T {
+    return () => {
+      const ctx = useContext(context);
+      if (ctx === undefined) {
+        throw new Error('use-context must be used within a provider');
+      }
+      return ctx;
+    };
 }
 
-export const useFirestore = (): Firestore => {
-  const firestore = useContext(FirestoreContext);
-  if (firestore === null) {
-      throw new Error('useFirestore must be used within a FirestoreProvider');
-  }
-  return firestore;
-};
+export const useFirebase = createFirebaseHook(FirebaseContext);
 
-// Firebase Provider
-export function FirebaseProvider({ children }: { children: ReactNode }) {
-  return (
-    <AuthProvider auth={firebaseAuth}>
-      <FirestoreProvider firestore={firebaseFirestore}>
-        {children}
-      </FirestoreProvider>
-    </AuthProvider>
-  );
+export const useFirebaseApp = (): FirebaseApp => useFirebase().app;
+export const useFirestore = (): Firestore => useFirebase().firestore;
+
+
+// Combined Firebase Provider
+export function FirebaseProvider({
+    children,
+    auth,
+    firestore
+}: {
+    children: ReactNode;
+    auth: Auth;
+    firestore: Firestore;
+}) {
+    const app = auth.app;
+    return (
+        <FirebaseContext.Provider value={{ app, auth, firestore }}>
+            <AuthProvider auth={auth}>
+                {children}
+            </AuthProvider>
+        </FirebaseContext.Provider>
+    );
 }
