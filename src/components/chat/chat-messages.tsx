@@ -37,9 +37,9 @@ export default function ChatMessages({ messages, isResponding }: ChatMessagesPro
               </AvatarFallback>
             </Avatar>
             <div className="px-4 py-3 rounded-2xl max-w-xs sm:max-w-md md:max-w-lg lg:max-w-2xl bg-card border rounded-bl-none space-y-2">
-              <Skeleton className="h-4 w-1/4" />
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-4 w-1/4 animate-pulse" />
+              <Skeleton className="h-4 w-3/4 animate-pulse" />
+              <Skeleton className="h-4 w-1/2 animate-pulse" />
             </div>
           </div>
         )}

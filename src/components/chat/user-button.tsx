@@ -23,7 +23,7 @@ export default function UserButton() {
     setIsClient(true);
   }, []);
 
-  if (!isClient || (loading && !user)) {
+  if (!isClient || loading) {
     return (
       <div className="flex items-center gap-2 p-2">
         <Skeleton className="h-10 w-10 rounded-full" />
