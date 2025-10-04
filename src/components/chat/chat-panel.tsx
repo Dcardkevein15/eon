@@ -41,7 +41,7 @@ export default function ChatPanel({ chat, appendMessages, updateChatTitle }: Cha
       const currentMessages = [...chat.messages, userMessage];
 
       // Only generate title if it's the first exchange
-      const isFirstMessage = chat.messages.length === 1;
+      const isFirstMessage = chat.messages.length === 0;
 
       // Get AI response
       const aiResponseContent = await getAIResponse(currentMessages);

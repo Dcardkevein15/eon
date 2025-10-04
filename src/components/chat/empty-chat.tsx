@@ -67,7 +67,7 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
   }, [isClient]);
 
   const selectCategorizedSuggestions = () => {
-    if (suggestionsPool.length > 0) {
+    if (suggestionsPool && suggestionsPool.length > 0) {
       const categories = [...new Set(suggestionsPool.map((s) => s.category))];
       const shuffledCategories = categories.sort(() => 0.5 - Math.random());
       const selectedCategories = shuffledCategories.slice(0, 6);
@@ -86,7 +86,7 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
   };
 
   useEffect(() => {
-    if (suggestionsPool && suggestionsPool.length > 0) {
+    if(suggestionsPool && suggestionsPool.length > 0) {
       selectCategorizedSuggestions();
     }
   }, [suggestionsPool]);
@@ -118,8 +118,8 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center h-full p-4 text-center">
-      <div className="max-w-4xl w-full flex-grow flex flex-col items-center justify-center">
+    <div className="flex flex-col items-center h-full p-4 text-center overflow-y-auto">
+      <div className="max-w-4xl w-full flex-grow flex flex-col items-center justify-center pt-12 md:pt-0">
         <AppLogo className="w-16 h-16 md:w-20 md:h-20 mx-auto text-primary" />
         <h1 className="text-3xl md:text-4xl font-bold mt-4">
           Bienvenido a ¡tu-psicologo-ya!

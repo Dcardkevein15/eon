@@ -55,7 +55,7 @@ export default function UserButton() {
                 <User />
               </AvatarFallback>
             </Avatar>
-            <div className="flex flex-col min-w-0">
+            <div className="flex-col min-w-0 hidden group-data-[state=expanded]:flex">
               <span className="font-medium truncate">{user?.displayName ?? 'Usuario'}</span>
               <span className="text-xs text-muted-foreground truncate">{user?.email ?? 'Invitado'}</span>
             </div>
