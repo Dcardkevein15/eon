@@ -8,6 +8,12 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 export const metadata: Metadata = {
   title: '¡tu-psicologo-ya!',
   description: 'Un asistente virtual profesional para brindar espacios de desahogo y control emocional.',
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
 };
 
 const inter = Inter({
