@@ -7,8 +7,6 @@ import { useToast } from '@/hooks/use-toast';
 import ChatMessages from './chat-messages';
 import ChatInput from './chat-input';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Button } from '../ui/button';
-import { PanelLeft } from 'lucide-react';
 import { useSidebar, SidebarTrigger } from '@/components/ui/sidebar';
 
 
@@ -22,7 +20,7 @@ export default function ChatPanel({ chat, appendMessages, updateChatTitle }: Cha
   const [isResponding, setIsResponding] = useState(false);
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const { toggleSidebar } = useSidebar();
+  const { open } = useSidebar();
 
 
   const handleSendMessage = async (input: string) => {
@@ -76,9 +74,9 @@ export default function ChatPanel({ chat, appendMessages, updateChatTitle }: Cha
 
   return (
     <div className="flex flex-col h-full">
-       <header className="flex items-center justify-between p-2 md:p-4 border-b">
+       <header className="flex h-14 items-center justify-between p-2 md:p-4 border-b">
         <div className="flex items-center gap-2">
-          {isMobile && <SidebarTrigger />}
+          {isMobile && !open && <SidebarTrigger />}
           <h2 className="text-base md:text-lg font-semibold truncate">{chat.title}</h2>
         </div>
       </header>
