@@ -101,10 +101,10 @@ function ChatSidebar({
                   <Button
                     asChild
                     variant={activeChatId === chat.id ? 'secondary' : 'ghost'}
-                    className="h-auto py-2 flex flex-col items-start w-full justify-start text-left"
+                    className="h-auto w-full justify-start text-left"
                   >
-                    <Link href={chat.path} className="w-full min-w-0">
-                      <span className="truncate block w-[90%]">{chat.title}</span>
+                    <Link href={chat.path} className="flex h-full w-full flex-col items-start p-2">
+                      <span className="block truncate">{chat.title}</span>
                       <span className="text-xs text-muted-foreground block w-full">
                         {getFormattedDate(chat.createdAt)}
                       </span>
