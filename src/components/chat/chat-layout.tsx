@@ -52,8 +52,8 @@ export default function ChatLayout({ chatId }: ChatLayoutProps) {
     async (input: string) => {
       if (!user || !firestore) return;
 
-      const title = input.substring(0, 100);
       const createdAt = Date.now();
+      const temporaryTitle = input.substring(0, 30) + '...';
 
       const newMessage: Omit<Message, 'id'> = {
         role: 'user',
@@ -65,7 +65,7 @@ export default function ChatLayout({ chatId }: ChatLayoutProps) {
         const newChatRef = await addDoc(
           collection(firestore, `users/${user.uid}/chats`),
           {
-            title,
+            title: temporaryTitle,
             userId: user.uid,
             createdAt: serverTimestamp(),
             path: '', // Will be updated below
@@ -90,10 +90,18 @@ export default function ChatLayout({ chatId }: ChatLayoutProps) {
       
       const chatRef = doc(firestore, `users/${user.uid}/chats`, chatId);
       
-      // Using arrayUnion is safer for concurrent updates
       await updateDoc(chatRef, {
         messages: arrayUnion(...messages),
       });
+    },
+    [user, firestore]
+  );
+
+  const updateChatTitle = useCallback(
+    async (chatId: string, title: string) => {
+      if (!user || !firestore) return;
+      const chatRef = doc(firestore, `users/${user.uid}/chats`, chatId);
+      await updateDoc(chatRef, { title });
     },
     [user, firestore]
   );
@@ -144,7 +152,8 @@ export default function ChatLayout({ chatId }: ChatLayoutProps) {
           {activeChat ? (
             <ChatPanel 
               chat={activeChat} 
-              appendMessages={appendMessages} 
+              appendMessages={appendMessages}
+              updateChatTitle={updateChatTitle}
             />
           ) : (
             <EmptyChat createChat={createChat} />

@@ -5,6 +5,7 @@ import type { Message, PromptSuggestion } from '@/lib/types';
 import { z } from 'zod';
 import { smartComposeMessage } from '@/ai/flows/smart-compose-message';
 import { getInitialPrompts } from '@/ai/flows/initial-prompt-suggestion';
+import { generateChatTitle as genTitle } from '@/ai/flows/generate-chat-title';
 import { collection, getDocs } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { SUGGESTIONS_FALLBACK } from '@/lib/suggestions-fallback';
@@ -76,5 +77,15 @@ export async function getSuggestions(): Promise<PromptSuggestion[]> {
   } catch (error) {
     console.error("Error fetching suggestions from Firestore:", error);
     return SUGGESTIONS_FALLBACK;
+  }
+}
+
+export async function generateChatTitle(conversationHistory: string): Promise<string> {
+  try {
+    const { title } = await genTitle({ conversationHistory });
+    return title;
+  } catch (error) {
+    console.error('Error generating chat title:', error);
+    return 'Nuevo Chat';
   }
 }

@@ -76,9 +76,9 @@ export default function ChatSidebar({
           </div>
         </div>
         <div className="p-2">
-          <Button asChild className="w-full">
+          <Button asChild className="w-full justify-center">
             <Link href="/">
-              <Plus className="mr-2" />
+              <Plus className="mr-2 h-4 w-4" />
               NUEVA CONVERSACIÓN
             </Link>
           </Button>
@@ -91,8 +91,8 @@ export default function ChatSidebar({
           </h2>
       </div>
       <SidebarContent className="flex-1">
-        <ScrollArea className="h-full p-2">
-          {isLoading && !isClient ? (
+        <ScrollArea className="h-full px-2">
+          {isLoading ? (
             <div className="space-y-2">
               <SidebarMenuSkeleton showIcon />
               <SidebarMenuSkeleton showIcon />
@@ -105,11 +105,11 @@ export default function ChatSidebar({
                   <SidebarMenuButton
                     asChild
                     isActive={activeChatId === chat.id}
-                    className="h-auto py-2"
+                    className="h-auto py-2 flex flex-col items-start"
                   >
-                    <Link href={chat.path} className="flex flex-col items-start w-full min-w-0">
-                      <span className="truncate max-w-full block">{chat.title}</span>
-                      <span className="text-xs text-muted-foreground">
+                    <Link href={chat.path} className="w-full min-w-0">
+                      <span className="truncate block w-full text-left">{chat.title}</span>
+                      <span className="text-xs text-muted-foreground block w-full text-left">
                         {getFormattedDate(chat.createdAt)}
                       </span>
                     </Link>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { Chat, Message } from '@/lib/types';
-import { getAIResponse } from '@/app/actions';
+import { getAIResponse, generateChatTitle } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import ChatMessages from './chat-messages';
 import ChatInput from './chat-input';
@@ -15,9 +15,10 @@ import { useSidebar } from '@/components/ui/sidebar';
 interface ChatPanelProps {
   chat: Chat;
   appendMessages: (chatId: string, messages: Omit<Message, 'id'>[]) => Promise<void>;
+  updateChatTitle: (chatId: string, title: string) => Promise<void>;
 }
 
-export default function ChatPanel({ chat, appendMessages }: ChatPanelProps) {
+export default function ChatPanel({ chat, appendMessages, updateChatTitle }: ChatPanelProps) {
   const [isResponding, setIsResponding] = useState(false);
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -36,17 +37,30 @@ export default function ChatPanel({ chat, appendMessages }: ChatPanelProps) {
     };
   
     try {
-      const historyForAI = [...chat.messages, { ...userMessage, id: 'temp-user-id' }];
-      
-      const aiResponseContent = await getAIResponse(historyForAI);
+      // Optimistically append user message for responsiveness
+      const currentMessages = [...chat.messages, userMessage];
+
+      // Only generate title if it's the first exchange
+      const isFirstMessage = chat.messages.length === 1;
+
+      // Get AI response
+      const aiResponseContent = await getAIResponse(currentMessages);
   
       const aiMessage: Omit<Message, 'id'> = {
         role: 'assistant',
         content: aiResponseContent,
         timestamp: Date.now(),
       };
-  
+      
+      // Append both messages to firestore
       await appendMessages(chat.id, [userMessage, aiMessage]);
+
+      // Generate and update title after the first AI response
+      if (isFirstMessage) {
+        const conversationForTitle = `User: ${input}\nAssistant: ${aiResponseContent}`;
+        const newTitle = await generateChatTitle(conversationForTitle);
+        await updateChatTitle(chat.id, newTitle);
+      }
   
     } catch (error) {
       console.error('Error handling message:', error);
