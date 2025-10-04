@@ -6,13 +6,14 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { User, Sparkles } from 'lucide-react';
 import { useAuth } from '@/firebase';
 import ReactMarkdown from 'react-markdown';
+import { memo } from 'react';
 
 
 interface ChatMessageProps {
   message: Message;
 }
 
-export default function ChatMessage({ message }: ChatMessageProps) {
+function ChatMessage({ message }: ChatMessageProps) {
   const { user: authUser } = useAuth();
   const isUser = message.role === 'user';
 
@@ -53,3 +54,5 @@ export default function ChatMessage({ message }: ChatMessageProps) {
     </div>
   );
 }
+
+export default memo(ChatMessage);

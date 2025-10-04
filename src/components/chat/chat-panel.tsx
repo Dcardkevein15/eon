@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback, memo } from 'react';
 import type { Chat, Message } from '@/lib/types';
 import { getAIResponse, generateChatTitle } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
@@ -16,14 +16,14 @@ interface ChatPanelProps {
   updateChatTitle: (chatId: string, title: string) => Promise<void>;
 }
 
-export default function ChatPanel({ chat, appendMessages, updateChatTitle }: ChatPanelProps) {
+function ChatPanel({ chat, appendMessages, updateChatTitle }: ChatPanelProps) {
   const [isResponding, setIsResponding] = useState(false);
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { open } = useSidebar();
 
 
-  const handleSendMessage = async (input: string) => {
+  const handleSendMessage = useCallback(async (input: string) => {
     if (!input.trim() || isResponding) return;
   
     setIsResponding(true);
@@ -70,13 +70,13 @@ export default function ChatPanel({ chat, appendMessages, updateChatTitle }: Cha
     } finally {
       setIsResponding(false);
     }
-  };
+  }, [chat.id, chat.messages, isResponding, appendMessages, updateChatTitle, toast]);
 
   return (
     <div className="flex flex-col h-full">
        <header className="flex h-14 items-center justify-between p-2 md:p-4 border-b">
         <div className="flex items-center gap-2">
-          {isMobile && !open && <SidebarTrigger />}
+          {isMobile && <SidebarTrigger />}
           <h2 className="text-base md:text-lg font-semibold truncate">{chat.title}</h2>
         </div>
       </header>
@@ -93,3 +93,5 @@ export default function ChatPanel({ chat, appendMessages, updateChatTitle }: Cha
     </div>
   );
 }
+
+export default memo(ChatPanel);

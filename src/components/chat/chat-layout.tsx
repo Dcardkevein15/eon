@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, memo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   collection,
@@ -31,7 +31,7 @@ interface ChatLayoutProps {
   chatId?: string;
 }
 
-export default function ChatLayout({ chatId }: ChatLayoutProps) {
+function ChatLayout({ chatId }: ChatLayoutProps) {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const firestore = useFirestore();
@@ -170,3 +170,6 @@ export default function ChatLayout({ chatId }: ChatLayoutProps) {
     </SidebarProvider>
   );
 }
+
+
+export default memo(ChatLayout);

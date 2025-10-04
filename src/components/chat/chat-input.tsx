@@ -7,6 +7,7 @@ import {
   useCallback,
   forwardRef,
   useImperativeHandle,
+  memo,
 } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -156,4 +157,4 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
 
 ChatInput.displayName = 'ChatInput';
 
-export default ChatInput;
+export default memo(ChatInput);
