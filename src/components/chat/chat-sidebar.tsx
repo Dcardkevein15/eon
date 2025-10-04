@@ -20,7 +20,7 @@ import { AppLogo } from '@/components/logo';
 import UserButton from '@/components/chat/user-button';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -38,7 +38,7 @@ interface ChatSidebarProps {
   clearChats: () => void;
 }
 
-export default function ChatSidebar({
+function ChatSidebar({
   chats,
   activeChatId,
   isLoading,
@@ -167,3 +167,5 @@ export default function ChatSidebar({
     </>
   );
 }
+
+export default memo(ChatSidebar);
