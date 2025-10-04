@@ -8,6 +8,8 @@ import { getSuggestions } from '@/app/actions';
 import type { PromptSuggestion } from '@/lib/types';
 import { HeartHandshake, MessageCircleHeart, Stethoscope } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+
 
 interface EmptyChatProps {
   createChat: (input: string) => void;
@@ -22,6 +24,8 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
   );
   const [displaySuggestions, setDisplaySuggestions] = useState<string[]>([]);
   const [isClient, setIsClient] = useState(false);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(true);
+
   const chatInputRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -30,6 +34,7 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
 
   useEffect(() => {
     const fetchAndCacheSuggestions = async () => {
+      setLoadingSuggestions(true);
       try {
         const cachedData = localStorage.getItem('suggestionsCache');
         const now = new Date().getTime();
@@ -38,6 +43,7 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
           const { pool, fetchedAt } = JSON.parse(cachedData);
           if (pool && Array.isArray(pool) && now - fetchedAt < CACHE_TTL) {
             setSuggestionsPool(pool);
+            setLoadingSuggestions(false);
             return;
           }
         }
@@ -50,6 +56,8 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
         );
       } catch (error) {
         console.error('Failed to fetch or cache suggestions:', error);
+      } finally {
+        setLoadingSuggestions(false);
       }
     };
 
@@ -172,7 +180,18 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
       </div>
 
       <div className="w-full max-w-4xl pb-4 space-y-4" ref={chatInputRef}>
-        {displaySuggestions.length > 0 && (
+        {loadingSuggestions ? (
+           <div>
+            <p className="text-sm text-muted-foreground mb-2">
+              Generando sugerencias...
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+              {[...Array(6)].map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+           </div>
+        ) : displaySuggestions.length > 0 && (
           <div>
             <p className="text-sm text-muted-foreground mb-2">
               Para empezar, puedes probar con:
