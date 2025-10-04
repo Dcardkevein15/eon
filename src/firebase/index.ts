@@ -20,6 +20,7 @@ export function useCollection<T>(query: Query | undefined) {
   const [error, setError] = useState<Error | null>(null);
   
   const queryMemo = useMemoCompare(query, (prev, next) => {
+    // isEqual is a Firestore function to compare queries
     return prev && next && isEqual(prev, next);
   });
 
