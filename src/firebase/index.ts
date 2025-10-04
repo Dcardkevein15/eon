@@ -2,7 +2,6 @@
 import {
   Query,
   onSnapshot,
-  isEqual,
 } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { useMemoCompare } from './use-memo-compare';
@@ -20,8 +19,21 @@ export function useCollection<T>(query: Query | undefined) {
   const [error, setError] = useState<Error | null>(null);
   
   const queryMemo = useMemoCompare(query, (prev, next) => {
-    // isEqual is a Firestore function to compare queries
-    return prev && next ? isEqual(prev, next) : prev === next;
+    // Firestore queries are complex objects. `isEqual` is the official way but is causing issues.
+    // A pragmatic approach for many cases is to compare the query's internal path and constraints.
+    // This is not foolproof for all possible queries, but robust for common cases like the one in this app.
+    return (
+      prev &&
+      next &&
+      // @ts-ignore internal property
+      prev._query.path.isEqual(next._query.path) &&
+      // @ts-ignore internal property
+      JSON.stringify(prev._query.explicitOrderBy) === JSON.stringify(next._query.explicitOrderBy) &&
+      // @ts-ignore internal property
+      JSON.stringify(prev._query.filters) === JSON.stringify(next._query.filters) &&
+      // @ts-ignore internal property
+      prev._query.limit === next._query.limit
+    );
   });
 
   useEffect(() => {
