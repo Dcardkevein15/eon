@@ -221,7 +221,7 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
                     key={i}
                     variant="outline"
                     onClick={() => handleSuggestionClick(s)}
-                    className="text-xs md:text-sm h-auto py-2 whitespace-normal text-center"
+                    className="text-xs md:text-sm h-auto py-3 whitespace-normal text-center"
                   >
                     {s}
                   </Button>
