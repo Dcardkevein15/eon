@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Plus, Trash2, History } from 'lucide-react';
+import { Plus, Trash2, History, Briefcase } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +29,7 @@ import {
   SidebarFooter,
   SidebarHeader,
 } from '@/components/ui/sidebar';
+import { useAuth } from '@/firebase';
 
 interface ChatSidebarProps {
   chats: Chat[];
@@ -46,6 +47,7 @@ function ChatSidebar({
   clearChats
 }: ChatSidebarProps) {
   const [isClient, setIsClient] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     setIsClient(true);
@@ -54,7 +56,6 @@ function ChatSidebar({
   const getFormattedDate = (timestamp: any) => {
     if (!timestamp) return '';
     try {
-      // Check if it's a Firestore Timestamp and has the toDate method
       const date = timestamp && typeof timestamp.toDate === 'function' 
         ? timestamp.toDate() 
         : new Date(timestamp);
@@ -74,13 +75,21 @@ function ChatSidebar({
             <span className="text-lg font-semibold">¡tu-psicologo-ya!</span>
           </div>
         </div>
-        <div className="p-2">
+        <div className="p-2 space-y-2">
           <Button asChild className="w-full justify-center">
             <Link href="/">
               <Plus className="mr-2 h-4 w-4" />
               NUEVA CONVERSACIÓN
             </Link>
           </Button>
+          {user && (
+              <Button asChild variant="outline" className="w-full justify-center">
+                <Link href="/">
+                  <Briefcase className="mr-2 h-4 w-4" />
+                  Marketplace
+                </Link>
+              </Button>
+          )}
         </div>
       </SidebarHeader>
       <div className='px-4 pt-4 pb-2'>
@@ -107,10 +116,12 @@ function ChatSidebar({
                       ? 'bg-sidebar-accent text-sidebar-accent-foreground' 
                       : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                   )}>
+                    <div className="flex-1 min-w-0">
                       <span className="block truncate w-full">{chat.title}</span>
                       <span className="text-xs text-muted-foreground block w-full">
                         {getFormattedDate(chat.createdAt)}
                       </span>
+                    </div>
                   </Link>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
