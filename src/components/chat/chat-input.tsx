@@ -12,7 +12,7 @@ import {
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Send, CornerDownLeft, Sparkles } from 'lucide-react';
+import { Send, CornerDownLeft, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem } from '@/components/ui/form';
@@ -100,23 +100,37 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
 
     return (
       <div className="space-y-4 w-full px-4">
-        {showSuggestions && suggestions.length > 0 && !isLoading && (
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Sparkles className="w-4 h-4 text-accent" />
-              Sugerencias:
-            </div>
-            {suggestions.map((s, i) => (
-              <Button
-                key={i}
-                variant="outline"
-                size="sm"
-                onClick={() => handleSuggestion(s)}
-                className="rounded-full text-xs md:text-sm"
+        {suggestions.length > 0 && !isLoading && (
+          <div className="relative pt-8">
+             <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute top-0 right-0 h-6 w-6"
+                onClick={handleToggleSuggestions}
               >
-                {s}
+                {showSuggestions ? <X className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+                <span className="sr-only">Toggle Suggestions</span>
               </Button>
-            ))}
+            {showSuggestions && (
+               <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Sparkles className="w-4 h-4 text-accent" />
+                  Sugerencias:
+                </div>
+                {suggestions.map((s, i) => (
+                  <Button
+                    key={i}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSuggestion(s)}
+                    className="rounded-full text-xs md:text-sm"
+                  >
+                    {s}
+                  </Button>
+                ))}
+              </div>
+            )}
           </div>
         )}
         <Form {...form}>
@@ -154,19 +168,6 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
              </div>
             </div>
             <div className="flex items-center gap-1 pl-2">
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                        "h-8 w-8 md:h-10 md:w-10",
-                        showSuggestions && "text-accent"
-                    )}
-                    onClick={handleToggleSuggestions}
-                >
-                    <Sparkles className={cn("w-4 h-4", showSuggestions && "fill-current")} />
-                    <span className="sr-only">Toggle Suggestions</span>
-                </Button>
               <Button
                 type="submit"
                 size="icon"
