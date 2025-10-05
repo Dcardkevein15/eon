@@ -23,3 +23,17 @@ export type PromptSuggestion = {
   text: string;
   category: string;
 }
+
+export type Therapist = {
+  id: string;
+  name: string;
+  photoUrl: string;
+  rating: number;
+  reviewsCount: number;
+  specialties: string[];
+  pricePerSession: number;
+  languages: string[];
+  verified: boolean;
+  credentials: string;
+  bio: string;
+};

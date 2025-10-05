@@ -94,6 +94,25 @@
         }
       },
       "required": ["text", "category"]
+    },
+    "therapist": {
+      "title": "Therapist",
+      "description": "A verified therapist on the platform.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the therapist." },
+        "name": { "type": "string", "description": "Therapist's full name." },
+        "photoUrl": { "type": "string", "format": "uri", "description": "URL of the therapist's profile picture." },
+        "rating": { "type": "number", "description": "Average user rating (1-5)." },
+        "reviewsCount": { "type": "number", "description": "Total number of reviews." },
+        "specialties": { "type": "array", "items": { "type": "string" }, "description": "List of therapeutic specialties." },
+        "pricePerSession": { "type": "number", "description": "Price for a standard session." },
+        "languages": { "type": "array", "items": { "type": "string" }, "description": "Languages spoken by the therapist." },
+        "verified": { "type": "boolean", "description": "Whether the therapist's credentials have been verified." },
+        "credentials": { "type": "string", "description": "Summary of credentials (e.g., license number, university)." },
+        "bio": { "type": "string", "description": "A short biography of the therapist." }
+      },
+      "required": ["id", "name", "photoUrl", "specialties", "pricePerSession", "languages", "verified", "credentials", "bio"]
     }
   },
   "auth": {
@@ -117,6 +136,12 @@
         "$ref": "#/entities/promptSuggestion"
       },
       "description": "A pool of suggestions for starting a conversation."
+    },
+    "/therapists/{therapistId}": {
+      "schema": {
+        "$ref": "#/entities/therapist"
+      },
+      "description": "Stores profiles of verified therapists."
     }
   }
 }
