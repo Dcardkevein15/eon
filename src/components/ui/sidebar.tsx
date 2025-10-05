@@ -59,8 +59,8 @@ export function Sidebar({ children }: { children: React.ReactNode }) {
   if (isMobile) {
     return (
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="left" className="w-[300px] p-0 z-50">
-          <div className="flex h-full flex-col">{children}</div>
+        <SheetContent side="left" className="w-[300px] p-0 z-50 flex flex-col">
+          {children}
         </SheetContent>
       </Sheet>
     );
@@ -69,7 +69,7 @@ export function Sidebar({ children }: { children: React.ReactNode }) {
   return (
     <div
       className={cn(
-        'hidden md:flex flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-[width] duration-300',
+        'hidden md:flex flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-[width] duration-300 h-screen',
         open ? 'w-72' : 'w-0'
       )}
     >

@@ -14,7 +14,7 @@ import {
   query,
 } from 'firebase/firestore';
 
-import { useAuth, useFirestore, useCollection } from '@/firebase';
+import { useAuth, useCollection, useFirestore } from '@/firebase';
 import type { Chat, Message } from '@/lib/types';
 import {
   Sidebar,
@@ -156,15 +156,17 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
           />
         </Sidebar>
         <SidebarInset>
-          {chatId && activeChat ? (
-            <ChatPanel
-              chat={activeChat}
-              appendMessages={appendMessages}
-              updateChatTitle={updateChatTitle}
-            />
-          ) : (
-            <EmptyChat createChat={createChat} />
-          )}
+          <div className="h-screen flex flex-col">
+            {chatId && activeChat ? (
+              <ChatPanel
+                chat={activeChat}
+                appendMessages={appendMessages}
+                updateChatTitle={updateChatTitle}
+              />
+            ) : (
+              <EmptyChat createChat={createChat} />
+            )}
+          </div>
         </SidebarInset>
       </div>
     </SidebarProvider>
