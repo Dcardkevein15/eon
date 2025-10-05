@@ -26,6 +26,7 @@ import {
 import ChatSidebar from '@/components/chat/chat-sidebar';
 import ChatPanel from '@/components/chat/chat-panel';
 import EmptyChat from '@/components/chat/empty-chat';
+import { cn } from '@/lib/utils';
 
 interface ChatLayoutProps {
   chatId?: string;
@@ -156,7 +157,7 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
           />
         </Sidebar>
         <SidebarInset>
-          <div className="h-screen flex flex-col">
+          <div className={cn("flex flex-col", chatId && "h-screen")}>
             {chatId && activeChat ? (
               <ChatPanel
                 chat={activeChat}

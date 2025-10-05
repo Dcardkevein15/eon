@@ -78,36 +78,14 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
     createChat(suggestion);
   };
 
-  if (!isClient) {
-    return (
-      <div className="flex flex-col h-full">
-        <header className="flex h-14 items-center justify-between p-2 md:p-4 border-b">
-          <div className="flex items-center gap-2">
-            {isMobile && <SidebarTrigger />}
-            <h2 className="text-base md:text-lg font-semibold truncate">MENÚ</h2>
-          </div>
-        </header>
-        <div className="flex flex-col items-center justify-center flex-1 p-4 text-center">
-          <div className="max-w-4xl w-full flex-grow flex flex-col items-center justify-center">
-            <AppLogo className="w-16 h-16 md:w-20 md:h-20 mx-auto text-primary" />
-            <h1 className="text-3xl md:text-4xl font-bold mt-4">
-              Bienvenido a ¡tu-psicologo-ya!
-            </h1>
-            <p className="text-muted-foreground mt-2 text-sm md:text-base max-w-lg mx-auto">
-              Tu asistente profesional para el desahogo y control emocional.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col h-full">
        <header className="flex h-14 items-center justify-between p-2 md:p-4 border-b">
         <div className="flex items-center gap-2">
           {isMobile && <SidebarTrigger />}
-          <h2 className="text-base md:text-lg font-semibold truncate">MENÚ</h2>
+          <h2 className="text-base md:text-lg font-semibold truncate">
+            {isMobile ? 'MENÚ' : 'Bienvenido'}
+          </h2>
         </div>
       </header>
       <div className="flex-1 overflow-y-auto p-4">
