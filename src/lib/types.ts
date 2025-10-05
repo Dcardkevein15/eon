@@ -1,4 +1,5 @@
 import type { User as FirebaseUser } from 'firebase/auth';
+import type { Timestamp } from 'firebase/firestore';
 
 export type User = FirebaseUser;
 
@@ -13,7 +14,7 @@ export type Chat = {
   id:string;
   title: string;
   messages: Message[];
-  createdAt: any;
+  createdAt: Timestamp | number;
   userId: string;
   path: string;
 };

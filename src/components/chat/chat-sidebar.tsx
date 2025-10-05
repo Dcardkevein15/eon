@@ -54,7 +54,10 @@ function ChatSidebar({
   const getFormattedDate = (timestamp: any) => {
     if (!timestamp) return '';
     try {
-      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      // Check if it's a Firestore Timestamp and has the toDate method
+      const date = timestamp && typeof timestamp.toDate === 'function' 
+        ? timestamp.toDate() 
+        : new Date(timestamp);
       return formatDistanceToNow(date, { addSuffix: true, locale: es });
     } catch (e) {
       console.error("Error formatting date:", e);
