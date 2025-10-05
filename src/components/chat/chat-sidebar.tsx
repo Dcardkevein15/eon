@@ -101,18 +101,17 @@ function ChatSidebar({
             <ul className="space-y-1 p-2">
               {chats.map((chat) => (
                 <li key={chat.id} className="relative group/menu-item">
-                  <Button
-                    asChild
-                    variant={activeChatId === chat.id ? 'secondary' : 'ghost'}
-                    className="h-auto w-full justify-start text-left"
-                  >
-                    <Link href={chat.path} className="flex h-full w-full flex-col items-start p-2 min-w-0">
-                      <span className="block truncate">{chat.title}</span>
+                  <Link href={chat.path} className={cn(
+                    "h-auto w-full justify-start text-left flex flex-col items-start p-2 rounded-md min-w-0",
+                    activeChatId === chat.id 
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground' 
+                      : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                  )}>
+                      <span className="block truncate w-full">{chat.title}</span>
                       <span className="text-xs text-muted-foreground block w-full">
                         {getFormattedDate(chat.createdAt)}
                       </span>
-                    </Link>
-                  </Button>
+                  </Link>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                        <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 opacity-0 group-hover/menu-item:opacity-100">
