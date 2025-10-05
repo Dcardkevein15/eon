@@ -27,6 +27,7 @@ import ChatSidebar from '@/components/chat/chat-sidebar';
 import ChatPanel from '@/components/chat/chat-panel';
 import EmptyChat from '@/components/chat/empty-chat';
 import { cn } from '@/lib/utils';
+import { getAIResponse, generateChatTitle as genTitle } from '@/app/actions';
 
 interface ChatLayoutProps {
   chatId?: string;
@@ -60,30 +61,43 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
   const createChat = useCallback(
     async (input: string) => {
       if (!user || !firestore) return;
-
+  
       const createdAt = Date.now();
-
-      const newMessage: Omit<Message, 'id'> = {
+  
+      const userMessage: Omit<Message, 'id'> = {
         role: 'user',
         content: input,
         timestamp: createdAt,
       };
-
+  
       try {
+        // Get AI response and title in parallel
+        const [aiResponseContent, title] = await Promise.all([
+          getAIResponse([userMessage]),
+          genTitle(`User: ${input}`),
+        ]);
+  
+        const aiMessage: Omit<Message, 'id'> = {
+          role: 'assistant',
+          content: aiResponseContent,
+          timestamp: Date.now(),
+        };
+  
+        // Create new chat with both messages and the generated title
         const newChatRef = await addDoc(
           collection(firestore, `users/${user.uid}/chats`),
           {
-            title: 'Nuevo Chat', // Temporary title
+            title: title || 'Nuevo Chat',
             userId: user.uid,
             createdAt: serverTimestamp(),
             path: '', // Will be updated below
-            messages: [newMessage],
+            messages: [userMessage, aiMessage],
           }
         );
-
+  
         const path = `/c/${newChatRef.id}`;
         await updateDoc(newChatRef, { path });
-
+  
         router.push(path);
       } catch (e) {
         console.error('Error creating chat:', e);
