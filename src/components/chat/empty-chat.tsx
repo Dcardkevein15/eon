@@ -16,13 +16,9 @@ interface EmptyChatProps {
   createChat: (input: string) => void;
 }
 
-const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
-
 export default function EmptyChat({ createChat }: EmptyChatProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const [suggestionsPool, setSuggestionsPool] = useState<PromptSuggestion[]>(
-    []
-  );
+  const [suggestionsPool, setSuggestionsPool] = useState<PromptSuggestion[]>([]);
   const [displaySuggestions, setDisplaySuggestions] = useState<string[]>([]);
   const [isClient, setIsClient] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(true);
@@ -34,48 +30,14 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
     setIsClient(true);
   }, []);
 
-  useEffect(() => {
-    const fetchAndCacheSuggestions = async () => {
-      setLoadingSuggestions(true);
-      try {
-        const cachedData = localStorage.getItem('suggestionsCache');
-        const now = new Date().getTime();
-
-        if (cachedData) {
-          const { pool, fetchedAt } = JSON.parse(cachedData);
-          if (pool && Array.isArray(pool) && now - fetchedAt < CACHE_TTL) {
-            setSuggestionsPool(pool);
-            setLoadingSuggestions(false);
-            return;
-          }
-        }
-
-        const newSuggestions = await getSuggestions();
-        setSuggestionsPool(newSuggestions);
-        localStorage.setItem(
-          'suggestionsCache',
-          JSON.stringify({ pool: newSuggestions, fetchedAt: now })
-        );
-      } catch (error) {
-        console.error('Failed to fetch or cache suggestions:', error);
-      } finally {
-        setLoadingSuggestions(false);
-      }
-    };
-
-    if (isClient) {
-      fetchAndCacheSuggestions();
-    }
-  }, [isClient]);
-
-  const selectCategorizedSuggestions = () => {
-    if (suggestionsPool && suggestionsPool.length > 0) {
-      const categories = [...new Set(suggestionsPool.map((s) => s.category))];
+  const selectCategorizedSuggestions = (pool: PromptSuggestion[]) => {
+    if (pool && pool.length > 0) {
+      const categories = [...new Set(pool.map((s) => s.category))];
       const shuffledCategories = categories.sort(() => 0.5 - Math.random());
       const selectedCategories = shuffledCategories.slice(0, 6);
 
       const newSuggestions = selectedCategories.map((category) => {
-        const suggestionsForCategory = suggestionsPool.filter(
+        const suggestionsForCategory = pool.filter(
           (s) => s.category === category
         );
         return suggestionsForCategory[
@@ -88,15 +50,28 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
   };
 
   useEffect(() => {
-    if(suggestionsPool && suggestionsPool.length > 0) {
-      selectCategorizedSuggestions();
+    const fetchSuggestions = async () => {
+      setLoadingSuggestions(true);
+      try {
+        const newSuggestions = await getSuggestions();
+        setSuggestionsPool(newSuggestions);
+        selectCategorizedSuggestions(newSuggestions);
+      } catch (error) {
+        console.error('Failed to fetch suggestions:', error);
+      } finally {
+        setLoadingSuggestions(false);
+      }
+    };
+
+    if (isClient) {
+      fetchSuggestions();
     }
-  }, [suggestionsPool]);
+  }, [isClient]);
 
   const handleNewConversation = () => {
     chatInputRef.current?.scrollIntoView({ behavior: 'smooth' });
     setTimeout(() => inputRef.current?.focus(), 400);
-    selectCategorizedSuggestions(); // Refresh suggestions when starting a new chat
+    selectCategorizedSuggestions(suggestionsPool); // Refresh suggestions
   };
 
   const handleSuggestionClick = (suggestion: string) => {
@@ -109,6 +84,7 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
         <header className="flex h-14 items-center justify-between p-2 md:p-4 border-b">
           <div className="flex items-center gap-2">
             {isMobile && <SidebarTrigger />}
+            <h2 className="text-base md:text-lg font-semibold truncate">MENÚ</h2>
           </div>
         </header>
         <div className="flex flex-col items-center justify-center flex-1 p-4 text-center">
