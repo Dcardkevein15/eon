@@ -18,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem } from '@/components/ui/form';
 import { getSmartComposeSuggestions } from '@/app/actions';
 import type { Message } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 const chatSchema = z.object({
   message: z.string().min(1, 'El mensaje no puede estar vacío'),
@@ -34,6 +35,7 @@ interface ChatInputProps {
 const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
   ({ onSendMessage, isLoading, chatHistory }, ref) => {
     const [suggestions, setSuggestions] = useState<string[]>([]);
+    const [showSuggestions, setShowSuggestions] = useState(true);
     const localTextareaRef = useRef<HTMLTextAreaElement>(null);
 
     useImperativeHandle(ref, () => localTextareaRef.current as HTMLTextAreaElement);
@@ -66,11 +68,21 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
       setSuggestions(newSuggestions.slice(0, 3));
     }, [chatHistory]);
 
-    useEffect(() => {
-      if (chatHistory.length > 0) {
+
+    const handleToggleSuggestions = () => {
+      const willShow = !showSuggestions;
+      setShowSuggestions(willShow);
+      if (willShow) {
         fetchSuggestions();
       }
-    }, [chatHistory, fetchSuggestions]);
+    };
+
+
+    useEffect(() => {
+      if (chatHistory.length > 0 && showSuggestions) {
+        fetchSuggestions();
+      }
+    }, [chatHistory, showSuggestions, fetchSuggestions]);
 
     const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (event.key === 'Enter' && !event.shiftKey) {
@@ -88,7 +100,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
 
     return (
       <div className="space-y-4 w-full px-4">
-        {suggestions.length > 0 && !isLoading && (
+        {showSuggestions && suggestions.length > 0 && !isLoading && (
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Sparkles className="w-4 h-4 text-accent" />
@@ -110,8 +122,9 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(handleSubmit)}
-            className="relative flex items-end w-full space-x-2"
+            className="relative flex items-end w-full"
           >
+            <div className="flex-1 flex items-end space-x-2">
             <FormField
               control={form.control}
               name="message"
@@ -130,14 +143,30 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
                 </FormItem>
               )}
             />
-            <div className="absolute right-2 bottom-2 flex items-center gap-1">
-              <p className="text-xs text-muted-foreground hidden md:block">
+             <div className="absolute right-14 bottom-2 hidden md:block">
+              <p className="text-xs text-muted-foreground">
                 <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
                   <span className="text-base">⇧</span> +{' '}
                   <CornerDownLeft className="h-3 w-3" />
                 </kbd>{' '}
                 para nueva línea
               </p>
+             </div>
+            </div>
+            <div className="flex items-center gap-1 pl-2">
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                        "h-8 w-8 md:h-10 md:w-10",
+                        showSuggestions && "text-accent"
+                    )}
+                    onClick={handleToggleSuggestions}
+                >
+                    <Sparkles className={cn("w-4 h-4", showSuggestions && "fill-current")} />
+                    <span className="sr-only">Toggle Suggestions</span>
+                </Button>
               <Button
                 type="submit"
                 size="icon"
