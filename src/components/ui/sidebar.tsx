@@ -67,14 +67,14 @@ export function Sidebar({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div
+    <aside
       className={cn(
-        'hidden md:flex flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-[width] duration-300 h-screen',
+        'hidden md:flex flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-[width] duration-300 h-screen fixed top-0 left-0 z-40',
         open ? 'w-72' : 'w-0'
       )}
     >
       {open && children}
-    </div>
+    </aside>
   );
 }
 
@@ -106,7 +106,14 @@ export function SidebarInset({
   children: React.ReactNode;
   className?: string;
 }) {
-  return <main className={cn('flex-1', className)}>{children}</main>;
+  const { open } = useSidebar();
+  const isMobile = useIsMobile();
+
+  return <main className={cn(
+    'flex-1 transition-[margin-left] duration-300',
+    !isMobile && (open ? 'ml-72' : 'ml-0'),
+    className
+  )}>{children}</main>;
 }
 
 // Header
@@ -116,7 +123,7 @@ export const SidebarHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn('flex flex-col p-2', className)}
+    className={cn('flex flex-col', className)}
     {...props}
   />
 ));

@@ -146,7 +146,7 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen bg-background text-foreground">
+      <div className="bg-background text-foreground">
         <Sidebar>
           <ChatSidebar
             chats={chats || []}
@@ -157,7 +157,7 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
           />
         </Sidebar>
         <SidebarInset>
-          <div className={cn("flex flex-col", chatId && "h-screen")}>
+          <div className={cn("flex flex-col", chatId ? "h-screen" : "min-h-screen")}>
             {chatId && activeChat ? (
               <ChatPanel
                 chat={activeChat}
