@@ -1,18 +1,19 @@
 'use client';
 
 import Image from 'next/image';
-import { Star, Languages, BadgeCheck } from 'lucide-react';
+import { Star, Languages, BadgeCheck, Edit } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import type { Therapist } from '@/lib/types';
-import { cn } from '@/lib/utils';
 
 interface TherapistCardProps {
   therapist: Therapist;
+  onEdit: (therapist: Therapist) => void;
+  isAdmin: boolean;
 }
 
-export default function TherapistCard({ therapist }: TherapistCardProps) {
+export default function TherapistCard({ therapist, onEdit, isAdmin }: TherapistCardProps) {
   return (
     <Card className="overflow-hidden transition-shadow hover:shadow-lg">
       <CardContent className="p-4">
@@ -67,6 +68,12 @@ export default function TherapistCard({ therapist }: TherapistCardProps) {
              <div className="mt-4 flex flex-col sm:flex-row gap-2">
               <Button className="flex-1">Ver Perfil</Button>
               <Button variant="outline" className="flex-1">Reservar</Button>
+               {isAdmin && (
+                <Button variant="secondary" size="icon" onClick={() => onEdit(therapist)}>
+                  <Edit className="w-4 h-4" />
+                  <span className="sr-only">Editar</span>
+                </Button>
+              )}
             </div>
           </div>
         </div>

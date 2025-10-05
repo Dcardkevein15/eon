@@ -5,9 +5,11 @@ import TherapistCard from './therapist-card';
 
 interface TherapistListProps {
   therapists: Therapist[];
+  onEdit: (therapist: Therapist) => void;
+  isAdmin: boolean;
 }
 
-export default function TherapistList({ therapists }: TherapistListProps) {
+export default function TherapistList({ therapists, onEdit, isAdmin }: TherapistListProps) {
   if (therapists.length === 0) {
     return (
       <div className="text-center py-12">
@@ -24,7 +26,7 @@ export default function TherapistList({ therapists }: TherapistListProps) {
   return (
     <div className="grid grid-cols-1 gap-4">
       {therapists.map((therapist) => (
-        <TherapistCard key={therapist.id} therapist={therapist} />
+        <TherapistCard key={therapist.id} therapist={therapist} onEdit={onEdit} isAdmin={isAdmin} />
       ))}
     </div>
   );
