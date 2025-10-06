@@ -46,8 +46,8 @@ export default function MarketplacePage() {
       // When opening to edit, convert arrays to comma-separated strings for the form
       const therapistForForm = {
         ...therapist,
-        specialties: Array.isArray(therapist.specialties) ? therapist.specialties.join(', ') : therapist.specialties,
-        languages: Array.isArray(therapist.languages) ? therapist.languages.join(', ') : therapist.languages,
+        specialties: Array.isArray(therapist.specialties) ? therapist.specialties.join(', ') : '',
+        languages: Array.isArray(therapist.languages) ? therapist.languages.join(', ') : '',
       };
       setEditingTherapist(therapistForForm as unknown as Therapist);
     } else {
@@ -100,7 +100,7 @@ export default function MarketplacePage() {
         t.specialties.forEach((s) => specialties.add(s))
       }
     });
-    return Array.from(specialties);
+    return Array.from(specialties).filter(Boolean);
   }, [therapists]);
 
   const allLanguages = useMemo(() => {
@@ -110,13 +110,13 @@ export default function MarketplacePage() {
         t.languages.forEach((l) => languages.add(l))
        }
     });
-    return Array.from(languages);
+    return Array.from(languages).filter(Boolean);
   }, [therapists]);
 
 
   return (
     <SidebarProvider>
-      <div className="flex">
+      <div className="flex h-screen overflow-hidden">
         <Sidebar>
             <ChatSidebar
                 chats={chats || []}
@@ -126,11 +126,11 @@ export default function MarketplacePage() {
                 clearChats={() => {}}
             />
         </Sidebar>
-        <SidebarInset>
-            <main className="flex-1 flex flex-col">
-                <div className='flex-1 flex'>
+        <SidebarInset className="flex-1 flex flex-col">
+            <main className="flex-1 flex flex-col overflow-hidden">
+                <div className='flex-1 flex overflow-hidden'>
                     {/* Filters Sidebar */}
-                    <aside className="w-72 border-r bg-card flex-shrink-0 hidden md:block h-full overflow-y-auto">
+                    <aside className="w-72 border-r bg-card flex-shrink-0 hidden md:block overflow-y-auto">
                         <TherapistFilters
                         specialties={allSpecialties}
                         languages={allLanguages}
