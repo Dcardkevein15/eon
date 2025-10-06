@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
-import { THERAPISTS_DATA } from '@/lib/placeholder-data';
 import type { Therapist } from '@/lib/types';
 import TherapistFilters from '@/components/marketplace/therapist-filters';
 import TherapistList from '@/components/marketplace/therapist-list';
@@ -13,6 +12,8 @@ import type { Chat } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
 import TherapistEditModal from '@/components/marketplace/therapist-edit-modal';
+import { THERAPISTS_DATA } from '@/lib/placeholder-data';
+
 
 export default function MarketplacePage() {
   const { user } = useAuth();
@@ -129,8 +130,8 @@ export default function MarketplacePage() {
                 clearChats={() => {}}
             />
         </Sidebar>
-        <SidebarInset className="flex flex-col">
-            <main className="flex flex-1 overflow-hidden">
+        <SidebarInset className="flex flex-col overflow-hidden">
+            <main className="flex-1 grid grid-cols-[auto_1fr] overflow-hidden">
                 {/* Filters Sidebar */}
                 <aside className="w-72 border-r bg-card flex-shrink-0 hidden md:block overflow-y-auto">
                     <TherapistFilters
