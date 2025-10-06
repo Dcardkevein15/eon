@@ -15,7 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
-import { type Therapist } from '@/lib/types';
+import type { Therapist } from '@/lib/types';
 import { useEffect } from 'react';
 import { ScrollArea } from '../ui/scroll-area';
 
@@ -25,6 +25,16 @@ interface TherapistEditModalProps {
   onClose: () => void;
   onSave: (data: Therapist) => void;
 }
+
+// Helper to safely convert a value to an array of strings
+const toArray = (value: string | string[] | undefined): string[] => {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string' && value.trim() !== '') {
+    return value.split(',').map(s => s.trim());
+  }
+  return [];
+};
+
 
 export default function TherapistEditModal({
   therapist,
@@ -68,9 +78,14 @@ export default function TherapistEditModal({
     }
   }, [therapist, isOpen, reset]);
 
-  const onSubmit = (data: Therapist) => {
-    // In a real app, you might handle file uploads for photoUrl and KYC docs here
-    onSave(data);
+  const onSubmit = (data: any) => {
+    // Convert comma-separated strings back to arrays before saving
+    const processedData = {
+      ...data,
+      specialties: toArray(data.specialties),
+      languages: toArray(data.languages),
+    };
+    onSave(processedData);
   };
 
   return (
@@ -112,14 +127,14 @@ export default function TherapistEditModal({
                   <Label htmlFor="specialties" className="text-right">
                     Especialidades
                   </Label>
-                  <Input id="specialties" {...register('specialties')} placeholder="Ansiedad, Depresión,..." className="col-span-3" />
+                  <Input id="specialties" {...register('specialties' as any)} placeholder="Ansiedad, Depresión,..." className="col-span-3" />
                    <p className="col-span-3 col-start-2 text-xs text-muted-foreground">Valores separados por coma.</p>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="languages" className="text-right">
                     Idiomas
                   </Label>
-                  <Input id="languages" {...register('languages')} placeholder="Español, Inglés,..." className="col-span-3" />
+                  <Input id="languages" {...register('languages' as any)} placeholder="Español, Inglés,..." className="col-span-3" />
                    <p className="col-span-3 col-start-2 text-xs text-muted-foreground">Valores separados por coma.</p>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">

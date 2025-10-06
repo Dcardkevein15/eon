@@ -5,7 +5,7 @@ import { THERAPISTS_DATA } from '@/lib/placeholder-data';
 import type { Therapist } from '@/lib/types';
 import TherapistFilters from '@/components/marketplace/therapist-filters';
 import TherapistList from '@/components/marketplace/therapist-list';
-import { Sidebar, SidebarContent, SidebarHeader, SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { Sidebar, SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import ChatSidebar from '@/components/chat/chat-sidebar';
 import { useAuth, useCollection, useFirestore } from '@/firebase';
 import { collection, query } from 'firebase/firestore';
@@ -42,7 +42,17 @@ export default function MarketplacePage() {
   };
 
   const openEditModal = (therapist: Therapist | 'new') => {
-    setEditingTherapist(therapist);
+    if (therapist !== 'new') {
+      // When opening to edit, convert arrays to comma-separated strings for the form
+      const therapistForForm = {
+        ...therapist,
+        specialties: Array.isArray(therapist.specialties) ? therapist.specialties.join(', ') : therapist.specialties,
+        languages: Array.isArray(therapist.languages) ? therapist.languages.join(', ') : therapist.languages,
+      };
+      setEditingTherapist(therapistForForm as unknown as Therapist);
+    } else {
+      setEditingTherapist('new');
+    }
   };
 
 
@@ -85,13 +95,21 @@ export default function MarketplacePage() {
 
   const allSpecialties = useMemo(() => {
     const specialties = new Set<string>();
-    therapists.forEach((t) => t.specialties.forEach((s) => specialties.add(s)));
+    therapists.forEach((t) => {
+      if (Array.isArray(t.specialties)) {
+        t.specialties.forEach((s) => specialties.add(s))
+      }
+    });
     return Array.from(specialties);
   }, [therapists]);
 
   const allLanguages = useMemo(() => {
     const languages = new Set<string>();
-    therapists.forEach((t) => t.languages.forEach((l) => languages.add(l)));
+    therapists.forEach((t) => {
+       if (Array.isArray(t.languages)) {
+        t.languages.forEach((l) => languages.add(l))
+       }
+    });
     return Array.from(languages);
   }, [therapists]);
 
