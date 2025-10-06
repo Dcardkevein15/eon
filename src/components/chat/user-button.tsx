@@ -12,16 +12,44 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
-import { LogIn, LogOut, User } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { LogIn, LogOut, User, Camera } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
 
 export default function UserButton() {
   const { user, loading, signInWithGoogle, signOut } = useAuth();
   const [isClient, setIsClient] = useState(false);
+  const [photoURL, setPhotoURL] = useState(user?.photoURL ?? '');
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  useEffect(() => {
+    if (user?.photoURL) {
+      setPhotoURL(user.photoURL);
+    }
+  }, [user?.photoURL]);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        setPhotoURL(result);
+        // In a real app, you would upload the `file` to a storage service (e.g., Firebase Storage)
+        // and then update the user's profile with the new URL.
+        // For example: `updateProfile(user, { photoURL: newImageUrl });`
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
 
   if (!isClient || loading) {
     return (
@@ -45,36 +73,49 @@ export default function UserButton() {
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="w-full justify-start text-left h-auto py-2 px-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={user?.photoURL ?? ''} alt={user?.displayName ?? ''} />
-              <AvatarFallback>
-                <User />
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col min-w-0">
-              <span className="font-medium truncate">{user?.displayName ?? 'Usuario'}</span>
-              <span className="text-xs text-muted-foreground truncate">{user?.email ?? 'Invitado'}</span>
+    <>
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        className="hidden"
+        accept="image/*"
+      />
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="w-full justify-start text-left h-auto py-2 px-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={photoURL ?? ''} alt={user?.displayName ?? ''} />
+                <AvatarFallback>
+                  <User />
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col min-w-0">
+                <span className="font-medium truncate">{user?.displayName ?? 'Usuario'}</span>
+                <span className="text-xs text-muted-foreground truncate">{user?.email ?? 'Invitado'}</span>
+              </div>
             </div>
-          </div>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end" forceMount>
-        <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user?.displayName}</p>
-            <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={signOut}>
-          <LogOut className="mr-2 h-4 w-4" />
-          <span>Cerrar sesión</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-56" align="end" forceMount>
+          <DropdownMenuLabel className="font-normal">
+            <div className="flex flex-col space-y-1">
+              <p className="text-sm font-medium leading-none">{user?.displayName}</p>
+              <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+            </div>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={handleUploadClick}>
+            <Camera className="mr-2 h-4 w-4" />
+            <span>Cambiar foto de perfil</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={signOut}>
+            <LogOut className="mr-2 h-4 w-4" />
+            <span>Cerrar sesión</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
   );
 }
