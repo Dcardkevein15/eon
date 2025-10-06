@@ -77,12 +77,15 @@ function ChatPanel({ chat, appendMessages, updateChatTitle }: ChatPanelProps) {
        <header className="flex h-14 items-center justify-between p-2 md:p-4 border-b">
         <div className="flex items-center gap-2">
           {isMobile && <SidebarTrigger />}
+           <h2 className="text-base md:text-lg font-semibold truncate">
+            {chat.title}
+          </h2>
         </div>
       </header>
       <div className="flex-1 overflow-y-auto">
         <ChatMessages messages={chat.messages} isResponding={isResponding} />
       </div>
-      <div className="p-2 md:p-4 border-t bg-background/80 backdrop-blur-sm">
+      <div className="p-2 md:p-4 border-t bg-background/95 backdrop-blur-sm">
         <ChatInput
           onSendMessage={handleSendMessage}
           isLoading={isResponding}

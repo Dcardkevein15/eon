@@ -71,8 +71,8 @@ function ChatSidebar({
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center justify-between p-2">
           <div className="flex items-center gap-2">
-            <AppLogo className="w-8 h-8 text-primary" />
-            <span className="text-lg font-semibold">¡tu-psicologo-ya!</span>
+            <AppLogo className="w-8 h-8" />
+            <span className="text-lg font-semibold tracking-wider">NIMBUS</span>
           </div>
         </div>
         <div className="p-2 space-y-2">
@@ -83,7 +83,7 @@ function ChatSidebar({
             </Link>
           </Button>
           {user && (
-              <Button asChild variant="outline" className="w-full justify-center">
+              <Button asChild variant="secondary" className="w-full justify-center">
                 <Link href="/marketplace">
                   <Briefcase className="mr-2 h-4 w-4" />
                   Marketplace
@@ -111,13 +111,13 @@ function ChatSidebar({
               {chats.map((chat) => (
                 <li key={chat.id} className="relative group/menu-item">
                   <Link href={chat.path} className={cn(
-                    "h-auto w-full justify-start text-left flex flex-col items-start p-2 rounded-md min-w-0",
+                    "h-auto w-full justify-start text-left flex flex-col items-start p-2 rounded-md min-w-0 transition-colors",
                     activeChatId === chat.id 
                       ? 'bg-sidebar-accent text-sidebar-accent-foreground' 
                       : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                   )}>
                     <div className="flex-1 min-w-0">
-                      <span className="block truncate w-full">{chat.title}</span>
+                      <span className="block truncate w-full font-medium">{chat.title}</span>
                       <span className="text-xs text-muted-foreground block w-full">
                         {getFormattedDate(chat.createdAt)}
                       </span>

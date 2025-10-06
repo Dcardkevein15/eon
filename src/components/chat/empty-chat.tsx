@@ -1,12 +1,21 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { AppLogo } from '@/components/logo';
 import ChatInput from './chat-input';
 import { getSuggestions } from '@/app/actions';
 import type { PromptSuggestion } from '@/lib/types';
-import { HeartHandshake, MessageCircleHeart, Stethoscope } from 'lucide-react';
+import {
+  HeartHandshake,
+  MessageCircleHeart,
+  Stethoscope,
+  Brain,
+  Smile,
+  Bed,
+  Feather,
+  Zap,
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -16,38 +25,27 @@ interface EmptyChatProps {
   createChat: (input: string) => void;
 }
 
+const categoryIcons: { [key: string]: React.ElementType } = {
+  estrés: Zap,
+  motivación: Smile,
+  hábitos: Bed,
+  desahogo: Feather,
+  ansiedad: Brain,
+  default: MessageCircleHeart,
+};
+
+const getIconForCategory = (category: string) => {
+  return categoryIcons[category] || categoryIcons.default;
+};
+
+
 export default function EmptyChat({ createChat }: EmptyChatProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [suggestionsPool, setSuggestionsPool] = useState<PromptSuggestion[]>([]);
-  const [displaySuggestions, setDisplaySuggestions] = useState<string[]>([]);
-  const [isClient, setIsClient] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(true);
 
   const chatInputRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  const selectCategorizedSuggestions = (pool: PromptSuggestion[]) => {
-    if (pool && pool.length > 0) {
-      const categories = [...new Set(pool.map((s) => s.category))];
-      const shuffledCategories = categories.sort(() => 0.5 - Math.random());
-      const selectedCategories = shuffledCategories.slice(0, 6);
-
-      const newSuggestions = selectedCategories.map((category) => {
-        const suggestionsForCategory = pool.filter(
-          (s) => s.category === category
-        );
-        return suggestionsForCategory[
-          Math.floor(Math.random() * suggestionsForCategory.length)
-        ].text;
-      });
-
-      setDisplaySuggestions(newSuggestions);
-    }
-  };
 
   useEffect(() => {
     const fetchSuggestions = async () => {
@@ -55,7 +53,6 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
       try {
         const newSuggestions = await getSuggestions();
         setSuggestionsPool(newSuggestions);
-        selectCategorizedSuggestions(newSuggestions);
       } catch (error) {
         console.error('Failed to fetch suggestions:', error);
       } finally {
@@ -63,15 +60,32 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
       }
     };
 
-    if (isClient) {
-      fetchSuggestions();
+    fetchSuggestions();
+  }, []);
+
+  const displaySuggestions = useMemo(() => {
+    if (!suggestionsPool || suggestionsPool.length === 0) {
+      return [];
     }
-  }, [isClient]);
+    const categories = [...new Set(suggestionsPool.map((s) => s.category))];
+    const shuffledCategories = categories.sort(() => 0.5 - Math.random());
+    const selectedCategories = shuffledCategories.slice(0, 6);
+
+    const newSuggestions = selectedCategories.map((category) => {
+      const suggestionsForCategory = suggestionsPool.filter(
+        (s) => s.category === category
+      );
+      return suggestionsForCategory[
+        Math.floor(Math.random() * suggestionsForCategory.length)
+      ];
+    });
+
+    return newSuggestions;
+  }, [suggestionsPool]);
 
   const handleNewConversation = () => {
     chatInputRef.current?.scrollIntoView({ behavior: 'smooth' });
     setTimeout(() => inputRef.current?.focus(), 400);
-    selectCategorizedSuggestions(suggestionsPool); // Refresh suggestions
   };
 
   const handleSuggestionClick = (suggestion: string) => {
@@ -80,7 +94,7 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
 
   return (
     <div className="flex flex-col h-full">
-       <header className="flex h-14 items-center justify-between p-2 md:p-4 border-b">
+      <header className="flex h-14 items-center justify-between p-2 md:p-4 border-b">
         <div className="flex items-center gap-2">
           {isMobile && <SidebarTrigger />}
           <h2 className="text-base md:text-lg font-semibold truncate">
@@ -91,11 +105,11 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
       <div className="flex-1 overflow-y-auto p-4">
         <div className="flex flex-col items-center text-center">
           <div className="max-w-4xl w-full flex flex-col items-center justify-center pt-12 md:pt-0">
-            <AppLogo className="w-16 h-16 md:w-20 md:h-20 mx-auto text-primary" />
-            <h1 className="text-3xl md:text-4xl font-bold mt-4">
-              Bienvenido a ¡tu-psicologo-ya!
+            <AppLogo className="w-16 h-16 md:w-20 md:h-20 mx-auto" />
+            <h1 className="text-3xl md:text-5xl font-bold tracking-tighter mt-4">
+              Bienvenido a NimbusChat
             </h1>
-            <p className="text-muted-foreground mt-2 text-sm md:text-base max-w-lg mx-auto">
+            <p className="text-muted-foreground mt-2 text-base md:text-lg max-w-xl mx-auto">
               Tu asistente profesional para el desahogo y control emocional.
             </p>
 
@@ -105,11 +119,11 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
           </div>
           <div className="w-full max-w-5xl mx-auto py-12" id="features">
             <div className="grid md:grid-cols-3 gap-6 text-center">
-              <Card className="bg-background/50">
+              <Card className="bg-card/50 border-border/50">
                 <CardHeader>
-                  <CardTitle className="flex items-center justify-center gap-2">
-                    <HeartHandshake className="w-8 h-8 text-primary" />
-                    <span>Espacio de Desahogo</span>
+                  <CardTitle className="flex items-center justify-center gap-3">
+                    <HeartHandshake className="w-7 h-7 text-accent" />
+                    <span className="text-lg">Espacio de Desahogo</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -119,31 +133,29 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
                   </p>
                 </CardContent>
               </Card>
-              <Card className="bg-background/50">
+              <Card className="bg-card/50 border-border/50">
                 <CardHeader>
-                  <CardTitle className="flex items-center justify-center gap-2">
-                    <Stethoscope className="w-8 h-8 text-primary" />
-                    <span>Orientación Profesional</span>
+                  <CardTitle className="flex items-center justify-center gap-3">
+                    <Stethoscope className="w-7 h-7 text-accent" />
+                    <span className="text-lg">Orientación Profesional</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground">
-                    Recibe análisis preliminares y, si es necesario, la
-                    recomendación de contactar a un psicólogo.
+                    Recibe análisis preliminares y recomendaciones de psicólogos.
                   </p>
                 </CardContent>
               </Card>
-              <Card className="bg-background/50">
+              <Card className="bg-card/50 border-border/50">
                 <CardHeader>
-                  <CardTitle className="flex items-center justify-center gap-2">
-                    <MessageCircleHeart className="w-8 h-8 text-primary" />
-                    <span>Respuestas Empáticas</span>
+                  <CardTitle className="flex items-center justify-center gap-3">
+                    <MessageCircleHeart className="w-7 h-7 text-accent" />
+                    <span className="text-lg">Respuestas Empáticas</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground">
-                    Conversa con una IA entrenada para ofrecerte un trato
-                    comprensivo y profesional en todo momento.
+                    Conversa con una IA entrenada para un trato comprensivo y profesional.
                   </p>
                 </CardContent>
               </Card>
@@ -151,35 +163,36 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
           </div>
         </div>
       </div>
-      <div className="p-2 md:p-4 border-t bg-background/80 backdrop-blur-sm" ref={chatInputRef}>
+      <div
+        className="p-2 md:p-4 border-t bg-background/95 backdrop-blur-sm"
+        ref={chatInputRef}
+      >
         <div className="w-full max-w-4xl mx-auto space-y-4">
           {loadingSuggestions ? (
-            <div>
-              <p className="text-sm text-muted-foreground mb-2">
-                Generando sugerencias...
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                {[...Array(6)].map((_, i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
-                ))}
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {[...Array(6)].map((_, i) => (
+                <Skeleton key={i} className="h-20 w-full rounded-lg" />
+              ))}
             </div>
           ) : displaySuggestions.length > 0 && (
             <div>
-              <p className="text-sm text-muted-foreground mb-2">
-                Para empezar, puedes probar con:
+               <p className="text-sm text-muted-foreground mb-2 px-2">
+                O prueba con una de estas sugerencias:
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                {displaySuggestions.map((s, i) => (
-                  <Button
-                    key={i}
-                    variant="outline"
-                    onClick={() => handleSuggestionClick(s)}
-                    className="text-xs md:text-sm h-auto py-3 whitespace-normal text-center"
-                  >
-                    {s}
-                  </Button>
-                ))}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {displaySuggestions.map((suggestion, i) => {
+                  const Icon = getIconForCategory(suggestion.category);
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => handleSuggestionClick(suggestion.text)}
+                      className="p-4 rounded-lg bg-card hover:bg-card/70 border border-border/50 text-left transition-colors flex items-start gap-4"
+                    >
+                      <Icon className="w-5 h-5 text-accent flex-shrink-0 mt-1" />
+                      <span className="text-sm">{suggestion.text}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}

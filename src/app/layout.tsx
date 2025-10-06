@@ -28,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" suppressHydrationWarning>
+    <html lang="es" suppressHydrationWarning className="dark">
       <body className={cn(inter.variable, 'font-body antialiased')}>
         <FirebaseClientProvider>
           {children}

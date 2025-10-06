@@ -25,7 +25,7 @@ function ChatMessage({ message }: ChatMessageProps) {
       )}
     >
       {!isUser && (
-        <Avatar className="h-8 w-8 bg-primary/20 text-primary">
+        <Avatar className="h-8 w-8 bg-accent/20 text-accent">
             <AvatarFallback>
                 <Sparkles className="h-5 w-5" />
             </AvatarFallback>
