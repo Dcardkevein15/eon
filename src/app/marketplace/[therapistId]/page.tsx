@@ -1,9 +1,8 @@
 'use client';
 
 import { THERAPISTS_DATA } from '@/lib/placeholder-data';
-import type { Therapist } from '@/lib/types';
 import Image from 'next/image';
-import { notFound } from 'next/navigation';
+import { notFound, useParams } from 'next/navigation';
 import { Star, BadgeCheck, Languages, BrainCircuit, MessageSquare, CalendarPlus, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,15 +10,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ProfileSection from '@/components/marketplace/profile-section';
 import Link from 'next/link';
 
-type TherapistProfilePageProps = {
-  params: {
-    therapistId: string;
-  };
-};
+export default function TherapistProfilePage() {
+  const params = useParams();
+  const therapistId = params.therapistId as string;
 
-export default function TherapistProfilePage({ params }: TherapistProfilePageProps) {
   // In a real app, you would fetch this data from your API/database
-  const therapist = THERAPISTS_DATA.find((t) => t.id === params.therapistId);
+  const therapist = THERAPISTS_DATA.find((t) => t.id === therapistId);
 
   if (!therapist) {
     notFound();
