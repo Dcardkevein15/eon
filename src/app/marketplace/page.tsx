@@ -47,6 +47,7 @@ export default function MarketplacePage() {
   
   const openEditModal = (therapist: Therapist | 'new') => {
     if (therapist !== 'new') {
+      // Ensure data passed to form is a string for multiselect fields
       const therapistForForm = {
         ...therapist,
         specialties: Array.isArray(therapist.specialties) ? therapist.specialties.join(', ') : therapist.specialties,
@@ -129,8 +130,8 @@ export default function MarketplacePage() {
                 clearChats={() => {}}
             />
         </Sidebar>
-        <SidebarInset className="flex-1 flex flex-col">
-            <main className="flex-1 flex overflow-hidden">
+        <SidebarInset className="flex flex-col">
+            <main className="flex flex-1 overflow-hidden">
                 {/* Filters Sidebar */}
                 <aside className="w-72 border-r bg-card flex-shrink-0 hidden md:block overflow-y-auto">
                     <TherapistFilters
