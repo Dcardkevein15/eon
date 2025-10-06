@@ -97,8 +97,8 @@ export default function MarketplacePage() {
 
 
   return (
-    <div className="flex">
-      <SidebarProvider>
+    <SidebarProvider>
+      <div className="flex">
         <Sidebar>
             <ChatSidebar
                 chats={chats || []}
@@ -109,27 +109,27 @@ export default function MarketplacePage() {
             />
         </Sidebar>
         <SidebarInset>
-            <main className="flex-1 flex flex-col overflow-hidden">
+            <main className="flex-1 flex flex-col">
                 <div className='flex-1 flex'>
                     {/* Filters Sidebar */}
-                    <div className="w-72 border-r bg-card flex-shrink-0 h-full overflow-y-auto">
+                    <aside className="w-72 border-r bg-card flex-shrink-0 hidden md:block h-full overflow-y-auto">
                         <TherapistFilters
                         specialties={allSpecialties}
                         languages={allLanguages}
                         filters={filters}
                         onFilterChange={handleFilterChange}
                         />
-                    </div>
+                    </aside>
             
                     {/* Main content */}
                     <div className="flex-1 overflow-y-auto">
-                        <div className="p-4 sm:p-6">
-                          <div className="flex items-center justify-between mb-4">
-                            <h1 className="text-2xl font-bold tracking-tight">
+                        <div className="p-4 sm:p-6 lg:p-8">
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
                                 Encuentra tu terapeuta ideal
                             </h1>
                             {isAdmin && (
-                                <Button onClick={() => openEditModal('new')}>
+                                <Button onClick={() => openEditModal('new')} className="flex-shrink-0">
                                     <PlusCircle className="mr-2 h-4 w-4" />
                                     Agregar profesional
                                 </Button>
@@ -149,9 +149,7 @@ export default function MarketplacePage() {
             onSave={handleSaveTherapist}
           />
         )}
-      </SidebarProvider>
-    </div>
+      </div>
+    </SidebarProvider>
   );
 }
-
-    

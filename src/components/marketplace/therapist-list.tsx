@@ -24,7 +24,7 @@ export default function TherapistList({ therapists, onEdit, isAdmin }: Therapist
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4">
+    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
       {therapists.map((therapist) => (
         <TherapistCard key={therapist.id} therapist={therapist} onEdit={onEdit} isAdmin={isAdmin} />
       ))}
