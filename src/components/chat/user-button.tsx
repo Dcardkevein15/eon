@@ -12,12 +12,20 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
-import { LogIn, LogOut, User, Camera } from 'lucide-react';
+import { LogIn, LogOut, User, Camera, Loader2 } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
+import { useStorage } from '@/firebase/storage';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { updateProfile } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
 
 export default function UserButton() {
-  const { user, loading, signInWithGoogle, signOut } = useAuth();
+  const { user, loading, signInWithGoogle, signOut, auth } = useAuth();
+  const storage = useStorage();
+  const { toast } = useToast();
+  
   const [isClient, setIsClient] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [photoURL, setPhotoURL] = useState(user?.photoURL ?? '');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -32,18 +40,38 @@ export default function UserButton() {
     }
   }, [user?.photoURL]);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        setPhotoURL(result);
-        // In a real app, you would upload the `file` to a storage service (e.g., Firebase Storage)
-        // and then update the user's profile with the new URL.
-        // For example: `updateProfile(user, { photoURL: newImageUrl });`
-      };
-      reader.readAsDataURL(file);
+    if (!file || !user || !storage) return;
+
+    setIsUploading(true);
+
+    const storageRef = ref(storage, `profile-pictures/${user.uid}/${file.name}`);
+
+    try {
+      const snapshot = await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+
+      if (auth.currentUser) {
+        await updateProfile(auth.currentUser, { photoURL: downloadURL });
+      }
+      
+      setPhotoURL(downloadURL);
+
+      toast({
+        title: '¡Éxito!',
+        description: 'Tu foto de perfil se ha actualizado.',
+      });
+
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'No se pudo subir la imagen. Inténtalo de nuevo.',
+      });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -80,6 +108,7 @@ export default function UserButton() {
         onChange={handleFileChange}
         className="hidden"
         accept="image/*"
+        disabled={isUploading}
       />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -106,9 +135,13 @@ export default function UserButton() {
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleUploadClick}>
-            <Camera className="mr-2 h-4 w-4" />
-            <span>Cambiar foto de perfil</span>
+          <DropdownMenuItem onClick={handleUploadClick} disabled={isUploading}>
+            {isUploading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Camera className="mr-2 h-4 w-4" />
+            )}
+            <span>{isUploading ? 'Subiendo...' : 'Cambiar foto de perfil'}</span>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={signOut}>
             <LogOut className="mr-2 h-4 w-4" />

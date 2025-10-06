@@ -5,33 +5,38 @@ import {
   useEffect,
   useState,
   type ReactNode,
+  useCallback,
 } from 'react';
 import {
   onAuthStateChanged,
   GoogleAuthProvider,
   signInWithPopup,
   signOut as firebaseSignOut,
+  updateProfile as firebaseUpdateProfile,
   type Auth,
+  type User as FirebaseUser,
 } from 'firebase/auth';
 import { type Firestore } from 'firebase/firestore';
+import { type FirebaseStorage } from 'firebase/storage';
 import { type FirebaseApp } from 'firebase/app';
-import type { User } from '@/lib/types';
-
 
 // Main Firebase Context
 interface FirebaseContextType {
     auth: Auth;
     firestore: Firestore;
+    storage: FirebaseStorage;
     app: FirebaseApp;
 }
 const FirebaseContext = createContext<FirebaseContextType | undefined>(undefined);
 
 // Auth Context
 interface AuthContextType {
-  user: User | null;
+  user: FirebaseUser | null;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  updateProfile: (updates: { displayName?: string | null; photoURL?: string | null; }) => Promise<void>;
+  auth: Auth;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -43,7 +48,7 @@ export function AuthProvider({
   children: ReactNode;
   auth: Auth;
 }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -72,8 +77,21 @@ export function AuthProvider({
     }
   };
 
+  const updateProfile = useCallback(async (updates: { displayName?: string | null; photoURL?: string | null; }) => {
+    if (auth.currentUser) {
+      try {
+        await firebaseUpdateProfile(auth.currentUser, updates);
+        // Manually update the user state to trigger a re-render in consumers
+        setUser(auth.currentUser);
+      } catch (error) {
+        console.error('Error updating profile:', error);
+        throw error;
+      }
+    }
+  }, [auth]);
+
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOut, updateProfile, auth }}>
       {children}
     </AuthContext.Provider>
   );
@@ -108,15 +126,17 @@ export const useFirestore = (): Firestore => useFirebase().firestore;
 export function FirebaseProvider({
     children,
     auth,
-    firestore
+    firestore,
+    storage,
 }: {
     children: ReactNode;
     auth: Auth;
     firestore: Firestore;
+    storage: FirebaseStorage;
 }) {
     const app = auth.app;
     return (
-        <FirebaseContext.Provider value={{ app, auth, firestore }}>
+        <FirebaseContext.Provider value={{ app, auth, firestore, storage }}>
             <AuthProvider auth={auth}>
                 {children}
             </AuthProvider>
