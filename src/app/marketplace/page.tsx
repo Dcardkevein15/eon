@@ -47,7 +47,6 @@ export default function MarketplacePage() {
   
   const openEditModal = (therapist: Therapist | 'new') => {
     if (therapist !== 'new') {
-      // Ensure data passed to form is a string for multiselect fields
       const therapistForForm = {
         ...therapist,
         specialties: Array.isArray(therapist.specialties) ? therapist.specialties.join(', ') : therapist.specialties,
@@ -143,7 +142,7 @@ export default function MarketplacePage() {
                 </aside>
         
                 {/* Main content */}
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 flex flex-col overflow-y-auto">
                     <div className="p-4 sm:p-6 lg:p-8">
                       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                         <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
@@ -156,7 +155,7 @@ export default function MarketplacePage() {
                             </Button>
                         )}
                       </div>
-                    <TherapistList therapists={filteredTherapists} onEdit={openEditModal} isAdmin={isAdmin} />
+                      <TherapistList therapists={filteredTherapists} onEdit={openEditModal} isAdmin={isAdmin} />
                     </div>
                 </div>
             </main>
