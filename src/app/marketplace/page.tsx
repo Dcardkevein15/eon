@@ -29,25 +29,28 @@ export default function MarketplacePage() {
   const [editingTherapist, setEditingTherapist] = useState<Therapist | null | 'new'>(null);
 
   const handleSaveTherapist = (therapistData: Therapist) => {
-    // In a real app, this would call a backend API
+    // Convert comma-separated strings back to arrays before saving
+    const processedData = {
+      ...therapistData,
+      specialties: Array.isArray(therapistData.specialties) ? therapistData.specialties : therapistData.specialties.split(',').map(s => s.trim()).filter(Boolean),
+      languages: Array.isArray(therapistData.languages) ? therapistData.languages : therapistData.languages.split(',').map(l => l.trim()).filter(Boolean),
+    };
+
     if (editingTherapist === 'new') {
-      // Create new therapist
-      const newTherapist = { ...therapistData, id: Date.now().toString(), reviewsCount: 0, rating: 0 };
+      const newTherapist = { ...processedData, id: Date.now().toString(), reviewsCount: 0, rating: 0, photoUrl: processedData.photoUrl || 'https://picsum.photos/seed/new-therapist/200/200' };
       setTherapists(prev => [newTherapist, ...prev]);
     } else {
-      // Update existing therapist
-      setTherapists(prev => prev.map(t => t.id === therapistData.id ? therapistData : t));
+      setTherapists(prev => prev.map(t => t.id === processedData.id ? processedData : t));
     }
-    setEditingTherapist(null); // Close modal
+    setEditingTherapist(null);
   };
-
+  
   const openEditModal = (therapist: Therapist | 'new') => {
     if (therapist !== 'new') {
-      // When opening to edit, convert arrays to comma-separated strings for the form
       const therapistForForm = {
         ...therapist,
-        specialties: Array.isArray(therapist.specialties) ? therapist.specialties.join(', ') : '',
-        languages: Array.isArray(therapist.languages) ? therapist.languages.join(', ') : '',
+        specialties: Array.isArray(therapist.specialties) ? therapist.specialties.join(', ') : therapist.specialties,
+        languages: Array.isArray(therapist.languages) ? therapist.languages.join(', ') : therapist.languages,
       };
       setEditingTherapist(therapistForForm as unknown as Therapist);
     } else {
@@ -116,7 +119,7 @@ export default function MarketplacePage() {
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen overflow-hidden">
+      <div className="flex h-screen bg-background">
         <Sidebar>
             <ChatSidebar
                 chats={chats || []}
@@ -127,34 +130,32 @@ export default function MarketplacePage() {
             />
         </Sidebar>
         <SidebarInset className="flex-1 flex flex-col">
-            <main className="flex-1 flex flex-col overflow-hidden">
-                <div className='flex-1 flex overflow-hidden'>
-                    {/* Filters Sidebar */}
-                    <aside className="w-72 border-r bg-card flex-shrink-0 hidden md:block overflow-y-auto">
-                        <TherapistFilters
-                        specialties={allSpecialties}
-                        languages={allLanguages}
-                        filters={filters}
-                        onFilterChange={handleFilterChange}
-                        />
-                    </aside>
-            
-                    {/* Main content */}
-                    <div className="flex-1 overflow-y-auto">
-                        <div className="p-4 sm:p-6 lg:p-8">
-                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-                                Encuentra tu terapeuta ideal
-                            </h1>
-                            {isAdmin && (
-                                <Button onClick={() => openEditModal('new')} className="flex-shrink-0">
-                                    <PlusCircle className="mr-2 h-4 w-4" />
-                                    Agregar profesional
-                                </Button>
-                            )}
-                          </div>
-                        <TherapistList therapists={filteredTherapists} onEdit={openEditModal} isAdmin={isAdmin} />
-                        </div>
+            <main className="flex-1 flex overflow-hidden">
+                {/* Filters Sidebar */}
+                <aside className="w-72 border-r bg-card flex-shrink-0 hidden md:block overflow-y-auto">
+                    <TherapistFilters
+                    specialties={allSpecialties}
+                    languages={allLanguages}
+                    filters={filters}
+                    onFilterChange={handleFilterChange}
+                    />
+                </aside>
+        
+                {/* Main content */}
+                <div className="flex-1 overflow-y-auto">
+                    <div className="p-4 sm:p-6 lg:p-8">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+                            Encuentra tu terapeuta ideal
+                        </h1>
+                        {isAdmin && (
+                            <Button onClick={() => openEditModal('new')} className="flex-shrink-0">
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Agregar profesional
+                            </Button>
+                        )}
+                      </div>
+                    <TherapistList therapists={filteredTherapists} onEdit={openEditModal} isAdmin={isAdmin} />
                     </div>
                 </div>
             </main>
