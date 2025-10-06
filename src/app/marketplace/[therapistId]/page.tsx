@@ -17,9 +17,9 @@ type TherapistProfilePageProps = {
   };
 };
 
-export default function TherapistProfilePage({ params: { therapistId } }: TherapistProfilePageProps) {
+export default function TherapistProfilePage({ params }: TherapistProfilePageProps) {
   // In a real app, you would fetch this data from your API/database
-  const therapist = THERAPISTS_DATA.find((t) => t.id === therapistId);
+  const therapist = THERAPISTS_DATA.find((t) => t.id === params.therapistId);
 
   if (!therapist) {
     notFound();
