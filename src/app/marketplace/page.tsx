@@ -97,7 +97,7 @@ export default function MarketplacePage() {
 
 
   return (
-    <div className="flex h-screen bg-background text-foreground">
+    <div className="flex">
       <SidebarProvider>
         <Sidebar>
             <ChatSidebar
@@ -109,32 +109,34 @@ export default function MarketplacePage() {
             />
         </Sidebar>
         <SidebarInset>
-            <main className="flex-1 flex overflow-hidden">
-                {/* Filters Sidebar */}
-                <div className="w-72 border-r bg-card flex-shrink-0 h-full overflow-y-auto">
-                    <TherapistFilters
-                    specialties={allSpecialties}
-                    languages={allLanguages}
-                    filters={filters}
-                    onFilterChange={handleFilterChange}
-                    />
-                </div>
-        
-                {/* Main content */}
-                <div className="flex-1 overflow-y-auto">
-                    <div className="p-4 sm:p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <h1 className="text-2xl font-bold tracking-tight">
-                            Encuentra tu terapeuta ideal
-                        </h1>
-                        {isAdmin && (
-                            <Button onClick={() => openEditModal('new')}>
-                                <PlusCircle className="mr-2 h-4 w-4" />
-                                Agregar profesional
-                            </Button>
-                        )}
-                      </div>
-                    <TherapistList therapists={filteredTherapists} onEdit={openEditModal} isAdmin={isAdmin} />
+            <main className="flex-1 flex flex-col overflow-hidden">
+                <div className='flex-1 flex'>
+                    {/* Filters Sidebar */}
+                    <div className="w-72 border-r bg-card flex-shrink-0 h-full overflow-y-auto">
+                        <TherapistFilters
+                        specialties={allSpecialties}
+                        languages={allLanguages}
+                        filters={filters}
+                        onFilterChange={handleFilterChange}
+                        />
+                    </div>
+            
+                    {/* Main content */}
+                    <div className="flex-1 overflow-y-auto">
+                        <div className="p-4 sm:p-6">
+                          <div className="flex items-center justify-between mb-4">
+                            <h1 className="text-2xl font-bold tracking-tight">
+                                Encuentra tu terapeuta ideal
+                            </h1>
+                            {isAdmin && (
+                                <Button onClick={() => openEditModal('new')}>
+                                    <PlusCircle className="mr-2 h-4 w-4" />
+                                    Agregar profesional
+                                </Button>
+                            )}
+                          </div>
+                        <TherapistList therapists={filteredTherapists} onEdit={openEditModal} isAdmin={isAdmin} />
+                        </div>
                     </div>
                 </div>
             </main>
@@ -151,3 +153,5 @@ export default function MarketplacePage() {
     </div>
   );
 }
+
+    

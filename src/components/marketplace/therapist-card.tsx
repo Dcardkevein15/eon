@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { Star, Languages, BadgeCheck, Edit } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -66,7 +67,9 @@ export default function TherapistCard({ therapist, onEdit, isAdmin }: TherapistC
                 </div>
             </div>
              <div className="mt-4 flex flex-col sm:flex-row gap-2">
-              <Button className="flex-1">Ver Perfil</Button>
+              <Button asChild className="flex-1">
+                <Link href={`/marketplace/${therapist.id}`}>Ver Perfil</Link>
+              </Button>
               <Button variant="outline" className="flex-1">Reservar</Button>
                {isAdmin && (
                 <Button variant="secondary" size="icon" onClick={() => onEdit(therapist)}>
@@ -81,3 +84,5 @@ export default function TherapistCard({ therapist, onEdit, isAdmin }: TherapistC
     </Card>
   );
 }
+
+    
