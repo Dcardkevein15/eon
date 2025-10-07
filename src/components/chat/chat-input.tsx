@@ -12,13 +12,14 @@ import {
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Send, CornerDownLeft, Sparkles, X } from 'lucide-react';
+import { Send, Sparkles, Paperclip, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem } from '@/components/ui/form';
 import { getSmartComposeSuggestions } from '@/app/actions';
 import type { Message } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 const chatSchema = z.object({
   message: z.string().min(1, 'El mensaje no puede estar vacío'),
@@ -37,6 +38,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
     const [suggestions, setSuggestions] = useState<string[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(true);
     const localTextareaRef = useRef<HTMLTextAreaElement>(null);
+    const [isFocused, setIsFocused] = useState(false);
 
     useImperativeHandle(ref, () => localTextareaRef.current as HTMLTextAreaElement);
 
@@ -44,6 +46,10 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
       resolver: zodResolver(chatSchema),
       defaultValues: { message: '' },
     });
+
+    const messageValue = form.watch('message');
+    const isMessageEmpty = !messageValue || messageValue.trim() === '';
+
 
     const handleSuggestion = (suggestion: string) => {
       if (isLoading) return;
@@ -53,41 +59,33 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
     };
 
     const handleSubmit: SubmitHandler<ChatFormValues> = (data) => {
-      if (isLoading) return;
+      if (isLoading || isMessageEmpty) return;
       onSendMessage(data.message);
       form.reset();
       setSuggestions([]);
     };
 
     const fetchSuggestions = useCallback(async () => {
-      if (chatHistory.length === 0) return;
+      if (chatHistory.length === 0 || !showSuggestions) return;
       const historyString = chatHistory
         .map((m) => `${m.role}: ${m.content}`)
         .join('\n');
       const newSuggestions = await getSmartComposeSuggestions(historyString);
       setSuggestions(newSuggestions.slice(0, 3));
-    }, [chatHistory]);
-
-
-    const handleToggleSuggestions = () => {
-      const willShow = !showSuggestions;
-      setShowSuggestions(willShow);
-      if (willShow) {
-        fetchSuggestions();
-      }
-    };
-
+    }, [chatHistory, showSuggestions]);
 
     useEffect(() => {
-      if (chatHistory.length > 0 && showSuggestions) {
+      if (chatHistory.length > 0) {
         fetchSuggestions();
       }
-    }, [chatHistory, showSuggestions, fetchSuggestions]);
+    }, [chatHistory, fetchSuggestions]);
 
     const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault();
-        form.handleSubmit(handleSubmit)();
+        if (!isMessageEmpty) {
+          form.handleSubmit(handleSubmit)();
+        }
       }
     };
 
@@ -96,91 +94,106 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
         localTextareaRef.current.style.height = 'auto';
         localTextareaRef.current.style.height = `${localTextareaRef.current.scrollHeight}px`;
       }
-    }, [form.watch('message')]);
+    }, [messageValue]);
 
     return (
+      <TooltipProvider delayDuration={200}>
       <div className="w-full max-w-4xl mx-auto space-y-4">
-        {suggestions.length > 0 && !isLoading && (
-          <div className="relative pt-8">
-             <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute top-0 right-0 h-6 w-6"
-                onClick={handleToggleSuggestions}
+        {suggestions.length > 0 && !isLoading && showSuggestions && (
+           <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground w-full">
+              <Sparkles className="w-4 h-4 text-accent flex-shrink-0" />
+              <span>Sugerencias:</span>
+            </div>
+            {suggestions.map((s, i) => (
+              <Button
+                key={i}
+                variant="outline"
+                size="sm"
+                onClick={() => handleSuggestion(s)}
+                className="rounded-full text-xs md:text-sm h-auto whitespace-normal"
               >
-                {showSuggestions ? <X className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
-                <span className="sr-only">Toggle Suggestions</span>
+                {s}
               </Button>
-            {showSuggestions && (
-               <div className="flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground w-full">
-                  <Sparkles className="w-4 h-4 text-accent flex-shrink-0" />
-                  <span>Sugerencias:</span>
-                </div>
-                {suggestions.map((s, i) => (
-                  <Button
-                    key={i}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleSuggestion(s)}
-                    className="rounded-full text-xs md:text-sm h-auto whitespace-normal"
-                  >
-                    {s}
-                  </Button>
-                ))}
-              </div>
-            )}
+            ))}
           </div>
         )}
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(handleSubmit)}
-            className="relative flex items-end w-full"
+            className="w-full"
           >
-            <div className="flex-1 flex items-end space-x-2">
             <FormField
               control={form.control}
               name="message"
               render={({ field }) => (
-                <FormItem className="flex-1">
+                <FormItem>
                   <FormControl>
-                    <Textarea
-                      {...field}
-                      ref={localTextareaRef}
-                      placeholder="Cuéntame cómo te sientes..."
-                      className="pr-12 md:pr-16 resize-none max-h-40 text-sm md:text-base"
-                      onKeyDown={handleKeyDown}
-                      rows={1}
-                    />
+                     <div className={cn(
+                        "relative flex w-full items-end overflow-hidden rounded-2xl border bg-card transition-all",
+                        isFocused ? "ring-2 ring-primary/50" : "ring-0"
+                     )}>
+                        <div className="flex items-center pl-2">
+                           <Tooltip>
+                              <TooltipTrigger asChild>
+                                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => setShowSuggestions(!showSuggestions)}>
+                                    <Sparkles className={cn("h-5 w-5", showSuggestions && "text-accent")} />
+                                    <span className="sr-only">Toggle Suggestions</span>
+                                  </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{showSuggestions ? 'Ocultar' : 'Mostrar'} Sugerencias</p>
+                              </TooltipContent>
+                           </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                                  <Paperclip className="h-5 w-5" />
+                                  <span className="sr-only">Adjuntar archivo</span>
+                                </Button>
+                              </TooltipTrigger>
+                               <TooltipContent>
+                                <p>Adjuntar archivo</p>
+                              </TooltipContent>
+                            </Tooltip>
+                        </div>
+                        <Textarea
+                          {...field}
+                          ref={localTextareaRef}
+                          placeholder="Cuéntame cómo te sientes..."
+                          className="flex-1 resize-none self-center border-none bg-transparent px-3 py-3 text-base shadow-none outline-none ring-0 focus-visible:ring-0 max-h-48"
+                          onKeyDown={handleKeyDown}
+                          onFocus={() => setIsFocused(true)}
+                          onBlur={() => setIsFocused(false)}
+                          rows={1}
+                        />
+                         <div className="flex items-end self-end p-2">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                  type="submit"
+                                  size="icon"
+                                  className="h-9 w-9 shrink-0 rounded-full transition-colors"
+                                  disabled={isLoading || isMessageEmpty}
+                                >
+                                  <Send className="w-4 h-4" />
+                                  <span className="sr-only">Enviar mensaje</span>
+                                </Button>
+                            </TooltipTrigger>
+                             <TooltipContent>
+                                <p>Enviar Mensaje</p>
+                              </TooltipContent>
+                          </Tooltip>
+                         </div>
+                      </div>
                   </FormControl>
                 </FormItem>
               )}
             />
-             <div className="absolute right-14 bottom-2 hidden md:block">
-              <p className="text-xs text-muted-foreground">
-                <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
-                  <span className="text-base">⇧</span> +{' '}
-                  <CornerDownLeft className="h-3 w-3" />
-                </kbd>{' '}
-                para nueva línea
-              </p>
-             </div>
-            </div>
-            <div className="flex items-center gap-1 pl-2">
-              <Button
-                type="submit"
-                size="icon"
-                className="h-8 w-8 md:h-10 md:w-10"
-                disabled={isLoading || !form.formState.isValid}
-              >
-                <Send className="w-4 h-4" />
-                <span className="sr-only">Enviar mensaje</span>
-              </Button>
-            </div>
           </form>
         </Form>
       </div>
+       </TooltipProvider>
     );
   }
 );

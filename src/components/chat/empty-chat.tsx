@@ -167,7 +167,7 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
         </div>
       </div>
       <div
-        className="p-2 md:p-4 border-t bg-background/95 backdrop-blur-sm"
+        className="px-2 py-4 md:px-4 md:py-4 border-t bg-background/95 backdrop-blur-sm"
         ref={chatInputRef}
       >
         <div className="w-full max-w-4xl mx-auto space-y-4">
