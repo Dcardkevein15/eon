@@ -18,17 +18,23 @@ const getAIResponseSchema = z.object({
       role: z.enum(['user', 'assistant']),
       content: z.string(),
       imageUrl: z.string().optional(),
-      timestamp: z.number(),
+      timestamp: z.any(), // Allow any type for timestamp initially
     })
   ),
 });
 
-export async function getAIResponse(history: Omit<Message, 'id'>[]): Promise<string> {
+export async function getAIResponse(history: Message[]): Promise<string> {
   const validatedHistory = getAIResponseSchema.parse({ history });
 
   const systemPrompt = 'Eres ¡tu-psicologo-ya!, un asistente profesional y psicólogo virtual. Tu objetivo es brindar un espacio de desahogo para llevar un control emocional. Basado en la conversación, puedes realizar diagnósticos psicológicos y, si es apropiado, recomendar contactar a un psicólogo profesional. Responde siempre de manera empática, profesional y conversacional. Si el usuario envía una imagen, descríbela y analiza su contenido emocional si es relevante.';
   
-  const messages: Part[] = validatedHistory.history.map(msg => {
+  // Convert Firebase Timestamps to simple numbers (milliseconds) for serialization.
+  const plainHistory = validatedHistory.history.map(msg => ({
+    ...msg,
+    timestamp: msg.timestamp.toMillis(),
+  }));
+
+  const messages: Part[] = plainHistory.map(msg => {
     const content: Part[] = [];
     if (msg.content) {
       content.push({ text: msg.content });
@@ -42,8 +48,7 @@ export async function getAIResponse(history: Omit<Message, 'id'>[]): Promise<str
   try {
     const { text } = await ai.generate({ 
       system: systemPrompt,
-      history: messages.slice(0, -1),
-      prompt: messages[messages.length - 1].content
+      history: messages,
     });
     return text;
   } catch (error) {
