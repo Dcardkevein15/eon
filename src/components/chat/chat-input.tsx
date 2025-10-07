@@ -99,7 +99,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
     }, [form.watch('message')]);
 
     return (
-      <div className="space-y-4 w-full px-4">
+      <div className="w-full max-w-4xl mx-auto space-y-4">
         {suggestions.length > 0 && !isLoading && (
           <div className="relative pt-8">
              <Button
@@ -124,7 +124,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
                     variant="outline"
                     size="sm"
                     onClick={() => handleSuggestion(s)}
-                    className="rounded-full text-xs md:text-sm"
+                    className="rounded-full text-xs md:text-sm h-auto whitespace-normal"
                   >
                     {s}
                   </Button>

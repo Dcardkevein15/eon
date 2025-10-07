@@ -85,7 +85,7 @@ function ChatPanel({ chat, appendMessages, updateChatTitle }: ChatPanelProps) {
       <div className="flex-1 overflow-y-auto">
         <ChatMessages messages={chat.messages} isResponding={isResponding} />
       </div>
-      <div className="py-2 md:py-4 border-t bg-background/95 backdrop-blur-sm">
+      <div className="mt-auto p-2 md:p-4 border-t bg-background/95 backdrop-blur-sm">
         <ChatInput
           onSendMessage={handleSendMessage}
           isLoading={isResponding}
