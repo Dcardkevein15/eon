@@ -38,6 +38,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
     const [suggestions, setSuggestions] = useState<string[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(true);
     const localTextareaRef = useRef<HTMLTextAreaElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [isFocused, setIsFocused] = useState(false);
 
     useImperativeHandle(ref, () => localTextareaRef.current as HTMLTextAreaElement);
@@ -88,6 +89,10 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
         }
       }
     };
+    
+    const handleAttachClick = () => {
+      fileInputRef.current?.click();
+    };
 
     useEffect(() => {
       if (localTextareaRef.current) {
@@ -111,7 +116,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
                 variant="outline"
                 size="sm"
                 onClick={() => handleSuggestion(s)}
-                className="rounded-full text-xs md:text-sm h-auto whitespace-normal"
+                className="rounded-full text-xs md:text-sm whitespace-normal h-auto"
               >
                 {s}
               </Button>
@@ -123,6 +128,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
             onSubmit={form.handleSubmit(handleSubmit)}
             className="w-full"
           >
+             <input type="file" ref={fileInputRef} className="hidden" />
             <FormField
               control={form.control}
               name="message"
@@ -147,7 +153,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
                            </Tooltip>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={handleAttachClick}>
                                   <Paperclip className="h-5 w-5" />
                                   <span className="sr-only">Adjuntar archivo</span>
                                 </Button>
