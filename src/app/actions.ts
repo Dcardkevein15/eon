@@ -18,7 +18,12 @@ const getAIResponseSchema = z.object({
       role: z.enum(['user', 'assistant']),
       content: z.string(),
       imageUrl: z.string().optional(),
-      timestamp: z.any(), // Allow any type for timestamp initially
+      // The timestamp is already serialized by Next.js into a plain object
+      timestamp: z.object({
+        seconds: z.number(),
+        nanoseconds: z.number(),
+      }),
+      id: z.string(), // Keep the ID
     })
   ),
 });
@@ -28,13 +33,7 @@ export async function getAIResponse(history: Message[]): Promise<string> {
 
   const systemPrompt = 'Eres ¡tu-psicologo-ya!, un asistente profesional y psicólogo virtual. Tu objetivo es brindar un espacio de desahogo para llevar un control emocional. Basado en la conversación, puedes realizar diagnósticos psicológicos y, si es apropiado, recomendar contactar a un psicólogo profesional. Responde siempre de manera empática, profesional y conversacional. Si el usuario envía una imagen, descríbela y analiza su contenido emocional si es relevante.';
   
-  // Convert Firebase Timestamps to simple numbers (milliseconds) for serialization.
-  const plainHistory = validatedHistory.history.map(msg => ({
-    ...msg,
-    timestamp: msg.timestamp.toMillis(),
-  }));
-
-  const messages: Part[] = plainHistory.map(msg => {
+  const messages: Part[] = validatedHistory.history.map(msg => {
     const content: Part[] = [];
     if (msg.content) {
       content.push({ text: msg.content });
