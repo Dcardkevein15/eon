@@ -84,14 +84,14 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
 
     return newSuggestions.filter(Boolean);
   }, [suggestionsPool]);
+  
+  const handleSuggestionClick = (suggestion: string) => {
+    createChat(suggestion);
+  };
 
   const handleNewConversation = () => {
     chatInputRef.current?.scrollIntoView({ behavior: 'smooth' });
     setTimeout(() => inputRef.current?.focus(), 400);
-  };
-
-  const handleSuggestionClick = (suggestion: string) => {
-    createChat(suggestion);
   };
 
   return (
@@ -109,7 +109,7 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
           <div className="max-w-4xl w-full flex flex-col items-center justify-center pt-8 md:pt-12">
             <AppLogo className="w-16 h-16 md:w-20 md:h-20 mx-auto" />
             <h1 className="text-4xl md:text-5xl font-bold tracking-tighter mt-4">
-              Tu Espacio Seguro
+            ¡tu-psicologo-ya!
             </h1>
             <p className="text-muted-foreground mt-2 text-base md:text-lg max-w-xl mx-auto">
               Un asistente profesional para el desahogo y control emocional, disponible 24/7.
