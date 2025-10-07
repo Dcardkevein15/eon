@@ -42,10 +42,8 @@ export async function getAIResponse(history: Omit<Message, 'id'>[]): Promise<str
   try {
     const { text } = await ai.generate({ 
       system: systemPrompt,
-      prompt: {
-        role: 'user',
-        content: messages.flatMap(m => m.content),
-      },
+      history: messages.slice(0, -1),
+      prompt: messages[messages.length - 1].content
     });
     return text;
   } catch (error) {
