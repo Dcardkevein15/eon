@@ -56,7 +56,7 @@ function ChatPanel({ chat }: ChatPanelProps) {
 
   const handleSendMessage = useCallback(async (input: string, imageUrl?: string) => {
     if ((!input.trim() && !imageUrl) || isResponding || !messages) return;
-
+  
     const userMessage: Omit<Message, 'id'> = {
       role: 'user',
       content: input,
@@ -66,13 +66,19 @@ function ChatPanel({ chat }: ChatPanelProps) {
     
     await appendMessage(userMessage);
     
-    const currentMessages = [...messages, userMessage];
-
+    const currentMessages: Message[] = [...messages, { ...userMessage, id: 'temp-id' }];
+  
     setIsResponding(true);
-
+  
     try {
+      // Manually convert Timestamps to plain objects before sending to the server action.
+      const plainHistory = currentMessages.map(msg => ({
+        ...msg,
+        timestamp: msg.timestamp.toMillis(),
+      }));
+
       // Get AI response
-      const aiResponseContent = await getAIResponse(currentMessages);
+      const aiResponseContent = await getAIResponse(plainHistory as any);
   
       const aiMessage: Omit<Message, 'id'> = {
         role: 'assistant',
@@ -81,7 +87,7 @@ function ChatPanel({ chat }: ChatPanelProps) {
       };
       
       await appendMessage(aiMessage);
-
+  
     } catch (error) {
       console.error('Error handling message:', error);
       toast({
@@ -100,7 +106,14 @@ function ChatPanel({ chat }: ChatPanelProps) {
         if (messages && messages.length === 1 && messages[0].role === 'user' && !isResponding) {
             setIsResponding(true);
             try {
-                const aiResponseContent = await getAIResponse(messages);
+                // Manually convert Timestamps to plain objects before sending to the server action.
+                const plainHistory = messages.map(msg => ({
+                  ...msg,
+                  timestamp: msg.timestamp.toMillis(),
+                }));
+
+                const aiResponseContent = await getAIResponse(plainHistory as any);
+
                 const aiMessage: Omit<Message, 'id'> = {
                     role: 'assistant',
                     content: aiResponseContent,
