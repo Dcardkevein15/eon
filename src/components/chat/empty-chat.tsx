@@ -31,11 +31,13 @@ const categoryIcons: { [key: string]: React.ElementType } = {
   hábitos: Bed,
   desahogo: Feather,
   ansiedad: Brain,
+  relaciones: HeartHandshake,
+  bienestar: MessageCircleHeart,
   default: MessageCircleHeart,
 };
 
 const getIconForCategory = (category: string) => {
-  return categoryIcons[category] || categoryIcons.default;
+  return categoryIcons[category.toLowerCase()] || categoryIcons.default;
 };
 
 
@@ -80,7 +82,7 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
       ];
     });
 
-    return newSuggestions;
+    return newSuggestions.filter(Boolean);
   }, [suggestionsPool]);
 
   const handleNewConversation = () => {
@@ -97,64 +99,65 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
       <header className="flex h-14 items-center justify-between p-2 md:p-4 border-b">
         <div className="flex items-center gap-2">
           {isMobile && <SidebarTrigger />}
-          <h2 className="text-base md:text-lg font-semibold truncate">
-            {isMobile ? 'MENÚ' : 'Bienvenido'}
+          <h2 className="text-lg font-semibold tracking-wider">
+            {isMobile ? 'MENÚ' : 'Bienvenido a NimbusChat'}
           </h2>
         </div>
       </header>
       <div className="flex-1 overflow-y-auto p-4">
         <div className="flex flex-col items-center text-center">
-          <div className="max-w-4xl w-full flex flex-col items-center justify-center pt-12 md:pt-0">
+          <div className="max-w-4xl w-full flex flex-col items-center justify-center pt-8 md:pt-12">
             <AppLogo className="w-16 h-16 md:w-20 md:h-20 mx-auto" />
-            <h1 className="text-3xl md:text-5xl font-bold tracking-tighter mt-4">
-              Bienvenido a NimbusChat
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tighter mt-4">
+              Tu Espacio Seguro
             </h1>
             <p className="text-muted-foreground mt-2 text-base md:text-lg max-w-xl mx-auto">
-              Tu asistente profesional para el desahogo y control emocional.
+              Un asistente profesional para el desahogo y control emocional, disponible 24/7.
             </p>
 
             <Button size="lg" className="mt-8" onClick={handleNewConversation}>
-              Nueva Conversación
+              <Feather className="mr-2 h-4 w-4" />
+              Empezar a Escribir
             </Button>
           </div>
           <div className="w-full max-w-5xl mx-auto py-12" id="features">
-            <div className="grid md:grid-cols-3 gap-6 text-center">
-              <Card className="bg-card/50 border-border/50">
+             <div className="grid md:grid-cols-3 gap-4 text-left">
+              <Card className="bg-card/50 border-border/50 hover:border-primary/50 transition-colors">
                 <CardHeader>
-                  <CardTitle className="flex items-center justify-center gap-3">
-                    <HeartHandshake className="w-7 h-7 text-accent" />
+                  <CardTitle className="flex items-center gap-3">
+                    <HeartHandshake className="w-6 h-6 text-accent" />
                     <span className="text-lg">Espacio de Desahogo</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     Un lugar seguro y confidencial para expresar tus emociones y
                     pensamientos sin juicios.
                   </p>
                 </CardContent>
               </Card>
-              <Card className="bg-card/50 border-border/50">
+              <Card className="bg-card/50 border-border/50 hover:border-primary/50 transition-colors">
                 <CardHeader>
-                  <CardTitle className="flex items-center justify-center gap-3">
-                    <Stethoscope className="w-7 h-7 text-accent" />
+                  <CardTitle className="flex items-center gap-3">
+                    <Stethoscope className="w-6 h-6 text-accent" />
                     <span className="text-lg">Orientación Profesional</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     Recibe análisis preliminares y recomendaciones de psicólogos.
                   </p>
                 </CardContent>
               </Card>
-              <Card className="bg-card/50 border-border/50">
+              <Card className="bg-card/50 border-border/50 hover:border-primary/50 transition-colors">
                 <CardHeader>
-                  <CardTitle className="flex items-center justify-center gap-3">
-                    <MessageCircleHeart className="w-7 h-7 text-accent" />
+                  <CardTitle className="flex items-center gap-3">
+                    <MessageCircleHeart className="w-6 h-6 text-accent" />
                     <span className="text-lg">Respuestas Empáticas</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     Conversa con una IA entrenada para un trato comprensivo y profesional.
                   </p>
                 </CardContent>
@@ -176,8 +179,8 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
             </div>
           ) : displaySuggestions.length > 0 && (
             <div>
-               <p className="text-sm text-muted-foreground mb-2 px-2">
-                O prueba con una de estas sugerencias:
+               <p className="text-sm text-muted-foreground mb-3 px-2">
+                O prueba con una de estas sugerencias para empezar:
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {displaySuggestions.map((suggestion, i) => {
@@ -186,10 +189,10 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
                     <button
                       key={i}
                       onClick={() => handleSuggestionClick(suggestion.text)}
-                      className="p-4 rounded-lg bg-card hover:bg-card/70 border border-border/50 text-left transition-colors flex items-start gap-4"
+                      className="p-4 rounded-lg bg-card hover:bg-card/80 border border-card-border/50 text-left transition-all duration-200 hover:border-primary/50 hover:scale-[1.02] flex items-start gap-4"
                     >
-                      <Icon className="w-5 h-5 text-accent flex-shrink-0 mt-1" />
-                      <span className="text-sm">{suggestion.text}</span>
+                      <Icon className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
+                      <span className="text-sm font-medium">{suggestion.text}</span>
                     </button>
                   );
                 })}
