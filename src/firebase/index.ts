@@ -44,6 +44,7 @@ export function useCollection<T>(query: Query | undefined) {
     }
 
     setLoading(true);
+    setError(null);
     const unsubscribe = onSnapshot(
       queryMemo,
       (snapshot) => {

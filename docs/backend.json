@@ -28,19 +28,12 @@
     },
     "chat": {
       "title": "Chat",
-      "description": "A chat session.",
+      "description": "A chat session, containing metadata about the conversation.",
       "type": "object",
       "properties": {
         "title": {
           "type": "string",
           "description": "The title of the chat."
-        },
-        "messages": {
-          "type": "array",
-          "items": {
-            "$ref": "#/entities/message"
-          },
-          "description": "The messages in the chat."
         },
         "createdAt": {
           "type": "string",
@@ -56,11 +49,11 @@
           "description": "The path to the chat."
         }
       },
-      "required": ["title", "messages", "createdAt", "userId", "path"]
+      "required": ["title", "createdAt", "userId", "path"]
     },
     "message": {
       "title": "Message",
-      "description": "A message in a chat.",
+      "description": "A single message within a chat.",
       "type": "object",
       "properties": {
         "role": {
@@ -73,8 +66,12 @@
           "description": "The content of the message."
         },
         "timestamp": {
-          "type": "number",
-          "description": "The timestamp of the message."
+          "$ref": "https://firebase.google.com/docs/reference/js/firebase.firestore.Timestamp"
+        },
+        "imageUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "The URL of an image attached to the message, if any."
         }
       },
       "required": ["role", "content", "timestamp"]
@@ -129,7 +126,13 @@
       "schema": {
         "$ref": "#/entities/chat"
       },
-      "description": "Chat sessions for a user."
+      "description": "Chat session metadata for a user."
+    },
+    "/users/{userId}/chats/{chatId}/messages/{messageId}": {
+      "schema": {
+        "$ref": "#/entities/message"
+      },
+      "description": "Individual messages within a chat session."
     },
     "/promptSuggestions": {
       "schema": {

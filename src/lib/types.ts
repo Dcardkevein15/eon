@@ -7,15 +7,14 @@ export type Message = {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  timestamp: number;
+  timestamp: Timestamp;
   imageUrl?: string;
 };
 
 export type Chat = {
   id:string;
   title: string;
-  messages: Message[];
-  createdAt: Timestamp | number;
+  createdAt: Timestamp;
   userId: string;
   path: string;
 };

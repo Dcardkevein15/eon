@@ -10,16 +10,14 @@ import {
   serverTimestamp,
   updateDoc,
   writeBatch,
-  arrayUnion,
   query,
+  Timestamp,
 } from 'firebase/firestore';
 
 import { useAuth, useCollection, useFirestore } from '@/firebase';
 import type { Chat, Message } from '@/lib/types';
 import {
   Sidebar,
-  SidebarContent,
-  SidebarHeader,
   SidebarInset,
   SidebarProvider,
 } from '@/components/ui/sidebar';
@@ -61,44 +59,34 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
   const createChat = useCallback(
     async (input: string, imageUrl?: string) => {
       if (!user || !firestore) return;
-  
-      const createdAt = Date.now();
-  
-      const userMessage: Omit<Message, 'id'> = {
+
+      const userMessageContent: Omit<Message, 'id'> = {
         role: 'user',
         content: input,
-        timestamp: createdAt,
+        timestamp: Timestamp.now(),
         ...(imageUrl && { imageUrl }),
       };
-  
+
       try {
-        // Get AI response and title in parallel
-        const [aiResponseContent, title] = await Promise.all([
-          getAIResponse([userMessage]),
-          genTitle(`User: ${input}`),
-        ]);
-  
-        const aiMessage: Omit<Message, 'id'> = {
-          role: 'assistant',
-          content: aiResponseContent,
-          timestamp: Date.now(),
-        };
-  
-        // Create new chat with both messages and the generated title
+        // 1. Create the main chat document first
         const newChatRef = await addDoc(
           collection(firestore, `users/${user.uid}/chats`),
           {
-            title: title || 'Nuevo Chat',
+            title: 'Nuevo Chat',
             userId: user.uid,
             createdAt: serverTimestamp(),
-            path: '', // Will be updated below
-            messages: [userMessage, aiMessage],
+            path: '',
           }
         );
-  
+
         const path = `/c/${newChatRef.id}`;
         await updateDoc(newChatRef, { path });
-  
+
+        // 2. Add the user's first message to the 'messages' subcollection
+        const messagesColRef = collection(newChatRef, 'messages');
+        await addDoc(messagesColRef, userMessageContent);
+
+        // 3. Navigate to the new chat page
         router.push(path);
       } catch (e) {
         console.error('Error creating chat:', e);
@@ -107,31 +95,12 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
     [user, firestore, router]
   );
 
-  const appendMessages = useCallback(
-    async (chatId: string, messages: Omit<Message, 'id'>[]) => {
-      if (!user || !firestore) return;
-
-      const chatRef = doc(firestore, `users/${user.uid}/chats`, chatId);
-
-      await updateDoc(chatRef, {
-        messages: arrayUnion(...messages),
-      });
-    },
-    [user, firestore]
-  );
-
-  const updateChatTitle = useCallback(
-    async (chatId: string, title: string) => {
-      if (!user || !firestore) return;
-      const chatRef = doc(firestore, `users/${user.uid}/chats`, chatId);
-      await updateDoc(chatRef, { title });
-    },
-    [user, firestore]
-  );
-
   const removeChat = useCallback(
     async (chatId: string) => {
       if (!user || !firestore) return;
+      // Note: Deleting a document does not delete its subcollections.
+      // For a production app, you'd need a Cloud Function to handle cascading deletes.
+      // For this context, we just delete the main chat doc.
       const chatRef = doc(firestore, `users/${user.uid}/chats`, chatId);
       await deleteDoc(chatRef);
 
@@ -151,6 +120,7 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
       batch.delete(chatRef);
     });
     await batch.commit();
+    // Again, subcollections are not deleted here.
 
     router.push('/');
   }, [user, firestore, chats, router]);
@@ -172,12 +142,10 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
           />
         </Sidebar>
         <SidebarInset>
-          <div className={cn("flex flex-col", chatId ? "h-screen" : "min-h-screen")}>
+          <div className={cn('flex flex-col', chatId ? 'h-screen' : 'min-h-screen')}>
             {chatId && activeChat ? (
               <ChatPanel
                 chat={activeChat}
-                appendMessages={appendMessages}
-                updateChatTitle={updateChatTitle}
               />
             ) : (
               <EmptyChat createChat={createChat} />
@@ -188,6 +156,5 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
     </SidebarProvider>
   );
 }
-
 
 export default memo(ChatLayout);
