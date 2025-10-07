@@ -9,61 +9,31 @@ import { generateChatTitle as genTitle } from '@/ai/flows/generate-chat-title';
 import { collection, getDocs } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { SUGGESTIONS_FALLBACK } from '@/lib/suggestions-fallback';
-import type { Part } from 'genkit';
-
 
 const getAIResponseSchema = z.object({
   history: z.array(
     z.object({
       role: z.enum(['user', 'assistant']),
       content: z.string(),
+      timestamp: z.number(),
       imageUrl: z.string().optional(),
-      timestamp: z.number(), // The client sends a plain number (milliseconds)
       id: z.string(),
     })
   ),
 });
 
 export async function getAIResponse(history: Message[]): Promise<string> {
-  // 1. Validate the incoming data structure from the client.
   const validatedHistory = getAIResponseSchema.parse({ history });
 
-  // 2. Define the system prompt.
-  const systemPrompt = 'Eres ¡tu-psicologo-ya!, un asistente profesional y psicólogo virtual. Tu objetivo es brindar un espacio de desahogo para llevar un control emocional. Basado en la conversación, puedes realizar diagnósticos psicológicos y, si es apropiado, recomendar contactar a un psicólogo profesional. Responde siempre de manera empática, profesional y conversacional. Si el usuario envía una imagen, descríbela y analiza su contenido emocional si es relevante.';
-  
-  // 3. Construct the message history in the format Genkit expects (`Part[]`).
-  const messages: Part[] = [
-    // The very first message must be the system prompt.
-    { role: 'system', content: [{ text: systemPrompt }] },
-    
-    // Map the rest of the conversation history.
-    ...validatedHistory.history.map(msg => {
-      const content: Part[] = [];
-      
-      // Add text content if it exists.
-      if (msg.content) {
-        content.push({ text: msg.content });
-      }
+  const prompt =
+    'Eres ¡tu-psicologo-ya!, un asistente profesional y psicólogo virtual. Tu objetivo es brindar un espacio de desahogo para llevar un control emocional. Basado en la conversación, puedes realizar diagnósticos psicológicos y, si es apropiado, recomendar contactar a un psicólogo profesional. Responde siempre de manera empática, profesional y conversacional.\n\n' +
+    validatedHistory.history
+      .map((m) => `${m.role === 'user' ? 'Usuario' : 'Asistente'}: ${m.content}`)
+      .join('\n') +
+    '\nAsistente:';
 
-      // Add image content if it exists.
-      if (msg.imageUrl) {
-        // Genkit expects the image in a `media` object.
-        content.push({ media: { url: msg.imageUrl } });
-      }
-      
-      return { 
-        // Convert 'assistant' role to 'model' for Genkit.
-        role: msg.role === 'user' ? 'user' : 'model', 
-        content 
-      };
-    })
-  ];
-
-  // 4. Call the AI with the correctly formatted history.
   try {
-    const { text } = await ai.generate({ 
-      history: messages,
-    });
+    const { text } = await ai.generate({prompt});
     return text;
   } catch (error) {
     console.error('Error getting AI response:', error);
