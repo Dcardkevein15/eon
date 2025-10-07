@@ -30,20 +30,22 @@ export async function getAIResponse(history: Message[]): Promise<string> {
 
   const systemPrompt = 'Eres ¡tu-psicologo-ya!, un asistente profesional y psicólogo virtual. Tu objetivo es brindar un espacio de desahogo para llevar un control emocional. Basado en la conversación, puedes realizar diagnósticos psicológicos y, si es apropiado, recomendar contactar a un psicólogo profesional. Responde siempre de manera empática, profesional y conversacional. Si el usuario envía una imagen, descríbela y analiza su contenido emocional si es relevante.';
   
-  const messages: Part[] = validatedHistory.history.map(msg => {
-    const content: Part[] = [];
-    if (msg.content) {
-      content.push({ text: msg.content });
-    }
-    if (msg.imageUrl) {
-      content.push({ media: { url: msg.imageUrl } });
-    }
-    return { role: msg.role === 'user' ? 'user' : 'model', content };
-  });
+  const messages: Part[] = [
+    { role: 'system', content: [{ text: systemPrompt }] },
+    ...validatedHistory.history.map(msg => {
+      const content: Part[] = [];
+      if (msg.content) {
+        content.push({ text: msg.content });
+      }
+      if (msg.imageUrl) {
+        content.push({ media: { url: msg.imageUrl } });
+      }
+      return { role: msg.role === 'user' ? 'user' : 'model', content };
+    })
+  ];
 
   try {
     const { text } = await ai.generate({ 
-      system: systemPrompt,
       history: messages,
     });
     return text;
