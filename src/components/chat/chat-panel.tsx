@@ -23,8 +23,8 @@ function ChatPanel({ chat, appendMessages, updateChatTitle }: ChatPanelProps) {
   const { open } = useSidebar();
 
 
-  const handleSendMessage = useCallback(async (input: string) => {
-    if (!input.trim() || isResponding) return;
+  const handleSendMessage = useCallback(async (input: string, imageUrl?: string) => {
+    if ((!input.trim() && !imageUrl) || isResponding) return;
   
     setIsResponding(true);
   
@@ -32,6 +32,7 @@ function ChatPanel({ chat, appendMessages, updateChatTitle }: ChatPanelProps) {
       role: 'user',
       content: input,
       timestamp: Date.now(),
+      ...(imageUrl && { imageUrl }),
     };
   
     try {

@@ -8,6 +8,7 @@ export type Message = {
   role: 'user' | 'assistant';
   content: string;
   timestamp: number;
+  imageUrl?: string;
 };
 
 export type Chat = {

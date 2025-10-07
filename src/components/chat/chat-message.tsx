@@ -7,6 +7,7 @@ import { User, Sparkles } from 'lucide-react';
 import { useAuth } from '@/firebase';
 import ReactMarkdown from 'react-markdown';
 import { memo } from 'react';
+import Image from 'next/image';
 
 
 interface ChatMessageProps {
@@ -40,6 +41,11 @@ function ChatMessage({ message }: ChatMessageProps) {
             : 'bg-card border rounded-bl-none'
         )}
       >
+        {message.imageUrl && (
+            <div className="relative aspect-video mb-2 not-prose">
+                <Image src={message.imageUrl} alt="Contenido del usuario" fill className="rounded-lg object-contain" />
+            </div>
+        )}
         <ReactMarkdown>{message.content}</ReactMarkdown>
       </div>
 

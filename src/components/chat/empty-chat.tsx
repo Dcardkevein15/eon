@@ -22,7 +22,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { SidebarTrigger } from '../ui/sidebar';
 
 interface EmptyChatProps {
-  createChat: (input: string) => void;
+  createChat: (input: string, imageUrl?: string) => void;
 }
 
 const categoryIcons: { [key: string]: React.ElementType } = {

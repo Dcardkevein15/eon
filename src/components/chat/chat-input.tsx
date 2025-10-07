@@ -20,15 +20,16 @@ import { getSmartComposeSuggestions } from '@/app/actions';
 import type { Message } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import Image from 'next/image';
 
 const chatSchema = z.object({
-  message: z.string().min(1, 'El mensaje no puede estar vacío'),
+  message: z.string(),
 });
 
 type ChatFormValues = z.infer<typeof chatSchema>;
 
 interface ChatInputProps {
-  onSendMessage: (message: string) => void;
+  onSendMessage: (message: string, imageUrl?: string) => void;
   isLoading: boolean;
   chatHistory: Message[];
 }
@@ -40,6 +41,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
     const localTextareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isFocused, setIsFocused] = useState(false);
+    const [attachedImage, setAttachedImage] = useState<string | null>(null);
 
     useImperativeHandle(ref, () => localTextareaRef.current as HTMLTextAreaElement);
 
@@ -50,7 +52,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
 
     const messageValue = form.watch('message');
     const isMessageEmpty = !messageValue || messageValue.trim() === '';
-
+    const canSubmit = !isLoading && (!isMessageEmpty || !!attachedImage);
 
     const handleSuggestion = (suggestion: string) => {
       if (isLoading) return;
@@ -60,10 +62,11 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
     };
 
     const handleSubmit: SubmitHandler<ChatFormValues> = (data) => {
-      if (isLoading || isMessageEmpty) return;
-      onSendMessage(data.message);
+      if (!canSubmit) return;
+      onSendMessage(data.message, attachedImage || undefined);
       form.reset();
       setSuggestions([]);
+      setAttachedImage(null);
     };
 
     const fetchSuggestions = useCallback(async () => {
@@ -84,7 +87,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
     const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault();
-        if (!isMessageEmpty) {
+        if (canSubmit) {
           form.handleSubmit(handleSubmit)();
         }
       }
@@ -92,6 +95,19 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
     
     const handleAttachClick = () => {
       fileInputRef.current?.click();
+    };
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setAttachedImage(e.target?.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
+      // Reset file input to allow selecting the same file again
+      event.target.value = '';
     };
 
     useEffect(() => {
@@ -105,7 +121,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
       <TooltipProvider delayDuration={200}>
       <div className="w-full max-w-4xl mx-auto space-y-4">
         {suggestions.length > 0 && !isLoading && showSuggestions && (
-           <div className="flex flex-wrap items-center gap-2">
+           <div className="flex items-center gap-2 flex-wrap">
             <div className="flex items-center gap-2 text-sm text-muted-foreground w-full">
               <Sparkles className="w-4 h-4 text-accent flex-shrink-0" />
               <span>Sugerencias:</span>
@@ -128,7 +144,23 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
             onSubmit={form.handleSubmit(handleSubmit)}
             className="w-full"
           >
-             <input type="file" ref={fileInputRef} className="hidden" />
+             <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
+            
+            {attachedImage && (
+              <div className="relative mb-2 w-28 h-28 group">
+                <Image src={attachedImage} alt="Preview" layout="fill" className="rounded-lg object-cover" />
+                <Button 
+                  type="button" 
+                  variant="destructive" 
+                  size="icon" 
+                  className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={() => setAttachedImage(null)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+
             <FormField
               control={form.control}
               name="message"
@@ -180,7 +212,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
                                   type="submit"
                                   size="icon"
                                   className="h-9 w-9 shrink-0 rounded-full transition-colors"
-                                  disabled={isLoading || isMessageEmpty}
+                                  disabled={!canSubmit}
                                 >
                                   <Send className="w-4 h-4" />
                                   <span className="sr-only">Enviar mensaje</span>

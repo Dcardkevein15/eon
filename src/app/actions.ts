@@ -9,12 +9,15 @@ import { generateChatTitle as genTitle } from '@/ai/flows/generate-chat-title';
 import { collection, getDocs } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { SUGGESTIONS_FALLBACK } from '@/lib/suggestions-fallback';
+import type { Part } from 'genkit';
+
 
 const getAIResponseSchema = z.object({
   history: z.array(
     z.object({
       role: z.enum(['user', 'assistant']),
       content: z.string(),
+      imageUrl: z.string().optional(),
       timestamp: z.number(),
     })
   ),
@@ -23,15 +26,27 @@ const getAIResponseSchema = z.object({
 export async function getAIResponse(history: Omit<Message, 'id'>[]): Promise<string> {
   const validatedHistory = getAIResponseSchema.parse({ history });
 
-  const prompt =
-    'Eres ¡tu-psicologo-ya!, un asistente profesional y psicólogo virtual. Tu objetivo es brindar un espacio de desahogo para llevar un control emocional. Basado en la conversación, puedes realizar diagnósticos psicológicos y, si es apropiado, recomendar contactar a un psicólogo profesional. Responde siempre de manera empática, profesional y conversacional.\n\n' +
-    validatedHistory.history
-      .map((m) => `${m.role === 'user' ? 'Usuario' : 'Asistente'}: ${m.content}`)
-      .join('\n') +
-    '\nAsistente:';
+  const systemPrompt = 'Eres ¡tu-psicologo-ya!, un asistente profesional y psicólogo virtual. Tu objetivo es brindar un espacio de desahogo para llevar un control emocional. Basado en la conversación, puedes realizar diagnósticos psicológicos y, si es apropiado, recomendar contactar a un psicólogo profesional. Responde siempre de manera empática, profesional y conversacional. Si el usuario envía una imagen, descríbela y analiza su contenido emocional si es relevante.';
+  
+  const messages: Part[] = validatedHistory.history.map(msg => {
+    const content: Part[] = [];
+    if (msg.content) {
+      content.push({ text: msg.content });
+    }
+    if (msg.imageUrl) {
+      content.push({ media: { url: msg.imageUrl } });
+    }
+    return { role: msg.role === 'user' ? 'user' : 'model', content };
+  });
 
   try {
-    const { text } = await ai.generate({prompt});
+    const { text } = await ai.generate({ 
+      system: systemPrompt,
+      prompt: {
+        role: 'user',
+        content: messages.flatMap(m => m.content),
+      },
+    });
     return text;
   } catch (error) {
     console.error('Error getting AI response:', error);

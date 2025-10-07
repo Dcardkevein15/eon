@@ -59,7 +59,7 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
   );
 
   const createChat = useCallback(
-    async (input: string) => {
+    async (input: string, imageUrl?: string) => {
       if (!user || !firestore) return;
   
       const createdAt = Date.now();
@@ -68,6 +68,7 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
         role: 'user',
         content: input,
         timestamp: createdAt,
+        ...(imageUrl && { imageUrl }),
       };
   
       try {
