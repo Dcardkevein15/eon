@@ -18,11 +18,8 @@ const getAIResponseSchema = z.object({
       role: z.enum(['user', 'assistant']),
       content: z.string(),
       imageUrl: z.string().optional(),
-      // The timestamp is already serialized by Next.js into a plain object
-      timestamp: z.object({
-        seconds: z.number(),
-        nanoseconds: z.number(),
-      }),
+      // The client now sends a plain number (milliseconds)
+      timestamp: z.number(),
       id: z.string(), // Keep the ID
     })
   ),
