@@ -114,9 +114,9 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
               </Button>
             {showSuggestions && (
                <div className="flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Sparkles className="w-4 h-4 text-accent" />
-                  Sugerencias:
+                <div className="flex items-center gap-2 text-sm text-muted-foreground w-full">
+                  <Sparkles className="w-4 h-4 text-accent flex-shrink-0" />
+                  <span>Sugerencias:</span>
                 </div>
                 {suggestions.map((s, i) => (
                   <Button
