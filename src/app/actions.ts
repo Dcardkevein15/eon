@@ -18,32 +18,48 @@ const getAIResponseSchema = z.object({
       role: z.enum(['user', 'assistant']),
       content: z.string(),
       imageUrl: z.string().optional(),
-      // The client now sends a plain number (milliseconds)
-      timestamp: z.number(),
-      id: z.string(), // Keep the ID
+      timestamp: z.number(), // The client sends a plain number (milliseconds)
+      id: z.string(),
     })
   ),
 });
 
 export async function getAIResponse(history: Message[]): Promise<string> {
+  // 1. Validate the incoming data structure from the client.
   const validatedHistory = getAIResponseSchema.parse({ history });
 
+  // 2. Define the system prompt.
   const systemPrompt = 'Eres ¡tu-psicologo-ya!, un asistente profesional y psicólogo virtual. Tu objetivo es brindar un espacio de desahogo para llevar un control emocional. Basado en la conversación, puedes realizar diagnósticos psicológicos y, si es apropiado, recomendar contactar a un psicólogo profesional. Responde siempre de manera empática, profesional y conversacional. Si el usuario envía una imagen, descríbela y analiza su contenido emocional si es relevante.';
   
+  // 3. Construct the message history in the format Genkit expects (`Part[]`).
   const messages: Part[] = [
+    // The very first message must be the system prompt.
     { role: 'system', content: [{ text: systemPrompt }] },
+    
+    // Map the rest of the conversation history.
     ...validatedHistory.history.map(msg => {
       const content: Part[] = [];
+      
+      // Add text content if it exists.
       if (msg.content) {
         content.push({ text: msg.content });
       }
+
+      // Add image content if it exists.
       if (msg.imageUrl) {
+        // Genkit expects the image in a `media` object.
         content.push({ media: { url: msg.imageUrl } });
       }
-      return { role: msg.role === 'user' ? 'user' : 'model', content };
+      
+      return { 
+        // Convert 'assistant' role to 'model' for Genkit.
+        role: msg.role === 'user' ? 'user' : 'model', 
+        content 
+      };
     })
   ];
 
+  // 4. Call the AI with the correctly formatted history.
   try {
     const { text } = await ai.generate({ 
       history: messages,
