@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { Progress } from '@/components/ui/progress';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import ReactMarkdown from 'react-markdown';
 
 type ProfileData = {
   diagnosis: string;
@@ -302,8 +303,8 @@ export default function PsychologicalProfile() {
                         </CardTitle>
                     </AccordionTrigger>
                     <AccordionContent>
-                        <CardContent>
-                             <p className="text-foreground/80 whitespace-pre-wrap">{profile.diagnosis}</p>
+                        <CardContent className="prose prose-sm dark:prose-invert prose-p:m-0">
+                             <ReactMarkdown className="text-foreground/80 whitespace-pre-wrap">{profile.diagnosis}</ReactMarkdown>
                         </CardContent>
                     </AccordionContent>
                 </Card>
@@ -318,8 +319,8 @@ export default function PsychologicalProfile() {
                         </CardTitle>
                     </AccordionTrigger>
                     <AccordionContent>
-                        <CardContent>
-                            <p className="text-foreground/80 whitespace-pre-wrap">{profile.personality}</p>
+                        <CardContent className="prose prose-sm dark:prose-invert prose-p:m-0">
+                            <ReactMarkdown className="text-foreground/80 whitespace-pre-wrap">{profile.personality}</ReactMarkdown>
                         </CardContent>
                     </AccordionContent>
                 </Card>
@@ -334,8 +335,8 @@ export default function PsychologicalProfile() {
                         </CardTitle>
                     </AccordionTrigger>
                     <AccordionContent>
-                        <CardContent>
-                            <p className="text-foreground/80 whitespace-pre-wrap">{profile.strengths}</p>
+                        <CardContent className="prose prose-sm dark:prose-invert prose-p:m-0">
+                            <ReactMarkdown className="text-foreground/80 whitespace-pre-wrap">{profile.strengths}</ReactMarkdown>
                         </CardContent>
                     </AccordionContent>
                 </Card>
@@ -355,7 +356,7 @@ export default function PsychologicalProfile() {
                             {profile.cognitiveBiases.map((rec, index) => (
                                 <li key={index} className="flex items-start gap-3">
                                     <ShieldCheck className="w-5 h-5 text-amber-500 flex-shrink-0 mt-1"/>
-                                    <span className="text-foreground/80">{rec}</span>
+                                    <ReactMarkdown className="text-foreground/80 prose prose-sm dark:prose-invert prose-p:m-0">{rec}</ReactMarkdown>
                                 </li>
                             ))}
                            </ul>
@@ -378,7 +379,7 @@ export default function PsychologicalProfile() {
                             {profile.defenseMechanisms.map((rec, index) => (
                                 <li key={index} className="flex items-start gap-3">
                                     <ShieldCheck className="w-5 h-5 text-blue-500 flex-shrink-0 mt-1"/>
-                                    <span className="text-foreground/80">{rec}</span>
+                                    <ReactMarkdown className="text-foreground/80 prose prose-sm dark:prose-invert prose-p:m-0">{rec}</ReactMarkdown>
                                 </li>
                             ))}
                            </ul>
@@ -401,7 +402,7 @@ export default function PsychologicalProfile() {
                             {profile.recommendations.map((rec, index) => (
                                 <li key={index} className="flex items-start gap-3">
                                     <ShieldCheck className="w-5 h-5 text-green-500 flex-shrink-0 mt-1"/>
-                                    <span className="text-foreground/80">{rec}</span>
+                                    <ReactMarkdown className="text-foreground/80 prose prose-sm dark:prose-invert prose-p:m-0">{rec}</ReactMarkdown>
                                 </li>
                             ))}
                            </ul>
