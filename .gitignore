@@ -27,7 +27,6 @@ pnpm-debug.log*
 
 # local env files
 .env*.local
-.env
 
 # vercel
 .vercel
@@ -35,3 +34,6 @@ pnpm-debug.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# genkit
+.genkit/cache/
