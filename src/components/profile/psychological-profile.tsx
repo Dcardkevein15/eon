@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth, useFirestore } from '@/firebase';
-import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, Timestamp } from 'firebase/firestore';
 import type { Chat, Message } from '@/lib/types';
 import { generateUserProfile } from '@/ai/flows/generate-user-profile';
 import { Button } from '@/components/ui/button';
@@ -60,7 +60,12 @@ export default function PsychologicalProfile() {
 
     if (lastMessageSnap.empty) return null;
 
-    return lastMessageSnap.docs[0].data().timestamp.toMillis();
+    const timestamp = lastMessageSnap.docs[0].data().timestamp;
+    if (timestamp instanceof Timestamp) {
+      return timestamp.toMillis();
+    }
+    // Fallback for different timestamp formats if needed
+    return new Date(timestamp as any).getTime();
   }, [user, firestore]);
 
   // Main generation function
@@ -111,7 +116,15 @@ export default function PsychologicalProfile() {
         messages.forEach(msg => {
           const role = msg.role === 'user' ? 'Usuario' : 'Asistente';
           fullChatHistory += `${role}: ${msg.content}\n`;
-          const msgTimestamp = msg.timestamp.toMillis();
+          
+          let msgTimestamp: number;
+          if (msg.timestamp && typeof (msg.timestamp as any).toMillis === 'function') {
+            msgTimestamp = (msg.timestamp as Timestamp).toMillis();
+          } else {
+            // Handle cases where it might already be a number or JS Date from JSON.parse
+            msgTimestamp = new Date(msg.timestamp as any).getTime();
+          }
+
           if (msgTimestamp > latestTimestamp) {
             latestTimestamp = msgTimestamp;
           }
@@ -196,7 +209,7 @@ export default function PsychologicalProfile() {
       : null;
 
 
-  if (loading || !isClient) {
+  if (!isClient || loading) {
     return (
       <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto w-full space-y-6">
         <Skeleton className="h-10 w-1/3" />
