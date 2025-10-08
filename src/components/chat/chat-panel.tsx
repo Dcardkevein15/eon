@@ -92,7 +92,7 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
     };
     processAIResponse();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages, isResponding]);
+  }, [messages]);
 
 
   return (
