@@ -41,6 +41,7 @@ export default function PsychologicalProfile() {
   const [error, setError] = useState<string | null>(null);
   const [isOutdated, setIsOutdated] = useState(false);
   const [cachedData, setCachedData] = useState<CachedProfile | null>(null);
+  const [isClient, setIsClient] = useState(false);
 
   const storageKey = useMemo(() => user ? `psych-profile-${user.uid}` : null, [user]);
 
@@ -147,7 +148,11 @@ export default function PsychologicalProfile() {
   }, [user, firestore, storageKey]);
 
   useEffect(() => {
-    if (!storageKey) {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isClient || !storageKey) {
         setLoading(false);
         return;
     };
@@ -176,7 +181,7 @@ export default function PsychologicalProfile() {
         }
     };
     loadInitialData();
-  }, [storageKey, getLatestMessageTimestamp, fetchAndGenerateProfile]);
+  }, [storageKey, getLatestMessageTimestamp, fetchAndGenerateProfile, isClient]);
 
   const handleGenerateNew = () => {
     fetchAndGenerateProfile(true);
@@ -191,7 +196,7 @@ export default function PsychologicalProfile() {
       : null;
 
 
-  if (loading) {
+  if (loading || !isClient) {
     return (
       <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto w-full space-y-6">
         <Skeleton className="h-10 w-1/3" />
