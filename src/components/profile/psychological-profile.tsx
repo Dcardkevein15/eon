@@ -91,7 +91,7 @@ export default function PsychologicalProfile() {
                 return 99;
             }
             // Use a non-linear increment to make it feel more real
-            const increment = Math.random() * 10;
+            const increment = Math.random() * 2;
             return Math.min(prev + increment, 99);
         });
     }, 400);
@@ -175,7 +175,7 @@ export default function PsychologicalProfile() {
   }, []);
 
   useEffect(() => {
-    if (!isClient || !storageKey) {
+    if (!isClient || !user || !storageKey) {
         setLoading(false);
         return;
     };
@@ -204,7 +204,7 @@ export default function PsychologicalProfile() {
         }
     };
     loadInitialData();
-  }, [storageKey, getLatestMessageTimestamp, fetchAndGenerateProfile, isClient]);
+  }, [storageKey, getLatestMessageTimestamp, fetchAndGenerateProfile, isClient, user]);
 
   const handleGenerateNew = () => {
     fetchAndGenerateProfile(true);
