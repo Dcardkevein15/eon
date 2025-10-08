@@ -10,12 +10,20 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { BrainCircuit, UserCheck, ShieldCheck, ListChecks, ChevronLeft, Sparkles, Filter, ShieldQuestion, Info, RefreshCcw } from 'lucide-react';
+import { BrainCircuit, UserCheck, ShieldCheck, ListChecks, ChevronLeft, Sparkles, Filter, ShieldQuestion, Info, RefreshCcw, LineChart } from 'lucide-react';
 import Link from 'next/link';
 import { Progress } from '@/components/ui/progress';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import ReactMarkdown from 'react-markdown';
+import EmotionalChart from './EmotionalChart';
+
+type EmotionalStatePoint = {
+  date: string;
+  sentiment: number;
+  summary: string;
+  keyEvents: string[];
+};
 
 type ProfileData = {
   diagnosis: string;
@@ -24,6 +32,7 @@ type ProfileData = {
   strengths: string;
   cognitiveBiases: string[];
   defenseMechanisms: string[];
+  emotionalJourney: EmotionalStatePoint[];
 };
 
 type CachedProfile = {
@@ -80,20 +89,16 @@ export default function PsychologicalProfile() {
     setGenerating(true);
     setLoading(false);
     setError(null);
-    setProgress(0);
     
-    // Simulate progress for preloader
     const progressInterval = setInterval(() => {
-        // Only increment if we are not at the final step
-        setProgress(prev => {
-            if (prev >= 99) {
-                clearInterval(progressInterval);
-                return 99;
-            }
-            // Use a non-linear increment to make it feel more real
-            const increment = Math.random() * 2;
-            return Math.min(prev + increment, 99);
-        });
+      setProgress(prev => {
+        if (prev >= 99) {
+          clearInterval(progressInterval);
+          return 99;
+        }
+        const increment = Math.random() * 0.5;
+        return Math.min(prev + increment, 99);
+      });
     }, 400);
 
     try {
@@ -111,6 +116,7 @@ export default function PsychologicalProfile() {
       
       let fullChatHistory = '';
       let latestTimestamp = 0;
+
       for (const chat of chats) {
         fullChatHistory += `--- INICIO DEL CHAT: ${chat.title} ---\n`;
         const messagesQuery = query(collection(firestore, `users/${user.uid}/chats/${chat.id}/messages`), orderBy('timestamp', 'asc'));
@@ -125,7 +131,6 @@ export default function PsychologicalProfile() {
           if (msg.timestamp && typeof (msg.timestamp as any).toMillis === 'function') {
             msgTimestamp = (msg.timestamp as Timestamp).toMillis();
           } else {
-            // Handle cases where it might already be a number or JS Date from JSON.parse
             msgTimestamp = new Date(msg.timestamp as any).getTime();
           }
 
@@ -146,7 +151,6 @@ export default function PsychologicalProfile() {
       
       const result = await generateUserProfile({ fullChatHistory });
       
-      // Stop the interval as we are about to finish
       clearInterval(progressInterval);
       
       const newCachedData: CachedProfile = { profile: result, lastMessageTimestamp: latestTimestamp };
@@ -161,9 +165,7 @@ export default function PsychologicalProfile() {
       console.error('Error generating psychological profile:', e);
       setError('Ocurrió un error al generar tu perfil. Por favor, inténtalo de nuevo más tarde.');
     } finally {
-      // Ensure interval is cleared and generation state is false
       clearInterval(progressInterval);
-      // A small delay to show 100% before hiding the loader
       setTimeout(() => {
         setGenerating(false);
       }, 500);
@@ -194,7 +196,6 @@ export default function PsychologicalProfile() {
             }
             setLoading(false);
         } else {
-            // If no cache, and no chats, show message. Otherwise, generate.
             if(latestTimestamp === null) {
                 setLoading(false);
                 setError('No hay conversaciones para analizar. ¡Inicia un chat para generar tu perfil!');
@@ -211,7 +212,7 @@ export default function PsychologicalProfile() {
   };
   
   const handleViewCached = () => {
-      setIsOutdated(false); // User chose to view the old version, so hide banner for this session.
+      setIsOutdated(false);
   };
 
   const lastConversationDate = cachedData?.lastMessageTimestamp
@@ -324,6 +325,20 @@ export default function PsychologicalProfile() {
                 Recuerda, esto no reemplaza un diagnóstico profesional.
             </p>
         </header>
+
+        {profile.emotionalJourney && profile.emotionalJourney.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3 text-xl">
+                <LineChart className="w-6 h-6 text-accent"/>
+                Evolución Emocional
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isClient && <EmotionalChart data={profile.emotionalJourney} />}
+            </CardContent>
+          </Card>
+        )}
 
         <Accordion type="multiple" defaultValue={['item-1', 'item-6']} className="w-full space-y-4">
             <AccordionItem value="item-1">
@@ -446,3 +461,5 @@ export default function PsychologicalProfile() {
     </div>
   );
 }
+
+    

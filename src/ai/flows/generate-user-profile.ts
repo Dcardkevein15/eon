@@ -2,7 +2,7 @@
 
 /**
  * @fileOverview A flow that generates a comprehensive psychological profile for a user
- * based on their entire chat history.
+ * based on their entire chat history, including an emotional timeline.
  *
  * - generateUserProfile - A function that creates the profile.
  * - GenerateUserProfileInput - The input type for the function.
@@ -22,6 +22,21 @@ const GenerateUserProfileInputSchema = z.object({
 export type GenerateUserProfileInput = z.infer<
   typeof GenerateUserProfileInputSchema
 >;
+
+const EmotionalStatePoint = z.object({
+  date: z.string().describe('La fecha de la entrada (formato AAAA-MM-DD).'),
+  sentiment: z
+    .number()
+    .min(-1)
+    .max(1)
+    .describe(
+      'Un valor numérico para el sentimiento general de ese día (-1 para muy negativo, 0 para neutral, 1 para muy positivo).'
+    ),
+  summary: z
+    .string()
+    .describe('Un resumen muy breve de los temas o eventos clave del día.'),
+  keyEvents: z.array(z.string()).describe('Una lista de 1 a 3 eventos o emociones clave del día (ej. "Pico de estrés laboral", "Conversación sobre relaciones").'),
+});
 
 const GenerateUserProfileOutputSchema = z.object({
   diagnosis: z
@@ -53,6 +68,11 @@ const GenerateUserProfileOutputSchema = z.object({
     .array(z.string())
     .describe(
       'Una lista de recomendaciones personalizadas y accionables para el bienestar psicológico y el desarrollo personal del usuario, vinculadas a los hallazgos.'
+    ),
+  emotionalJourney: z
+    .array(EmotionalStatePoint)
+    .describe(
+      'Una línea de tiempo de la evolución del estado de ánimo del usuario, extraída de los chats. Cada punto representa un día.'
     ),
 });
 export type GenerateUserProfileOutput = z.infer<
@@ -87,6 +107,12 @@ Basado en el historial completo de chats proporcionado, genera un informe estruc
 
 6.  **Recomendaciones Personalizadas**: Ofrece una lista de recomendaciones accionables y personalizadas para el bienestar y desarrollo del usuario. Estas deben estar directamente conectadas con los hallazgos de las secciones anteriores.
 
+7.  **Línea de Tiempo Emocional (emotionalJourney)**: Analiza el historial de chat cronológicamente. Agrupa las conversaciones por día. Para cada día con actividad, crea un objeto que contenga:
+    - \`date\`: La fecha en formato "AAAA-MM-DD".
+    - \`sentiment\`: Un puntaje de sentimiento numérico de -1.0 (muy negativo) a 1.0 (muy positivo) para ese día.
+    - \`summary\`: Un resumen de 1-2 frases sobre de qué se habló ese día.
+    - \`keyEvents\`: Un array de hasta 3 strings describiendo picos de estrés o eventos clave (ej: "Conflicto laboral", "Reflexión sobre el futuro", "Pico de ansiedad").
+
 Historial completo del chat:
 {{{fullChatHistory}}}
 `,
@@ -103,3 +129,5 @@ const generateUserProfileFlow = ai.defineFlow(
     return output!;
   }
 );
+
+    
