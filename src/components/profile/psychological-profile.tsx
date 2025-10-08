@@ -84,14 +84,17 @@ export default function PsychologicalProfile() {
     
     // Simulate progress for preloader
     const progressInterval = setInterval(() => {
+        // Only increment if we are not at the final step
         setProgress(prev => {
-            if (prev >= 95) {
+            if (prev >= 99) {
                 clearInterval(progressInterval);
-                return 95;
+                return 99;
             }
-            return prev + 5;
+            // Use a non-linear increment to make it feel more real
+            const increment = Math.random() * 10;
+            return Math.min(prev + increment, 99);
         });
-    }, 500);
+    }, 400);
 
     try {
       const chatsQuery = query(collection(firestore, `users/${user.uid}/chats`), orderBy('createdAt', 'asc'));
@@ -101,11 +104,11 @@ export default function PsychologicalProfile() {
       if (chats.length === 0) {
         setLoading(false);
         setGenerating(false);
+        clearInterval(progressInterval);
         setError('No hay conversaciones para analizar. ¡Inicia un chat para generar tu perfil!');
         return;
       }
-      setProgress(15);
-
+      
       let fullChatHistory = '';
       let latestTimestamp = 0;
       for (const chat of chats) {
@@ -132,18 +135,20 @@ export default function PsychologicalProfile() {
         });
         fullChatHistory += `--- FIN DEL CHAT ---\n\n`;
       }
-      setProgress(50);
 
       if (!fullChatHistory.trim()) {
         setLoading(false);
         setGenerating(false);
+        clearInterval(progressInterval);
         setError('Tus conversaciones están vacías. No se puede generar un perfil.');
         return;
       }
       
       const result = await generateUserProfile({ fullChatHistory });
-      setProgress(90);
-
+      
+      // Stop the interval as we are about to finish
+      clearInterval(progressInterval);
+      
       const newCachedData: CachedProfile = { profile: result, lastMessageTimestamp: latestTimestamp };
       localStorage.setItem(storageKey, JSON.stringify(newCachedData));
       
@@ -156,8 +161,12 @@ export default function PsychologicalProfile() {
       console.error('Error generating psychological profile:', e);
       setError('Ocurrió un error al generar tu perfil. Por favor, inténtalo de nuevo más tarde.');
     } finally {
+      // Ensure interval is cleared and generation state is false
       clearInterval(progressInterval);
-      setGenerating(false);
+      // A small delay to show 100% before hiding the loader
+      setTimeout(() => {
+        setGenerating(false);
+      }, 500);
     }
   }, [user, firestore, storageKey]);
 
@@ -249,12 +258,35 @@ export default function PsychologicalProfile() {
                 <AlertTitle>Error</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
             </Alert>
+             <Button onClick={handleGenerateNew} className="mt-4">
+                <RefreshCcw className="mr-2 h-4 w-4" />
+                Intentar de nuevo
+            </Button>
         </div>
     );
   }
 
   if (!profile) {
-    return null;
+     return (
+        <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto w-full">
+             <Button asChild variant="ghost" className="-ml-4 mb-4">
+                <Link href="/">
+                    <ChevronLeft className="h-4 w-4 mr-2" />
+                    Volver al Chat
+                </Link>
+            </Button>
+            <Alert>
+                <AlertTitle>Perfil no encontrado</AlertTitle>
+                <AlertDescription>
+                    No se pudo cargar tu perfil. Es posible que aún no se haya generado.
+                </AlertDescription>
+            </Alert>
+            <Button onClick={handleGenerateNew} className="mt-4">
+                <RefreshCcw className="mr-2 h-4 w-4" />
+                Generar perfil ahora
+            </Button>
+        </div>
+    );
   }
 
   return (
@@ -303,7 +335,7 @@ export default function PsychologicalProfile() {
                         </CardTitle>
                     </AccordionTrigger>
                     <AccordionContent>
-                        <CardContent className="prose prose-sm dark:prose-invert prose-p:m-0">
+                        <CardContent className="prose prose-sm dark:prose-invert max-w-none">
                              <ReactMarkdown className="text-foreground/80 whitespace-pre-wrap">{profile.diagnosis}</ReactMarkdown>
                         </CardContent>
                     </AccordionContent>
@@ -319,7 +351,7 @@ export default function PsychologicalProfile() {
                         </CardTitle>
                     </AccordionTrigger>
                     <AccordionContent>
-                        <CardContent className="prose prose-sm dark:prose-invert prose-p:m-0">
+                        <CardContent className="prose prose-sm dark:prose-invert max-w-none">
                             <ReactMarkdown className="text-foreground/80 whitespace-pre-wrap">{profile.personality}</ReactMarkdown>
                         </CardContent>
                     </AccordionContent>
@@ -335,7 +367,7 @@ export default function PsychologicalProfile() {
                         </CardTitle>
                     </AccordionTrigger>
                     <AccordionContent>
-                        <CardContent className="prose prose-sm dark:prose-invert prose-p:m-0">
+                        <CardContent className="prose prose-sm dark:prose-invert max-w-none">
                             <ReactMarkdown className="text-foreground/80 whitespace-pre-wrap">{profile.strengths}</ReactMarkdown>
                         </CardContent>
                     </AccordionContent>
@@ -356,7 +388,7 @@ export default function PsychologicalProfile() {
                             {profile.cognitiveBiases.map((rec, index) => (
                                 <li key={index} className="flex items-start gap-3">
                                     <ShieldCheck className="w-5 h-5 text-amber-500 flex-shrink-0 mt-1"/>
-                                    <ReactMarkdown className="text-foreground/80 prose prose-sm dark:prose-invert prose-p:m-0">{rec}</ReactMarkdown>
+                                    <ReactMarkdown className="text-foreground/80 prose prose-sm dark:prose-invert max-w-none prose-p:m-0">{rec}</ReactMarkdown>
                                 </li>
                             ))}
                            </ul>
@@ -379,7 +411,7 @@ export default function PsychologicalProfile() {
                             {profile.defenseMechanisms.map((rec, index) => (
                                 <li key={index} className="flex items-start gap-3">
                                     <ShieldCheck className="w-5 h-5 text-blue-500 flex-shrink-0 mt-1"/>
-                                    <ReactMarkdown className="text-foreground/80 prose prose-sm dark:prose-invert prose-p:m-0">{rec}</ReactMarkdown>
+                                    <ReactMarkdown className="text-foreground/80 prose prose-sm dark:prose-invert max-w-none prose-p:m-0">{rec}</ReactMarkdown>
                                 </li>
                             ))}
                            </ul>
@@ -402,7 +434,7 @@ export default function PsychologicalProfile() {
                             {profile.recommendations.map((rec, index) => (
                                 <li key={index} className="flex items-start gap-3">
                                     <ShieldCheck className="w-5 h-5 text-green-500 flex-shrink-0 mt-1"/>
-                                    <ReactMarkdown className="text-foreground/80 prose prose-sm dark:prose-invert prose-p:m-0">{rec}</ReactMarkdown>
+                                    <ReactMarkdown className="text-foreground/80 prose prose-sm dark:prose-invert max-w-none prose-p:m-0">{rec}</ReactMarkdown>
                                 </li>
                             ))}
                            </ul>
