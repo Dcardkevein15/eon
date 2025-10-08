@@ -10,13 +10,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { BrainCircuit, UserCheck, ShieldCheck, ListChecks, ChevronLeft } from 'lucide-react';
+import { BrainCircuit, UserCheck, ShieldCheck, ListChecks, ChevronLeft, Sparkles, Filter, ShieldQuestion } from 'lucide-react';
 import Link from 'next/link';
 
 type ProfileData = {
   diagnosis: string;
   personality: string;
   recommendations: string[];
+  strengths: string;
+  cognitiveBiases: string[];
+  defenseMechanisms: string[];
 };
 
 export default function PsychologicalProfile() {
@@ -94,6 +97,7 @@ export default function PsychologicalProfile() {
             <Skeleton className="h-32 w-full" />
             <Skeleton className="h-32 w-full" />
             <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-32 w-full" />
         </div>
       </div>
     );
@@ -139,7 +143,7 @@ export default function PsychologicalProfile() {
             </p>
         </header>
 
-        <Accordion type="single" collapsible defaultValue="item-1" className="w-full space-y-4">
+        <Accordion type="multiple" defaultValue={['item-1']} className="w-full space-y-4">
             <AccordionItem value="item-1">
                 <Card>
                     <CardHeader>
@@ -175,8 +179,76 @@ export default function PsychologicalProfile() {
                     </AccordionContent>
                 </Card>
             </AccordionItem>
-
+            
             <AccordionItem value="item-3">
+                 <Card>
+                    <CardHeader>
+                        <AccordionTrigger className="w-full text-left p-0 hover:no-underline">
+                             <CardTitle className="flex items-center gap-3 text-xl">
+                                <Sparkles className="w-6 h-6 text-accent"/>
+                                Fortalezas Psicológicas
+                            </CardTitle>
+                        </AccordionTrigger>
+                    </CardHeader>
+                    <AccordionContent>
+                        <CardContent>
+                            <p className="text-foreground/80 whitespace-pre-wrap">{profile.strengths}</p>
+                        </CardContent>
+                    </AccordionContent>
+                </Card>
+            </AccordionItem>
+
+            <AccordionItem value="item-4">
+                 <Card>
+                    <CardHeader>
+                        <AccordionTrigger className="w-full text-left p-0 hover:no-underline">
+                             <CardTitle className="flex items-center gap-3 text-xl">
+                                <Filter className="w-6 h-6 text-accent"/>
+                                Sesgos Cognitivos Potenciales
+                            </CardTitle>
+                        </AccordionTrigger>
+                    </CardHeader>
+                    <AccordionContent>
+                        <CardContent>
+                           <ul className="space-y-3">
+                            {profile.cognitiveBiases.map((rec, index) => (
+                                <li key={index} className="flex items-start gap-3">
+                                    <ShieldCheck className="w-5 h-5 text-amber-500 flex-shrink-0 mt-1"/>
+                                    <span className="text-foreground/80">{rec}</span>
+                                </li>
+                            ))}
+                           </ul>
+                        </CardContent>
+                    </AccordionContent>
+                </Card>
+            </AccordionItem>
+            
+            <AccordionItem value="item-5">
+                 <Card>
+                    <CardHeader>
+                        <AccordionTrigger className="w-full text-left p-0 hover:no-underline">
+                             <CardTitle className="flex items-center gap-3 text-xl">
+                                <ShieldQuestion className="w-6 h-6 text-accent"/>
+                                Mecanismos de Defensa
+                            </CardTitle>
+                        </AccordionTrigger>
+                    </CardHeader>
+                    <AccordionContent>
+                        <CardContent>
+                           <ul className="space-y-3">
+                            {profile.defenseMechanisms.map((rec, index) => (
+                                <li key={index} className="flex items-start gap-3">
+                                    <ShieldCheck className="w-5 h-5 text-blue-500 flex-shrink-0 mt-1"/>
+                                    <span className="text-foreground/80">{rec}</span>
+                                </li>
+                            ))}
+                           </ul>
+                        </CardContent>
+                    </AccordionContent>
+                </Card>
+            </AccordionItem>
+
+            <AccordionItem value="item-6">
                  <Card>
                     <CardHeader>
                         <AccordionTrigger className="w-full text-left p-0 hover:no-underline">

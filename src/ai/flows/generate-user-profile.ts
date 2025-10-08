@@ -16,7 +16,7 @@ const GenerateUserProfileInputSchema = z.object({
   fullChatHistory: z
     .string()
     .describe(
-      'The complete and unified history of all chat conversations for a single user.'
+      'El historial completo y unificado de todas las conversaciones de chat de un solo usuario.'
     ),
 });
 export type GenerateUserProfileInput = z.infer<
@@ -27,17 +27,32 @@ const GenerateUserProfileOutputSchema = z.object({
   diagnosis: z
     .string()
     .describe(
-      'A descriptive diagnosis of the most likely psychological state based on the analysis of all conversations. It should be written in a professional, empathetic, and clear manner.'
+      'Un diagnóstico descriptivo del estado psicológico más probable basado en el análisis de todas las conversaciones. Debe ser redactado de manera profesional, empática y clara, evitando etiquetas y enfocándose en tendencias.'
     ),
   personality: z
     .string()
     .describe(
-      'A detailed characterization of the personality, including dominant traits, cognitive style, frequent emotions, and patterns of thought and behavior.'
+      'Una caracterización detallada de la personalidad, incluyendo rasgos dominantes, estilo cognitivo, emociones frecuentes y patrones de pensamiento y comportamiento observados.'
+    ),
+  strengths: z
+    .string()
+    .describe(
+      'Análisis de las fortalezas y recursos psicológicos del usuario, como resiliencia, introspección, empatía, etc.'
+    ),
+  cognitiveBiases: z
+    .array(z.string())
+    .describe(
+      'Identificación de posibles sesgos cognitivos recurrentes (ej. pensamiento catastrófico, generalización, etc.) con ejemplos del chat.'
+    ),
+  defenseMechanisms: z
+    .array(z.string())
+    .describe(
+      'Inferencia de posibles mecanismos de defensa utilizados por el usuario (ej. racionalización, evitación, proyección) con justificación.'
     ),
   recommendations: z
     .array(z.string())
     .describe(
-      'A list of personalized recommendations for the psychological well-being and personal development of the user.'
+      'Una lista de recomendaciones personalizadas y accionables para el bienestar psicológico y el desarrollo personal del usuario, vinculadas a los hallazgos.'
     ),
 });
 export type GenerateUserProfileOutput = z.infer<
@@ -54,16 +69,25 @@ const prompt = ai.definePrompt({
   name: 'generateUserProfilePrompt',
   input: { schema: GenerateUserProfileInputSchema },
   output: { schema: GenerateUserProfileOutputSchema },
-  prompt: `You are an expert clinical psychologist AI. Your task is to analyze the complete chat history of a user to create an integrated and deep psychological profile. You must synthesize information across all provided conversations to build a continuous understanding of the person.
+  prompt: `Eres un psicólogo clínico experto y un analista de perfiles de IA. Tu tarea es analizar el historial completo de chats de un usuario para crear un perfil psicológico profundo, integrado y útil. Debes sintetizar la información de todas las conversaciones para construir una comprensión continua de la persona. Sé innovador y proporciona información que sea genuinamente útil.
 
-Based on the full chat history provided below, generate a comprehensive report with the following three sections:
-1.  **Descriptive Diagnosis**: Identify the most likely psychological state. Describe it professionally, avoiding definitive labels but explaining the observed emotional and cognitive trends (e.g., "The user shows persistent patterns of anxious thinking," not "The user has anxiety disorder").
-2.  **Personality Characterization**: Detail the user's personality. Mention dominant traits (e.g., introversion, conscientiousness), cognitive style (e.g., analytical, ruminative), frequent emotions (e.g., sadness, frustration), and recurring thought and behavior patterns.
-3.  **Personalized Recommendations**: Provide a list of actionable, personalized recommendations for psychological well-being. These should be directly linked to the findings in the diagnosis and personality sections.
+Mantén un tono profesional, empático y clínico en todo momento. Toda la salida DEBE estar en español.
 
-Maintain a professional, empathetic, and clinical tone throughout.
+Basado en el historial completo de chats proporcionado, genera un informe estructurado con las siguientes secciones:
 
-Full Chat History:
+1.  **Diagnóstico Descriptivo**: Identifica el estado psicológico más probable. Describe las tendencias emocionales y cognitivas observadas de forma profesional (ej. "El usuario muestra patrones persistentes de pensamiento ansioso y rumiación sobre eventos pasados", en lugar de "El usuario tiene ansiedad").
+
+2.  **Caracterización de la Personalidad**: Detalla la personalidad del usuario. Menciona rasgos dominantes (ej. introversión, neuroticismo, apertura a la experiencia), su estilo cognitivo (ej. analítico, asociativo, rumiante), las emociones más frecuentes (ej. frustración, alegría, tristeza) y patrones de comportamiento recurrentes.
+
+3.  **Fortalezas Psicológicas**: Identifica y describe los recursos y puntos fuertes del usuario. Busca signos de resiliencia, capacidad de introspección, empatía, autoconciencia, disciplina, creatividad o cualquier otra cualidad positiva que se manifieste.
+
+4.  **Sesgos Cognitivos Potenciales**: Analiza el lenguaje para identificar posibles sesgos cognitivos. Proporciona una lista de 2-3 sesgos que parezcan más prominentes (ej. "Pensamiento de todo o nada: 'Si no logro esto, soy un completo fracaso'", "Filtro mental: Se enfoca en un solo detalle negativo de una situación, ignorando los aspectos positivos.").
+
+5.  **Mecanismos de Defensa**: Infiere los posibles mecanismos de defensa que el usuario emplea para manejar el estrés o la disonancia cognitiva. Proporciona una lista de 2-3 mecanismos con una breve justificación (ej. "Racionalización: Justifica decisiones o resultados negativos con explicaciones lógicas para evitar sentir decepción.", "Evitación: Cambia de tema o minimiza la importancia de asuntos que le generan ansiedad.").
+
+6.  **Recomendaciones Personalizadas**: Ofrece una lista de recomendaciones accionables y personalizadas para el bienestar y desarrollo del usuario. Estas deben estar directamente conectadas con los hallazgos de las secciones anteriores.
+
+Historial completo del chat:
 {{{fullChatHistory}}}
 `,
 });
