@@ -19,6 +19,7 @@ import {
 import { type Firestore } from 'firebase/firestore';
 import { type FirebaseStorage } from 'firebase/storage';
 import { type FirebaseApp } from 'firebase/app';
+import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
 // Main Firebase Context
 interface FirebaseContextType {
@@ -120,6 +121,7 @@ export const useFirebase = createFirebaseHook(FirebaseContext);
 
 export const useFirebaseApp = (): FirebaseApp => useFirebase().app;
 export const useFirestore = (): Firestore => useFirebase().firestore;
+export const useStorage = (): FirebaseStorage => useFirebase().storage;
 
 
 // Combined Firebase Provider
@@ -138,6 +140,7 @@ export function FirebaseProvider({
     return (
         <FirebaseContext.Provider value={{ app, auth, firestore, storage }}>
             <AuthProvider auth={auth}>
+                <FirebaseErrorListener />
                 {children}
             </AuthProvider>
         </FirebaseContext.Provider>

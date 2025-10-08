@@ -13,16 +13,17 @@ import { collection, addDoc, updateDoc, doc, query, orderBy, Timestamp } from 'f
 
 interface ChatPanelProps {
   chat: Chat;
+  appendMessage: (chatId: string, message: Omit<Message, 'id'>) => Promise<void>;
+  updateChatTitle: (chatId: string, title: string) => Promise<void>;
 }
 
-function ChatPanel({ chat }: ChatPanelProps) {
+function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
   const [isResponding, setIsResponding] = useState(false);
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { user } = useAuth();
   const firestore = useFirestore();
 
-  // Set up the query for the messages subcollection
   const messagesQuery = useMemo(
     () =>
       user?.uid && firestore && chat.id
@@ -36,27 +37,9 @@ function ChatPanel({ chat }: ChatPanelProps) {
   
   const { data: messages, loading: messagesLoading } = useCollection<Message>(messagesQuery);
   
-  const appendMessage = useCallback(
-    async (message: Omit<Message, 'id'>) => {
-        if (!user || !firestore || !chat.id) return;
-        const messagesColRef = collection(firestore, `users/${user.uid}/chats/${chat.id}/messages`);
-        await addDoc(messagesColRef, message);
-    },
-    [user, firestore, chat.id]
-  );
-
-  const updateChatTitle = useCallback(
-    async (title: string) => {
-      if (!user || !firestore) return;
-      const chatRef = doc(firestore, `users/${user.uid}/chats`, chat.id);
-      await updateDoc(chatRef, { title });
-    },
-    [user, firestore, chat.id]
-  );
-
   const handleSendMessage = useCallback(async (input: string, imageUrl?: string) => {
-    if ((!input.trim() && !imageUrl) || isResponding || !messages) return;
-  
+    if (!input.trim() && !imageUrl) return;
+
     const userMessage: Omit<Message, 'id'> = {
       role: 'user',
       content: input,
@@ -64,49 +47,17 @@ function ChatPanel({ chat }: ChatPanelProps) {
       ...(imageUrl && { imageUrl }),
     };
     
-    await appendMessage(userMessage);
-    
-    const currentMessages: Message[] = [...messages, { ...userMessage, id: 'temp-id' }];
-  
-    setIsResponding(true);
-  
-    try {
-      // Manually convert Timestamps to plain objects before sending to the server action.
-      const plainHistory = currentMessages.map(msg => ({
-        ...msg,
-        timestamp: msg.timestamp.toMillis(),
-      }));
+    await appendMessage(chat.id, userMessage);
+  }, [appendMessage, chat.id]);
 
-      // Get AI response
-      const aiResponseContent = await getAIResponse(plainHistory as any);
-  
-      const aiMessage: Omit<Message, 'id'> = {
-        role: 'assistant',
-        content: aiResponseContent,
-        timestamp: Timestamp.now(),
-      };
-      
-      await appendMessage(aiMessage);
-  
-    } catch (error) {
-      console.error('Error handling message:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'No se pudo obtener una respuesta de la IA. Por favor, inténtalo de nuevo.',
-      });
-    } finally {
-      setIsResponding(false);
-    }
-  }, [messages, isResponding, appendMessage, toast]);
-  
-  // Effect to handle the very first AI response and title generation
   useEffect(() => {
-    const processInitialMessage = async () => {
-        if (messages && messages.length === 1 && messages[0].role === 'user' && !isResponding) {
+    const processAIResponse = async () => {
+        if (!messages || messages.length === 0 || isResponding) return;
+
+        const lastMessage = messages[messages.length - 1];
+        if (lastMessage.role === 'user') {
             setIsResponding(true);
             try {
-                // Manually convert Timestamps to plain objects before sending to the server action.
                 const plainHistory = messages.map(msg => ({
                   ...msg,
                   timestamp: msg.timestamp.toMillis(),
@@ -119,24 +70,27 @@ function ChatPanel({ chat }: ChatPanelProps) {
                     content: aiResponseContent,
                     timestamp: Timestamp.now(),
                 };
-                await appendMessage(aiMessage);
+                await appendMessage(chat.id, aiMessage);
                 
-                const conversationForTitle = `User: ${messages[0].content}\nAssistant: ${aiResponseContent}`;
-                const newTitle = await generateChatTitle(conversationForTitle);
-                await updateChatTitle(newTitle);
+                if (messages.length <= 2 && chat.title === 'Nuevo Chat') {
+                    const conversationForTitle = `User: ${messages[0].content}\nAssistant: ${aiResponseContent}`;
+                    const newTitle = await generateChatTitle(conversationForTitle);
+                    await updateChatTitle(chat.id, newTitle);
+                }
+
             } catch (error) {
-                console.error("Error processing initial message:", error);
+                console.error("Error processing AI response:", error);
                 toast({
                   variant: "destructive",
                   title: "Error",
-                  description: "No se pudo iniciar la conversación con la IA. Intenta de nuevo.",
+                  description: "No se pudo obtener una respuesta de la IA.",
                 });
             } finally {
                 setIsResponding(false);
             }
         }
     };
-    processInitialMessage();
+    processAIResponse();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, isResponding]);
 

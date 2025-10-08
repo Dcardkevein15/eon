@@ -5,10 +5,12 @@ import {
 } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { useMemoCompare } from './use-memo-compare';
+import { errorEmitter } from './error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from './errors';
 
 
 // Re-exporting from provider
-export { useAuth, useFirestore, useFirebaseApp } from './provider';
+export { useAuth, useFirestore, useFirebaseApp, useStorage } from './provider';
 
 // Collection Hook
 type DocumentWithId<T> = T & { id: string };
@@ -54,10 +56,17 @@ export function useCollection<T>(query: Query | undefined) {
         setData(docs);
         setLoading(false);
       },
-      (err) => {
-        console.error("Error in useCollection:", err);
-        setError(err);
+      async (err) => {
         setLoading(false);
+        setError(err);
+        if (err.code === 'permission-denied') {
+          const permissionError = new FirestorePermissionError({
+            // @ts-ignore internal property
+            path: queryMemo._query.path.toString(),
+            operation: 'list',
+          } satisfies SecurityRuleContext);
+          errorEmitter.emit('permission-error', permissionError);
+        }
       }
     );
 

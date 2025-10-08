@@ -26,6 +26,8 @@ import ChatPanel from '@/components/chat/chat-panel';
 import EmptyChat from '@/components/chat/empty-chat';
 import { cn } from '@/lib/utils';
 import { getAIResponse, generateChatTitle as genTitle } from '@/app/actions';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 interface ChatLayoutProps {
   chatId?: string;
@@ -66,34 +68,79 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
         timestamp: Timestamp.now(),
         ...(imageUrl && { imageUrl }),
       };
+      
+      const newChatData = {
+        title: 'Nuevo Chat',
+        userId: user.uid,
+        createdAt: serverTimestamp(),
+        path: '',
+      };
 
-      try {
-        // 1. Create the main chat document first
-        const newChatRef = await addDoc(
-          collection(firestore, `users/${user.uid}/chats`),
-          {
-            title: 'Nuevo Chat',
-            userId: user.uid,
-            createdAt: serverTimestamp(),
-            path: '',
-          }
-        );
+      const chatsCollectionRef = collection(firestore, `users/${user.uid}/chats`);
 
-        const path = `/c/${newChatRef.id}`;
-        await updateDoc(newChatRef, { path });
+      addDoc(chatsCollectionRef, newChatData)
+        .then(async (newChatRef) => {
+          const path = `/c/${newChatRef.id}`;
+          await updateDoc(newChatRef, { path });
 
-        // 2. Add the user's first message to the 'messages' subcollection
-        const messagesColRef = collection(newChatRef, 'messages');
-        await addDoc(messagesColRef, userMessageContent);
+          const messagesColRef = collection(newChatRef, 'messages');
+          await addDoc(messagesColRef, userMessageContent)
+            .catch(async (serverError) => {
+               const permissionError = new FirestorePermissionError({
+                  path: messagesColRef.path,
+                  operation: 'create',
+                  requestResourceData: userMessageContent,
+                } satisfies SecurityRuleContext);
+                errorEmitter.emit('permission-error', permissionError);
+            });
 
-        // 3. Navigate to the new chat page
-        router.push(path);
-      } catch (e) {
-        console.error('Error creating chat:', e);
-      }
+          router.push(path);
+        })
+        .catch(async (serverError) => {
+          const permissionError = new FirestorePermissionError({
+            path: chatsCollectionRef.path,
+            operation: 'create',
+            requestResourceData: newChatData,
+          } satisfies SecurityRuleContext);
+          errorEmitter.emit('permission-error', permissionError);
+        });
     },
     [user, firestore, router]
   );
+  
+  const appendMessage = useCallback(
+    async (chatId: string, message: Omit<Message, 'id'>) => {
+        if (!user || !firestore) return;
+        const messagesColRef = collection(firestore, `users/${user.uid}/chats/${chatId}/messages`);
+        
+        addDoc(messagesColRef, message).catch(async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+              path: messagesColRef.path,
+              operation: 'create',
+              requestResourceData: message,
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+        });
+    },
+    [user, firestore]
+  );
+  
+  const updateChatTitle = useCallback(
+    async (chatId: string, title: string) => {
+      if (!user || !firestore) return;
+      const chatRef = doc(firestore, `users/${user.uid}/chats`, chatId);
+      updateDoc(chatRef, { title }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: chatRef.path,
+          operation: 'update',
+          requestResourceData: { title },
+        } satisfies SecurityRuleContext);
+        errorEmitter.emit('permission-error', permissionError);
+      });
+    },
+    [user, firestore]
+  );
+
 
   const removeChat = useCallback(
     async (chatId: string) => {
@@ -102,7 +149,13 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
       // For a production app, you'd need a Cloud Function to handle cascading deletes.
       // For this context, we just delete the main chat doc.
       const chatRef = doc(firestore, `users/${user.uid}/chats`, chatId);
-      await deleteDoc(chatRef);
+      deleteDoc(chatRef).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: chatRef.path,
+          operation: 'delete',
+        } satisfies SecurityRuleContext);
+        errorEmitter.emit('permission-error', permissionError);
+      });
 
       if (activeChat?.id === chatId) {
         router.push('/');
@@ -119,7 +172,14 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
       const chatRef = doc(firestore, `users/${user.uid}/chats`, chat.id);
       batch.delete(chatRef);
     });
-    await batch.commit();
+    batch.commit().catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            // This path is a simplification for the batch operation
+            path: `users/${user.uid}/chats`,
+            operation: 'delete',
+        } satisfies SecurityRuleContext);
+        errorEmitter.emit('permission-error', permissionError);
+    });
     // Again, subcollections are not deleted here.
 
     router.push('/');
@@ -146,6 +206,8 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
             {chatId && activeChat ? (
               <ChatPanel
                 chat={activeChat}
+                appendMessage={appendMessage}
+                updateChatTitle={updateChatTitle}
               />
             ) : (
               <EmptyChat createChat={createChat} />
