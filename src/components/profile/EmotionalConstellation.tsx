@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { BrainCircuit } from 'lucide-react';
-import ForceGraph2D from 'react-force-graph-2d';
+import ForceGraph2D, { ForceGraphMethods } from 'react-force-graph-2d';
 
 type NodeObject = {
   id: string;
@@ -33,6 +33,7 @@ interface EmotionalConstellationProps {
 const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data }) => {
   const [isClient, setIsClient] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const graphRef = useRef<ForceGraphMethods>();
   const [graphDimensions, setGraphDimensions] = useState({ width: 0, height: 0 });
   const [theme, setTheme] = useState('dark');
 
@@ -83,6 +84,7 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
       </CardHeader>
       <CardContent ref={containerRef} className="p-0">
         <ForceGraph2D
+          ref={graphRef}
           width={graphDimensions.width}
           height={graphDimensions.height}
           graphData={data}
@@ -118,7 +120,7 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
             ctx.stroke();
           }}
           cooldownTicks={100}
-          onEngineStop={(graph) => graph.zoomToFit(200, 100)}
+          onEngineStop={() => graphRef.current?.zoomToFit(200, 100)}
         />
       </CardContent>
     </Card>
