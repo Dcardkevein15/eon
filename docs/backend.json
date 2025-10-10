@@ -110,6 +110,37 @@
         "bio": { "type": "string", "description": "A short biography of the therapist." }
       },
       "required": ["id", "name", "photoUrl", "specialties", "pricePerSession", "languages", "verified", "credentials", "bio"]
+    },
+    "emotionalConstellation": {
+      "title": "Emotional Constellation",
+      "description": "A graph-based representation of a user's emotional and thematic landscape.",
+      "type": "object",
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string", "description": "The unique identifier for the node (a key theme)." },
+              "val": { "type": "number", "description": "The recurrence or weight of the theme (e.g., number of mentions)." }
+            },
+            "required": ["id", "val"]
+          }
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "source": { "type": "string", "description": "The ID of the source node." },
+              "target": { "type": "string", "description": "The ID of the target node." },
+              "sentiment": { "type": "number", "description": "A value from -1 (negative) to 1 (positive) representing the sentiment of the relationship." }
+            },
+            "required": ["source", "target", "sentiment"]
+          }
+        }
+      },
+      "required": ["nodes", "links"]
     }
   },
   "auth": {

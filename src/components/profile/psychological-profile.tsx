@@ -17,12 +17,20 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import ReactMarkdown from 'react-markdown';
 import EmotionalChart from './EmotionalChart';
+import EmotionalConstellation from './EmotionalConstellation';
+import { useTheme } from 'next-themes';
+
 
 type EmotionalStatePoint = {
   date: string;
   sentiment: number;
   summary: string;
   keyEvents: string[];
+};
+
+type EmotionalConstellationData = {
+  nodes: { id: string; val: number }[];
+  links: { source: string; target: string; sentiment: number }[];
 };
 
 type ProfileData = {
@@ -33,6 +41,7 @@ type ProfileData = {
   cognitiveBiases: string[];
   defenseMechanisms: string[];
   emotionalJourney: EmotionalStatePoint[];
+  emotionalConstellation: EmotionalConstellationData;
 };
 
 type CachedProfile = {
@@ -43,6 +52,7 @@ type CachedProfile = {
 export default function PsychologicalProfile() {
   const { user } = useAuth();
   const firestore = useFirestore();
+  const { setTheme } = useTheme();
   
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -181,7 +191,9 @@ export default function PsychologicalProfile() {
 
   useEffect(() => {
     setIsClient(true);
-  }, []);
+    // Ensure the theme is set for graph colors
+    setTheme('dark');
+  }, [setTheme]);
 
   useEffect(() => {
     if (!isClient || !user || !storageKey) {
@@ -333,20 +345,6 @@ export default function PsychologicalProfile() {
             </p>
         </header>
 
-        {profile.emotionalJourney && profile.emotionalJourney.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <LineChart className="w-6 h-6 text-accent"/>
-                Evolución Emocional
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isClient && <EmotionalChart data={profile.emotionalJourney} />}
-            </CardContent>
-          </Card>
-        )}
-
         <Accordion type="multiple" defaultValue={['item-1', 'item-6']} className="w-full space-y-4">
             <AccordionItem value="item-1">
                 <Card>
@@ -363,6 +361,10 @@ export default function PsychologicalProfile() {
                     </AccordionContent>
                 </Card>
             </AccordionItem>
+            
+            {profile.emotionalConstellation && profile.emotionalConstellation.nodes.length > 0 && (
+              <EmotionalConstellation data={profile.emotionalConstellation} />
+            )}
 
             <AccordionItem value="item-2">
                  <Card>
@@ -395,6 +397,20 @@ export default function PsychologicalProfile() {
                     </AccordionContent>
                 </Card>
             </AccordionItem>
+
+             {profile.emotionalJourney && profile.emotionalJourney.length > 0 && (
+                <Card>
+                    <CardHeader>
+                    <CardTitle className="flex items-center gap-3 text-xl">
+                        <LineChart className="w-6 h-6 text-accent"/>
+                        Evolución Emocional
+                    </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                    {isClient && <EmotionalChart data={profile.emotionalJourney} />}
+                    </CardContent>
+                </Card>
+            )}
 
             <AccordionItem value="item-4">
                  <Card>
