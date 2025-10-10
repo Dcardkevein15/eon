@@ -65,8 +65,11 @@ export function AuthProvider({
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-    } catch (error) {
-      console.error('Error al iniciar sesión con Google:', error);
+    } catch (error: any) {
+      // Don't log the error if the user cancelled the popup
+      if (error.code !== 'auth/cancelled-popup-request') {
+        console.error('Error al iniciar sesión con Google:', error);
+      }
     }
   };
 
