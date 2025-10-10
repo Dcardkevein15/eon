@@ -17,9 +17,14 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import ReactMarkdown from 'react-markdown';
 import EmotionalChart from './EmotionalChart';
-import EmotionalConstellation from './EmotionalConstellation';
+import dynamic from 'next/dynamic';
 import { useTheme } from 'next-themes';
 
+
+const EmotionalConstellation = dynamic(() => import('./EmotionalConstellation'), {
+  ssr: false,
+  loading: () => <Skeleton className="h-[400px] w-full" />,
+});
 
 type EmotionalStatePoint = {
   date: string;
@@ -362,7 +367,7 @@ export default function PsychologicalProfile() {
                 </Card>
             </AccordionItem>
             
-            {profile.emotionalConstellation && profile.emotionalConstellation.nodes.length > 0 && (
+            {profile.emotionalConstellation && profile.emotionalConstellation.nodes.length > 0 && isClient && (
               <EmotionalConstellation data={profile.emotionalConstellation} />
             )}
 

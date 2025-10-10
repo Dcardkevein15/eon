@@ -4,7 +4,6 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { BrainCircuit } from 'lucide-react';
 import ForceGraph2D from 'react-force-graph-2d';
-import { useTheme } from 'next-themes';
 
 type NodeObject = {
   id: string;
@@ -33,12 +32,15 @@ interface EmotionalConstellationProps {
 
 const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data }) => {
   const [isClient, setIsClient] = useState(false);
-  const { resolvedTheme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const [graphDimensions, setGraphDimensions] = useState({ width: 0, height: 0 });
+  const [theme, setTheme] = useState('dark');
 
   useEffect(() => {
     setIsClient(true);
+    // Detect theme from DOM
+    const currentTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+    setTheme(currentTheme);
   }, []);
 
   const updateDimensions = useCallback(() => {
@@ -59,7 +61,7 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
   const getSentimentColor = (sentiment: number) => {
     if (sentiment > 0.5) return '#22c55e'; // Green 500
     if (sentiment > 0) return '#a3e635'; // Lime 500
-    if (sentiment === 0) return resolvedTheme === 'dark' ? '#64748b' : '#94a3b8'; // Slate 500 / 400
+    if (sentiment === 0) return theme === 'dark' ? '#64748b' : '#94a3b8'; // Slate 500 / 400
     if (sentiment < -0.5) return '#ef4444'; // Red 500
     return '#f97316'; // Orange 500
   };
@@ -90,8 +92,8 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
             const fontSize = 12 / globalScale;
             ctx.font = `${fontSize}px Sans-Serif`;
             
-            const nodeColor = resolvedTheme === 'dark' ? '#e2e8f0' : '#0f172a'; // Slate 200 / 900
-            const textColor = resolvedTheme === 'dark' ? '#94a3b8' : '#475569'; // Slate 400 / 600
+            const nodeColor = theme === 'dark' ? '#e2e8f0' : '#0f172a'; // Slate 200 / 900
+            const textColor = theme === 'dark' ? '#94a3b8' : '#475569'; // Slate 400 / 600
 
             ctx.fillStyle = nodeColor;
             ctx.beginPath();
@@ -110,7 +112,7 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
             
             ctx.beginPath();
             ctx.moveTo((link.source as NodeObject).x!, (link.source as NodeObject).y!);
-            ctx.lineTo((link.target as NodeObject).x!, (link.target as NodeObject).y!);
+            ctx.lineTo((link.target as NodeObject).x!, (link.targ_et as NodeObject).y!);
             ctx.strokeStyle = getSentimentColor(sentiment);
             ctx.lineWidth = Math.abs(sentiment) * 2 + 0.5;
             ctx.stroke();
