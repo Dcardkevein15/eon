@@ -8,8 +8,10 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
+  Brush,
+  CartesianGrid,
 } from 'recharts';
-import { format, parseISO } from 'date-fns';
+import { format, parse } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 
@@ -27,17 +29,15 @@ interface EmotionalChartProps {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
-    const dateLabel = payload[0].payload.date; // Use the original date string
+    const dateLabel = payload[0].payload.date; // Use the original date string 'YYYY-MM-DD'
 
     try {
-      // Create date as UTC to avoid timezone shifts from the string 'YYYY-MM-DD'
-      const utcDate = new Date(`${dateLabel}T00:00:00Z`);
-
+      const parsedDate = parse(dateLabel, 'yyyy-MM-dd', new Date());
       return (
         <Card className="max-w-sm">
           <CardHeader className="p-4">
             <CardTitle className="text-base">
-              {format(utcDate, "eeee, d 'de' MMMM", { locale: es })}
+              {format(parsedDate, "eeee, d 'de' MMMM", { locale: es })}
             </CardTitle>
             <CardDescription>{data.summary}</CardDescription>
           </CardHeader>
@@ -52,7 +52,6 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         </Card>
       );
     } catch (error) {
-      // Fallback if date is somehow still invalid
       return (
          <Card className="max-w-sm p-4">
           <p>Error al mostrar fecha.</p>
@@ -66,15 +65,28 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 
 export default function EmotionalChart({ data }: EmotionalChartProps) {
-
-  // The data now just needs to be parsed, no pre-formatting needed for the chart component itself
   const formattedData = data.map(item => ({
     ...item,
-    date: item.date, // Pass the original ISO string
+    // The date is already a 'YYYY-MM-DD' string, which recharts can handle
   }));
 
+  const tickFormatter = (value: string) => {
+    try {
+      const date = parse(value, 'yyyy-MM-dd', new Date());
+      return format(date, 'd MMM', { locale: es });
+    } catch (e) {
+      return '';
+    }
+  };
+
+  // Determine the domain for the brush
+  const numEntries = formattedData.length;
+  const startIndex = Math.max(0, numEntries - 7); // Show last 7 days by default
+  const endIndex = numEntries - 1;
+
+
   return (
-    <div className="h-80 w-full">
+    <div className="h-96 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart
           data={formattedData}
@@ -85,26 +97,29 @@ export default function EmotionalChart({ data }: EmotionalChartProps) {
             bottom: 5,
           }}
         >
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" />
           <XAxis 
             dataKey="date" 
             tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
             axisLine={{ stroke: 'hsl(var(--border))' }}
             tickLine={{ stroke: 'hsl(var(--muted-foreground))' }}
-            tickFormatter={(value) => {
-              try {
-                 // Create date as UTC to avoid timezone shifts
-                const utcDate = new Date(`${value}T00:00:00Z`);
-                return format(utcDate, 'd MMM', { locale: es })
-              } catch (e) {
-                return '';
-              }
-            }}
+            tickFormatter={tickFormatter}
+            minTickGap={15}
           />
           <YAxis 
-            domain={[-1, 1]} 
-            hide 
+            domain={[-1.1, 1.1]}
+            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+            axisLine={{ stroke: 'hsl(var(--border))' }}
+            tickLine={{ stroke: 'hsl(var(--muted-foreground))' }}
+            tickFormatter={(value) => 
+                value === 1 ? 'Positivo' : value === -1 ? 'Negativo' : value === 0 ? 'Neutral' : ''
+            }
           />
-          <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(var(--accent))', strokeDasharray: '3 3' }} />
+          <Tooltip 
+            content={<CustomTooltip />} 
+            cursor={{ stroke: 'hsl(var(--accent))', strokeDasharray: '3 3' }} 
+            wrapperStyle={{ zIndex: 100 }}
+          />
           
           <ReferenceLine y={0} stroke="hsl(var(--border))" strokeDasharray="3 3" />
 
@@ -120,10 +135,27 @@ export default function EmotionalChart({ data }: EmotionalChartProps) {
             dataKey="sentiment"
             stroke="hsl(var(--primary))"
             strokeWidth={2}
-            dot={false}
-            fillOpacity={1}
-            fill="url(#sentimentGradient)"
+            dot={{ r: 2, fill: 'hsl(var(--primary))' }}
+            activeDot={{ r: 6 }}
+            name="Sentimiento"
           />
+
+          {numEntries > 1 && (
+             <Brush 
+                dataKey="date" 
+                height={30} 
+                stroke="hsl(var(--primary))"
+                fill="hsl(var(--sidebar-background))"
+                tickFormatter={tickFormatter}
+                startIndex={startIndex}
+                endIndex={endIndex}
+             >
+                {/* This allows the brush to have its own mini-chart */}
+                <LineChart>
+                   <Line type="monotone" dataKey="sentiment" stroke="hsl(var(--primary))" dot={false} />
+                </LineChart>
+             </Brush>
+          )}
         </LineChart>
       </ResponsiveContainer>
     </div>
