@@ -112,7 +112,7 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
             
             ctx.beginPath();
             ctx.moveTo((link.source as NodeObject).x!, (link.source as NodeObject).y!);
-            ctx.lineTo((link.target as NodeObject).x!, (link.targ_et as NodeObject).y!);
+            ctx.lineTo((link.target as NodeObject).x!, (link.target as NodeObject).y!);
             ctx.strokeStyle = getSentimentColor(sentiment);
             ctx.lineWidth = Math.abs(sentiment) * 2 + 0.5;
             ctx.stroke();
