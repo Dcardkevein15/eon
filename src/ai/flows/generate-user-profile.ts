@@ -45,13 +45,13 @@ const EmotionalConstellationNodeSchema = z.object({
 
 const EmotionalConstellationLinkSchema = z.object({
     source: z.string().describe('El ID del nodo de origen.'),
-    target: z.string().describe('El ID del nodo de destino.'),
+    target: z.string().describe('El ID del nodo de destino. No puede ser el mismo que el de origen.'),
     sentiment: z.number().min(-1).max(1).describe('Un valor de -1 (muy negativo), 0 (neutral) a 1 (muy positivo) que representa la relación sentimental entre los dos temas.'),
 });
 
 const EmotionalConstellationSchema = z.object({
     nodes: z.array(EmotionalConstellationNodeSchema).describe('Una lista de los 5-8 temas más importantes o "planetas" en el universo emocional del usuario.'),
-    links: z.array(EmotionalConstellationLinkSchema).describe('Una lista de las conexiones u "órbitas" entre los temas, describiendo cómo se relacionan entre sí.'),
+    links: z.array(EmotionalConstellationLinkSchema).describe('Una lista de las conexiones u "órbitas" entre los temas, describiendo cómo se relacionan entre sí. Un nodo no puede estar conectado a sí mismo.'),
 });
 
 const GenerateUserProfileOutputSchema = z.object({
@@ -133,7 +133,7 @@ Basado en el historial completo de chats proporcionado, genera un informe estruc
 8.  **Constelador Emocional (emotionalConstellation)**: Analiza la totalidad de las conversaciones para construir un grafo de conexiones temáticas.
     - Identifica entre 5 y 8 temas centrales y recurrentes en la vida del usuario (ej. "Trabajo", "Familia", "Ansiedad", "Autoestima", "Planes a Futuro"). Estos serán los \`nodes\`. El valor \`val\` de cada nodo debe representar su importancia o frecuencia (un entero, ej: 10 para el tema más importante).
     - Identifica las relaciones entre estos temas. Por ejemplo, si el usuario habla de "Trabajo" y "Ansiedad" juntos con frecuencia, crea un \`link\`.
-    - Para cada \`link\`, determina el \`sentiment\` de la relación: -1 si la conexión es predominantemente negativa (ej. Trabajo causa Ansiedad), 1 si es positiva (ej. Amigos mejora la Autoestima), y 0 si es neutral o mixta.
+    - Para cada \`link\`, determina el \`sentiment\` de la relación: -1 si la conexión es predominantemente negativa (ej. Trabajo causa Ansiedad), 1 si es positiva (ej. Amigos mejora la Autoestima), y 0 si es neutral o mixta. Un nodo no puede estar enlazado a sí mismo.
     - El resultado debe ser un objeto con dos arrays: \`nodes\` y \`links\`.
 
 Historial completo del chat (cada mensaje incluye su fecha en formato ISO 8601):
