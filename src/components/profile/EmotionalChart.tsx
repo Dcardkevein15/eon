@@ -27,24 +27,41 @@ interface EmotionalChartProps {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
-    return (
-      <Card className="max-w-sm">
-        <CardHeader className="p-4">
-          <CardTitle className="text-base">
-            {format(parseISO(label), "eeee, d 'de' MMMM", { locale: es })}
-          </CardTitle>
-          <CardDescription>{data.summary}</CardDescription>
-        </CardHeader>
-        <CardContent className="p-4 pt-0">
-          <p className="text-xs font-semibold text-muted-foreground mb-2">Eventos Clave:</p>
-          <ul className="list-disc list-inside space-y-1 text-sm">
-            {data.keyEvents.map((event: string, index: number) => (
-              <li key={index}>{event}</li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
-    );
+    const dateLabel = payload[0].payload.date; // Use the original date string
+
+    // Validate date before formatting
+    try {
+      const parsedDate = parseISO(dateLabel);
+      if (isNaN(parsedDate.getTime())) {
+        throw new Error('Invalid date');
+      }
+
+      return (
+        <Card className="max-w-sm">
+          <CardHeader className="p-4">
+            <CardTitle className="text-base">
+              {format(parsedDate, "eeee, d 'de' MMMM", { locale: es })}
+            </CardTitle>
+            <CardDescription>{data.summary}</CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            <p className="text-xs font-semibold text-muted-foreground mb-2">Eventos Clave:</p>
+            <ul className="list-disc list-inside space-y-1 text-sm">
+              {data.keyEvents.map((event: string, index: number) => (
+                <li key={index}>{event}</li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      );
+    } catch (error) {
+      // Fallback if date is somehow still invalid
+      return (
+         <Card className="max-w-sm p-4">
+          <p>Error al mostrar fecha.</p>
+        </Card>
+      );
+    }
   }
 
   return null;
@@ -53,9 +70,10 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export default function EmotionalChart({ data }: EmotionalChartProps) {
 
+  // The data now just needs to be parsed, no pre-formatting needed for the chart component itself
   const formattedData = data.map(item => ({
     ...item,
-    formattedDate: format(parseISO(item.date), 'd MMM', { locale: es }),
+    date: item.date, // Pass the original ISO string
   }));
 
   return (
@@ -71,10 +89,17 @@ export default function EmotionalChart({ data }: EmotionalChartProps) {
           }}
         >
           <XAxis 
-            dataKey="formattedDate" 
+            dataKey="date" 
             tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
             axisLine={{ stroke: 'hsl(var(--border))' }}
             tickLine={{ stroke: 'hsl(var(--muted-foreground))' }}
+            tickFormatter={(value) => {
+              try {
+                return format(parseISO(value), 'd MMM', { locale: es })
+              } catch (e) {
+                return '';
+              }
+            }}
           />
           <YAxis 
             domain={[-1, 1]} 
@@ -105,5 +130,3 @@ export default function EmotionalChart({ data }: EmotionalChartProps) {
     </div>
   );
 }
-
-    
