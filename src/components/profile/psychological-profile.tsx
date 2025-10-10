@@ -124,15 +124,22 @@ export default function PsychologicalProfile() {
         const messages = messagesSnapshot.docs.map(doc => doc.data() as Message);
         
         messages.forEach(msg => {
-          const role = msg.role === 'user' ? 'Usuario' : 'Asistente';
-          fullChatHistory += `${role}: ${msg.content}\n`;
-          
+          let dateStr: string;
           let msgTimestamp: number;
-          if (msg.timestamp && typeof (msg.timestamp as any).toMillis === 'function') {
-            msgTimestamp = (msg.timestamp as Timestamp).toMillis();
+
+          if (msg.timestamp && typeof (msg.timestamp as any).toDate === 'function') {
+              const date = (msg.timestamp as Timestamp).toDate();
+              dateStr = date.toISOString();
+              msgTimestamp = date.getTime();
           } else {
-            msgTimestamp = new Date(msg.timestamp as any).getTime();
+              // Fallback for cases where timestamp might not be a Firestore Timestamp
+              const date = new Date(msg.timestamp as any);
+              dateStr = date.toISOString();
+              msgTimestamp = date.getTime();
           }
+          
+          const role = msg.role === 'user' ? 'Usuario' : 'Asistente';
+          fullChatHistory += `[${dateStr}] ${role}: ${msg.content}\n`;
 
           if (msgTimestamp > latestTimestamp) {
             latestTimestamp = msgTimestamp;
@@ -461,5 +468,3 @@ export default function PsychologicalProfile() {
     </div>
   );
 }
-
-    

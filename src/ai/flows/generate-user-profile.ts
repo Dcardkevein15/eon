@@ -16,7 +16,7 @@ const GenerateUserProfileInputSchema = z.object({
   fullChatHistory: z
     .string()
     .describe(
-      'El historial completo y unificado de todas las conversaciones de chat de un solo usuario.'
+      'El historial completo y unificado de todas las conversaciones de chat de un solo usuario, con cada mensaje precedido por su fecha y hora en formato ISO 8601 (ej. [YYYY-MM-DDTHH:mm:ss.sssZ]).'
     ),
 });
 export type GenerateUserProfileInput = z.infer<
@@ -89,7 +89,7 @@ const prompt = ai.definePrompt({
   name: 'generateUserProfilePrompt',
   input: { schema: GenerateUserProfileInputSchema },
   output: { schema: GenerateUserProfileOutputSchema },
-  prompt: `Eres un psicólogo clínico experto y un analista de perfiles de IA. Tu tarea es analizar el historial completo de chats de un usuario para crear un perfil psicológico profundo, integrado y útil. Debes sintetizar la información de todas las conversaciones para construir una comprensión continua de la persona. Sé innovador y proporciona información que sea genuinamente útil.
+  prompt: `Eres un psicólogo clínico experto y un analista de perfiles de IA. Tu tarea es analizar el historial completo de chats de un usuario para crear un perfil psicológico profundo, integrado y útil. Cada mensaje está precedido por su fecha y hora en formato ISO 8601. Debes sintetizar la información de todas las conversaciones para construir una comprensión continua de la persona. Sé innovador y proporciona información que sea genuinamente útil.
 
 Mantén un tono profesional, empático y clínico en todo momento. Toda la salida DEBE estar en español.
 
@@ -108,12 +108,12 @@ Basado en el historial completo de chats proporcionado, genera un informe estruc
 6.  **Recomendaciones Personalizadas**: Ofrece una lista de recomendaciones accionables y personalizadas para el bienestar y desarrollo del usuario. Estas deben estar directamente conectadas con los hallazgos de las secciones anteriores.
 
 7.  **Línea de Tiempo Emocional (emotionalJourney)**: Analiza el historial de chat cronológicamente. Agrupa las conversaciones por día. Para cada día con actividad, crea un objeto que contenga:
-    - \`date\`: La fecha en formato "AAAA-MM-DD".
+    - \`date\`: La fecha en formato "AAAA-MM-DD", extraída directamente de la marca de tiempo de los mensajes. Utiliza la porción de la fecha de la marca de tiempo UTC/Zulu (Z).
     - \`sentiment\`: Un puntaje de sentimiento numérico de -1.0 (muy negativo) a 1.0 (muy positivo) para ese día.
     - \`summary\`: Un resumen de 1-2 frases sobre de qué se habló ese día.
     - \`keyEvents\`: Un array de hasta 3 strings describiendo picos de estrés o eventos clave (ej: "Conflicto laboral", "Reflexión sobre el futuro", "Pico de ansiedad").
 
-Historial completo del chat:
+Historial completo del chat (cada mensaje incluye su fecha en formato ISO 8601):
 {{{fullChatHistory}}}
 `,
 });
@@ -129,5 +129,3 @@ const generateUserProfileFlow = ai.defineFlow(
     return output!;
   }
 );
-
-    

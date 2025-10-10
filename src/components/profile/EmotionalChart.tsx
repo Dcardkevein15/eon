@@ -29,18 +29,15 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     const data = payload[0].payload;
     const dateLabel = payload[0].payload.date; // Use the original date string
 
-    // Validate date before formatting
     try {
-      const parsedDate = parseISO(dateLabel);
-      if (isNaN(parsedDate.getTime())) {
-        throw new Error('Invalid date');
-      }
+      // Create date as UTC to avoid timezone shifts from the string 'YYYY-MM-DD'
+      const utcDate = new Date(`${dateLabel}T00:00:00Z`);
 
       return (
         <Card className="max-w-sm">
           <CardHeader className="p-4">
             <CardTitle className="text-base">
-              {format(parsedDate, "eeee, d 'de' MMMM", { locale: es })}
+              {format(utcDate, "eeee, d 'de' MMMM", { locale: es })}
             </CardTitle>
             <CardDescription>{data.summary}</CardDescription>
           </CardHeader>
@@ -95,7 +92,9 @@ export default function EmotionalChart({ data }: EmotionalChartProps) {
             tickLine={{ stroke: 'hsl(var(--muted-foreground))' }}
             tickFormatter={(value) => {
               try {
-                return format(parseISO(value), 'd MMM', { locale: es })
+                 // Create date as UTC to avoid timezone shifts
+                const utcDate = new Date(`${value}T00:00:00Z`);
+                return format(utcDate, 'd MMM', { locale: es })
               } catch (e) {
                 return '';
               }
