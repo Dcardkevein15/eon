@@ -11,7 +11,7 @@ import {
   Brush,
   CartesianGrid,
 } from 'recharts';
-import { format, parse } from 'date-fns';
+import { parse, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 
@@ -32,6 +32,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     const dateLabel = payload[0].payload.date; // Use the original date string 'YYYY-MM-DD'
 
     try {
+      // Treat the date string as a UTC date to avoid timezone shifts
       const parsedDate = parse(dateLabel, 'yyyy-MM-dd', new Date());
       return (
         <Card className="max-w-sm">
@@ -79,9 +80,9 @@ export default function EmotionalChart({ data }: EmotionalChartProps) {
     }
   };
 
-  // Determine the domain for the brush
+  // Determine the domain for the brush. Show last 30 days or all if less than 30.
   const numEntries = formattedData.length;
-  const startIndex = Math.max(0, numEntries - 7); // Show last 7 days by default
+  const startIndex = Math.max(0, numEntries - 30);
   const endIndex = numEntries - 1;
 
 
@@ -149,8 +150,8 @@ export default function EmotionalChart({ data }: EmotionalChartProps) {
                 tickFormatter={tickFormatter}
                 startIndex={startIndex}
                 endIndex={endIndex}
+                travellerWidth={10}
              >
-                {/* This allows the brush to have its own mini-chart */}
                 <LineChart>
                    <Line type="monotone" dataKey="sentiment" stroke="hsl(var(--primary))" dot={false} />
                 </LineChart>
