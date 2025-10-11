@@ -428,7 +428,7 @@ export default function PsychologicalProfile() {
                     <AccordionContent>
                         <CardContent>
                            <ul className="space-y-3">
-                            {profile.cognitiveBiases.map((rec, index) => (
+                            {profile.cognitiveBiases && profile.cognitiveBiases.length > 0 && profile.cognitiveBiases.map((rec, index) => (
                                 <li key={index} className="flex items-start gap-3">
                                     <ShieldCheck className="w-5 h-5 text-amber-500 flex-shrink-0 mt-1"/>
                                     <ReactMarkdown className="text-foreground/80 prose prose-sm dark:prose-invert max-w-none prose-p:m-0">{rec}</ReactMarkdown>
@@ -451,7 +451,7 @@ export default function PsychologicalProfile() {
                     <AccordionContent>
                         <CardContent>
                            <ul className="space-y-3">
-                            {profile.defenseMechanisms.map((rec, index) => (
+                            {profile.defenseMechanisms && profile.defenseMechanisms.length > 0 && profile.defenseMechanisms.map((rec, index) => (
                                 <li key={index} className="flex items-start gap-3">
                                     <ShieldCheck className="w-5 h-5 text-blue-500 flex-shrink-0 mt-1"/>
                                     <ReactMarkdown className="text-foreground/80 prose prose-sm dark:prose-invert max-w-none prose-p:m-0">{rec}</ReactMarkdown>
@@ -474,7 +474,7 @@ export default function PsychologicalProfile() {
                     <AccordionContent>
                         <CardContent>
                            <ul className="space-y-3">
-                            {profile.recommendations.map((rec, index) => (
+                            {profile.recommendations && profile.recommendations.length > 0 && profile.recommendations.map((rec, index) => (
                                 <li key={index} className="flex items-start gap-3">
                                     <ShieldCheck className="w-5 h-5 text-green-500 flex-shrink-0 mt-1"/>
                                     <ReactMarkdown className="text-foreground/80 prose prose-sm dark:prose-invert max-w-none prose-p:m-0">{rec}</ReactMarkdown>
