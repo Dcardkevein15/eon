@@ -59,7 +59,7 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
   );
 
   const createChat = useCallback(
-    async (input: string, imageUrl?: string) => {
+    (input: string, imageUrl?: string) => {
       if (!user || !firestore) return;
 
       const userMessageContent: Omit<Message, 'id'> = {
@@ -79,30 +79,43 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
       const chatsCollectionRef = collection(firestore, `users/${user.uid}/chats`);
 
       addDoc(chatsCollectionRef, newChatData)
-        .then(async (newChatRef) => {
+        .then((newChatRef) => {
           const path = `/c/${newChatRef.id}`;
-          await updateDoc(newChatRef, { path });
+          
+          updateDoc(newChatRef, { path }).catch((serverError) => {
+            if (serverError.code === 'permission-denied') {
+              const permissionError = new FirestorePermissionError({
+                path: newChatRef.path,
+                operation: 'update',
+                requestResourceData: { path },
+              } satisfies SecurityRuleContext);
+              errorEmitter.emit('permission-error', permissionError);
+            }
+          });
 
           const messagesColRef = collection(newChatRef, 'messages');
-          await addDoc(messagesColRef, userMessageContent)
-            .catch(async (serverError) => {
+          addDoc(messagesColRef, userMessageContent).catch((serverError) => {
+             if (serverError.code === 'permission-denied') {
                const permissionError = new FirestorePermissionError({
                   path: messagesColRef.path,
                   operation: 'create',
                   requestResourceData: userMessageContent,
                 } satisfies SecurityRuleContext);
                 errorEmitter.emit('permission-error', permissionError);
-            });
+             }
+          });
 
           router.push(path);
         })
-        .catch(async (serverError) => {
-          const permissionError = new FirestorePermissionError({
-            path: chatsCollectionRef.path,
-            operation: 'create',
-            requestResourceData: newChatData,
-          } satisfies SecurityRuleContext);
-          errorEmitter.emit('permission-error', permissionError);
+        .catch((serverError) => {
+          if (serverError.code === 'permission-denied') {
+            const permissionError = new FirestorePermissionError({
+              path: chatsCollectionRef.path,
+              operation: 'create',
+              requestResourceData: newChatData,
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+          }
         });
     },
     [user, firestore, router]
@@ -113,13 +126,15 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
         if (!user || !firestore) return;
         const messagesColRef = collection(firestore, `users/${user.uid}/chats/${chatId}/messages`);
         
-        addDoc(messagesColRef, message).catch(async (serverError) => {
+        addDoc(messagesColRef, message).catch((serverError) => {
+          if (serverError.code === 'permission-denied') {
             const permissionError = new FirestorePermissionError({
               path: messagesColRef.path,
               operation: 'create',
               requestResourceData: message,
             } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
+          }
         });
     },
     [user, firestore]
@@ -129,13 +144,15 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
     async (chatId: string, title: string) => {
       if (!user || !firestore) return;
       const chatRef = doc(firestore, `users/${user.uid}/chats`, chatId);
-      updateDoc(chatRef, { title }).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-          path: chatRef.path,
-          operation: 'update',
-          requestResourceData: { title },
-        } satisfies SecurityRuleContext);
-        errorEmitter.emit('permission-error', permissionError);
+      updateDoc(chatRef, { title }).catch((serverError) => {
+        if (serverError.code === 'permission-denied') {
+          const permissionError = new FirestorePermissionError({
+            path: chatRef.path,
+            operation: 'update',
+            requestResourceData: { title },
+          } satisfies SecurityRuleContext);
+          errorEmitter.emit('permission-error', permissionError);
+        }
       });
     },
     [user, firestore]
@@ -145,16 +162,15 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
   const removeChat = useCallback(
     async (chatId: string) => {
       if (!user || !firestore) return;
-      // Note: Deleting a document does not delete its subcollections.
-      // For a production app, you'd need a Cloud Function to handle cascading deletes.
-      // For this context, we just delete the main chat doc.
       const chatRef = doc(firestore, `users/${user.uid}/chats`, chatId);
-      deleteDoc(chatRef).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-          path: chatRef.path,
-          operation: 'delete',
-        } satisfies SecurityRuleContext);
-        errorEmitter.emit('permission-error', permissionError);
+      deleteDoc(chatRef).catch((serverError) => {
+        if (serverError.code === 'permission-denied') {
+          const permissionError = new FirestorePermissionError({
+            path: chatRef.path,
+            operation: 'delete',
+          } satisfies SecurityRuleContext);
+          errorEmitter.emit('permission-error', permissionError);
+        }
       });
 
       if (activeChat?.id === chatId) {
@@ -172,15 +188,15 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
       const chatRef = doc(firestore, `users/${user.uid}/chats`, chat.id);
       batch.delete(chatRef);
     });
-    batch.commit().catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-            // This path is a simplification for the batch operation
-            path: `users/${user.uid}/chats`,
-            operation: 'delete',
-        } satisfies SecurityRuleContext);
-        errorEmitter.emit('permission-error', permissionError);
+    batch.commit().catch((serverError) => {
+        if (serverError.code === 'permission-denied') {
+          const permissionError = new FirestorePermissionError({
+              path: `users/${user.uid}/chats`,
+              operation: 'delete',
+          } satisfies SecurityRuleContext);
+          errorEmitter.emit('permission-error', permissionError);
+        }
     });
-    // Again, subcollections are not deleted here.
 
     router.push('/');
   }, [user, firestore, chats, router]);
