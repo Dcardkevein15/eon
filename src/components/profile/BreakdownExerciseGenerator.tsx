@@ -13,7 +13,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Wand2, Loader2, X } from 'lucide-react';
 import type { BreakdownExercise, HabitLoopData } from '@/lib/types';
-import { generateAndSaveBreakdownExerciseAction } from '@/app/actions';
+import { generateBreakdownExerciseAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import ReactMarkdown from 'react-markdown';
 import { Card, CardContent } from '../ui/card';
@@ -22,10 +22,9 @@ import { useAuth } from '@/firebase';
 
 interface BreakdownExerciseGeneratorProps {
   habitLoop: HabitLoopData;
-  onExerciseGenerated: (newExercise: BreakdownExercise) => void;
 }
 
-export default function BreakdownExerciseGenerator({ habitLoop, onExerciseGenerated }: BreakdownExerciseGeneratorProps) {
+export default function BreakdownExerciseGenerator({ habitLoop }: BreakdownExerciseGeneratorProps) {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -45,12 +44,10 @@ export default function BreakdownExerciseGenerator({ habitLoop, onExerciseGenera
     setExercise(null); // Clear previous exercise
     setIsOpen(true);
     try {
-      const result = await generateAndSaveBreakdownExerciseAction({ 
+      const result = await generateBreakdownExerciseAction({ 
         habitLoop,
-        userId: user.uid,
        });
       setExercise(result);
-      onExerciseGenerated(result);
     } catch (error) {
       console.error(error);
       toast({
@@ -79,9 +76,13 @@ export default function BreakdownExerciseGenerator({ habitLoop, onExerciseGenera
         <DialogContent className="p-0 m-0 w-screen h-screen max-w-full sm:max-w-full block rounded-none border-none">
           <DialogHeader className="sr-only">
             <DialogTitle>{exercise ? exercise.title : 'Ejercicio de Ruptura'}</DialogTitle>
-            <DialogDescription>
-              {exercise ? <ReactMarkdown>{exercise.introduction}</ReactMarkdown> : 'Un ejercicio personalizado para ayudarte a romper un bucle de hábito.'}
-            </DialogDescription>
+             {exercise && (
+                 <DialogDescription>
+                    <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground">
+                        {exercise.introduction}
+                    </ReactMarkdown>
+                </DialogDescription>
+             )}
           </DialogHeader>
 
           <DialogClose className="fixed top-4 right-4 z-50 h-9 w-9 bg-red-600/80 hover:bg-red-700 text-white rounded-full flex items-center justify-center transition-colors">
