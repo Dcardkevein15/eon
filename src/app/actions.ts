@@ -1,7 +1,7 @@
 'use server';
 
 import { ai } from '@/ai/genkit';
-import type { Message, PromptSuggestion } from '@/lib/types';
+import type { Message, PromptSuggestion, GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput } from '@/lib/types';
 import { z } from 'zod';
 import { smartComposeMessage } from '@/ai/flows/smart-compose-message';
 import { getInitialPrompts } from '@/ai/flows/initial-prompt-suggestion';
@@ -9,7 +9,7 @@ import { generateChatTitle as genTitle } from '@/ai/flows/generate-chat-title';
 import { collection, getDocs } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { SUGGESTIONS_FALLBACK } from '@/lib/suggestions-fallback';
-import { generateBreakdownExercise as genExercise, type GenerateBreakdownExerciseInput } from '@/ai/flows/generate-breakdown-exercise';
+import { generateBreakdownExercise as genExercise } from '@/ai/flows/generate-breakdown-exercise';
 
 const getAIResponseSchema = z.object({
   history: z.array(
@@ -93,7 +93,7 @@ export async function generateChatTitle(conversationHistory: string): Promise<st
   }
 }
 
-export async function generateBreakdownExerciseAction(input: GenerateBreakdownExerciseInput) {
+export async function generateBreakdownExerciseAction(input: GenerateBreakdownExerciseInput): Promise<GenerateBreakdownExerciseOutput> {
   try {
     const result = await genExercise(input);
     return result;
