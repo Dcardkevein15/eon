@@ -17,6 +17,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import ReactMarkdown from 'react-markdown';
 import EmotionalChart from './EmotionalChart';
+import BreakdownExerciseGenerator from './BreakdownExerciseGenerator';
 import dynamic from 'next/dynamic';
 import { useTheme } from 'next-themes';
 
@@ -45,7 +46,7 @@ type CoreArchetypeData = {
   challenges: string;
 };
 
-type HabitLoopData = {
+export type HabitLoopData = {
   trigger: string;
   thought: string;
   action: string;
@@ -411,6 +412,7 @@ export default function PsychologicalProfile() {
                      <Card>
                       <CardHeader>
                         <CardTitle className='flex items-center gap-3'><Repeat className="w-6 h-6 text-accent"/> El Bucle del Hábito</CardTitle>
+                        <CardDescription>Un patrón recurrente en tu comportamiento. Identificarlo es el primer paso para poder cambiarlo.</CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-2">
                         <div className="flex items-start gap-3 p-3 bg-background/50 rounded-md">
@@ -441,6 +443,7 @@ export default function PsychologicalProfile() {
                             <p className="text-sm text-muted-foreground">{profile.habitLoop.result}</p>
                           </div>
                         </div>
+                        <BreakdownExerciseGenerator habitLoop={profile.habitLoop} />
                       </CardContent>
                     </Card>
                   )}

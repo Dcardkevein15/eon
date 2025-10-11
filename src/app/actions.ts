@@ -9,6 +9,7 @@ import { generateChatTitle as genTitle } from '@/ai/flows/generate-chat-title';
 import { collection, getDocs } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { SUGGESTIONS_FALLBACK } from '@/lib/suggestions-fallback';
+import { generateBreakdownExercise as genExercise, type GenerateBreakdownExerciseInput } from '@/ai/flows/generate-breakdown-exercise';
 
 const getAIResponseSchema = z.object({
   history: z.array(
@@ -89,5 +90,15 @@ export async function generateChatTitle(conversationHistory: string): Promise<st
   } catch (error) {
     console.error('Error generating chat title:', error);
     return 'Nuevo Chat';
+  }
+}
+
+export async function generateBreakdownExerciseAction(input: GenerateBreakdownExerciseInput) {
+  try {
+    const result = await genExercise(input);
+    return result;
+  } catch (error) {
+    console.error('Error generating breakdown exercise:', error);
+    throw new Error('No se pudo generar el ejercicio. Inténtalo de nuevo.');
   }
 }
