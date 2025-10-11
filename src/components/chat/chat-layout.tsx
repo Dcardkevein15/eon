@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, memo } from 'react';
+import { useCallback, useMemo, memo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   collection,
@@ -11,7 +11,6 @@ import {
   updateDoc,
   writeBatch,
   query,
-  Timestamp,
 } from 'firebase/firestore';
 
 import { useAuth, useCollection, useFirestore } from '@/firebase';
@@ -25,7 +24,6 @@ import ChatSidebar from '@/components/chat/chat-sidebar';
 import ChatPanel from '@/components/chat/chat-panel';
 import EmptyChat from '@/components/chat/empty-chat';
 import { cn } from '@/lib/utils';
-import { getAIResponse, generateChatTitle as genTitle } from '@/app/actions';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
@@ -59,64 +57,42 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
   );
 
   const createChat = useCallback(
-    (input: string, imageUrl?: string) => {
+    async (firstMessage: Omit<Message, 'id'>): Promise<string | undefined> => {
       if (!user || !firestore) return;
 
-      const userMessageContent: Omit<Message, 'id'> = {
-        role: 'user',
-        content: input,
-        timestamp: Timestamp.now(),
-        ...(imageUrl && { imageUrl }),
-      };
-      
       const newChatData = {
         title: 'Nuevo Chat',
         userId: user.uid,
         createdAt: serverTimestamp(),
         path: '',
       };
-
+      
       const chatsCollectionRef = collection(firestore, `users/${user.uid}/chats`);
+      
+      try {
+        const newChatRef = await addDoc(chatsCollectionRef, newChatData);
+        const path = `/c/${newChatRef.id}`;
+        
+        await updateDoc(newChatRef, { path });
 
-      addDoc(chatsCollectionRef, newChatData)
-        .then((newChatRef) => {
-          const path = `/c/${newChatRef.id}`;
-          
-          updateDoc(newChatRef, { path }).catch((serverError) => {
-            if (serverError.code === 'permission-denied') {
-              const permissionError = new FirestorePermissionError({
-                path: newChatRef.path,
-                operation: 'update',
-                requestResourceData: { path },
-              } satisfies SecurityRuleContext);
-              errorEmitter.emit('permission-error', permissionError);
-            }
-          });
+        const messagesColRef = collection(newChatRef, 'messages');
+        await addDoc(messagesColRef, firstMessage);
 
-          const messagesColRef = collection(newChatRef, 'messages');
-          addDoc(messagesColRef, userMessageContent).catch((serverError) => {
-             if (serverError.code === 'permission-denied') {
-               const permissionError = new FirestorePermissionError({
-                  path: messagesColRef.path,
-                  operation: 'create',
-                  requestResourceData: userMessageContent,
-                } satisfies SecurityRuleContext);
-                errorEmitter.emit('permission-error', permissionError);
-             }
-          });
-
-          router.push(path);
-        })
-        .catch((serverError) => {
-          if (serverError.code === 'permission-denied') {
-            const permissionError = new FirestorePermissionError({
-              path: chatsCollectionRef.path,
-              operation: 'create',
-              requestResourceData: newChatData,
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
-          }
-        });
+        router.push(path);
+        return newChatRef.id;
+      } catch (serverError: any) {
+        if (serverError.code === 'permission-denied') {
+          const permissionError = new FirestorePermissionError({
+            path: chatsCollectionRef.path,
+            operation: 'create',
+            requestResourceData: newChatData,
+          } satisfies SecurityRuleContext);
+          errorEmitter.emit('permission-error', permissionError);
+        } else {
+           console.error("Error creating chat:", serverError);
+        }
+        return undefined;
+      }
     },
     [user, firestore, router]
   );
@@ -134,6 +110,8 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
               requestResourceData: message,
             } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
+          } else {
+             console.error("Error appending message:", serverError);
           }
         });
     },
@@ -142,7 +120,7 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
   
   const updateChatTitle = useCallback(
     async (chatId: string, title: string) => {
-      if (!user || !firestore) return;
+      if (!user || !firestore || !title) return;
       const chatRef = doc(firestore, `users/${user.uid}/chats`, chatId);
       updateDoc(chatRef, { title }).catch((serverError) => {
         if (serverError.code === 'permission-denied') {
@@ -152,6 +130,8 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
             requestResourceData: { title },
           } satisfies SecurityRuleContext);
           errorEmitter.emit('permission-error', permissionError);
+        } else {
+           console.error("Error updating title:", serverError);
         }
       });
     },
@@ -202,7 +182,8 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
   }, [user, firestore, chats, router]);
 
   if (error) {
-    return <p>Error: {error.message}</p>;
+    // In a real app, you'd want a nicer error boundary
+    return <div className='flex items-center justify-center h-screen'>Error: {error.message}</div>;
   }
 
   return (
@@ -221,6 +202,7 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
           <div className={cn('flex flex-col', chatId ? 'h-screen' : 'min-h-screen')}>
             {chatId && activeChat ? (
               <ChatPanel
+                key={chatId} // Ensure re-mount when chat changes
                 chat={activeChat}
                 appendMessage={appendMessage}
                 updateChatTitle={updateChatTitle}

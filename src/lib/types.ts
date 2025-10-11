@@ -41,7 +41,7 @@ export type Therapist = {
 };
 
 // Schema and Type for Breakdown Exercise
-const HabitLoopSchema = z.object({
+export const HabitLoopSchema = z.object({
   trigger: z.string().describe('El disparador o situación recurrente que activa el patrón de comportamiento problemático.'),
   thought: z.string().describe('El pensamiento automático (sesgo cognitivo) que aparece inmediatamente después del disparador.'),
   action: z.string().describe('La acción o respuesta conductual (mecanismo de defensa) que se ejecuta como resultado del pensamiento.'),
@@ -60,3 +60,6 @@ export const GenerateBreakdownExerciseOutputSchema = z.object({
   finalThought: z.string().describe('Un párrafo final de ánimo y refuerzo positivo en formato Markdown.'),
 });
 export type GenerateBreakdownExerciseOutput = z.infer<typeof GenerateBreakdownExerciseOutputSchema>;
+
+export type BreakdownExercise = z.infer<typeof GenerateBreakdownExerciseOutputSchema>;
+export type HabitLoopData = z.infer<typeof HabitLoopSchema>;

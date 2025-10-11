@@ -1,7 +1,6 @@
 'use server';
 
 import { ai } from '@/ai/genkit';
-import type { Message, PromptSuggestion, GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput } from '@/lib/types';
 import { z } from 'zod';
 import { smartComposeMessage } from '@/ai/flows/smart-compose-message';
 import { getInitialPrompts } from '@/ai/flows/initial-prompt-suggestion';
@@ -9,30 +8,35 @@ import { generateChatTitle as genTitle } from '@/ai/flows/generate-chat-title';
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { SUGGESTIONS_FALLBACK } from '@/lib/suggestions-fallback';
-import { generateBreakdownExercise as genExercise } from '@/ai/flows/generate-breakdown-exercise';
+import { generateBreakdownExerciseAction as genExercise } from './actions';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, PromptSuggestion } from '@/lib/types';
+
 
 const getAIResponseSchema = z.object({
   history: z.array(
     z.object({
       role: z.enum(['user', 'assistant']),
       content: z.string(),
-      timestamp: z.number(),
-      imageUrl: z.string().optional(),
-      id: z.string(),
     })
   ),
   userId: z.string(),
 });
 
-export async function getAIResponse(history: Message[], userId: string): Promise<string> {
+export async function getAIResponse(history: Pick<Message, 'role' | 'content'>[], userId: string): Promise<string> {
   const validatedInput = getAIResponseSchema.parse({ history, userId });
 
-  // Fetch the chatbot's current psychological blueprint
   const chatbotStateRef = doc(firestore, `users/${validatedInput.userId}/chatbotState/main`);
   
-  const chatbotStateSnap = await getDoc(chatbotStateRef).catch(serverError => {
+  let chatbotBlueprint = {};
+
+  try {
+    const chatbotStateSnap = await getDoc(chatbotStateRef);
+    if (chatbotStateSnap.exists()) {
+      chatbotBlueprint = chatbotStateSnap.data().blueprint || {};
+    }
+  } catch (serverError: any) {
     if (serverError.code === 'permission-denied') {
         const permissionError = new FirestorePermissionError({
             path: chatbotStateRef.path,
@@ -40,17 +44,10 @@ export async function getAIResponse(history: Message[], userId: string): Promise
         } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
     }
-    // Return null to signify an error occurred.
-    return null;
-  });
-
-  // If the read operation failed (e.g., permission error), return the error message.
-  if (chatbotStateSnap === null) {
-    return "Lo siento, estoy teniendo problemas para acceder a mi memoria interna en este momento. Por favor, inténtalo de nuevo en un momento.";
+    // Log other errors but proceed with an empty blueprint
+    console.error("Could not fetch chatbot blueprint, proceeding without it.", serverError);
   }
 
-  // If the document doesn't exist, use an empty object. This is a valid state for a new user.
-  const chatbotBlueprint = chatbotStateSnap.exists() ? chatbotStateSnap.data().blueprint : {};
 
   const prompt =
     `Eres ¡tu-psicologo-ya!, un asistente profesional y psicólogo virtual. Tu objetivo es brindar un espacio de desahogo para llevar un control emocional. 

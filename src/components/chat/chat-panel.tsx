@@ -7,10 +7,11 @@ import { useToast } from '@/hooks/use-toast';
 import ChatMessages from './chat-messages';
 import ChatInput from './chat-input';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useSidebar, SidebarTrigger } from '@/components/ui/sidebar';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useAuth, useCollection, useFirestore } from '@/firebase';
-import { collection, addDoc, updateDoc, doc, query, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, Timestamp } from 'firebase/firestore';
 import { updatePsychologicalBlueprint } from '@/ai/flows/update-psychological-blueprint';
+import { v4 as uuidv4 } from 'uuid';
 
 interface ChatPanelProps {
   chat: Chat;
@@ -36,74 +37,94 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
     [user?.uid, firestore, chat.id]
   );
   
-  const { data: messages, loading: messagesLoading } = useCollection<Message>(messagesQuery);
-  
-  const handleSendMessage = useCallback(async (input: string, imageUrl?: string) => {
-    if (!input.trim() && !imageUrl) return;
+  const { data: remoteMessages, loading: messagesLoading } = useCollection<Message>(messagesQuery);
+  const [localMessages, setLocalMessages] = useState<Message[]>([]);
 
-    const userMessage: Omit<Message, 'id'> = {
+  useEffect(() => {
+    if (remoteMessages) {
+        setLocalMessages(remoteMessages);
+    }
+  }, [remoteMessages]);
+
+
+  const handleSendMessage = useCallback(async (input: string, imageUrl?: string) => {
+    if ((!input || !input.trim()) && !imageUrl) return;
+    if (!user) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Debes iniciar sesión para chatear.",
+        });
+        return;
+    }
+
+    setIsResponding(true);
+
+    const userMessage: Message = {
+      id: uuidv4(),
       role: 'user',
       content: input,
       timestamp: Timestamp.now(),
       ...(imageUrl && { imageUrl }),
     };
-    
+
+    // Optimistic UI update
+    const newMessages = [...localMessages, userMessage];
+    setLocalMessages(newMessages);
+
+    // Save user message to Firestore
     await appendMessage(chat.id, userMessage);
-  }, [appendMessage, chat.id]);
+    
+    try {
+        const plainHistory = newMessages.map(msg => ({
+            role: msg.role,
+            content: msg.content,
+        }));
+        
+        const aiResponseContent = await getAIResponse(plainHistory as any, user.uid);
 
-  useEffect(() => {
-    const processAIResponse = async () => {
-        if (!messages || messages.length === 0 || isResponding || !user) return;
+        const aiMessage: Message = {
+            id: uuidv4(),
+            role: 'assistant',
+            content: aiResponseContent,
+            timestamp: Timestamp.now(),
+        };
+        
+        // Optimistic UI update for AI response
+        setLocalMessages(prev => [...prev, aiMessage]);
 
-        const lastMessage = messages[messages.length - 1];
-        if (lastMessage.role === 'user') {
-            setIsResponding(true);
-            try {
-                const plainHistory = messages.map(msg => ({
-                  ...msg,
-                  timestamp: msg.timestamp.toMillis(),
-                }));
-
-                const aiResponseContent = await getAIResponse(plainHistory as any, user.uid);
-
-                const aiMessage: Omit<Message, 'id'> = {
-                    role: 'assistant',
-                    content: aiResponseContent,
-                    timestamp: Timestamp.now(),
-                };
-                await appendMessage(chat.id, aiMessage);
-                
-                if (messages.length <= 2 && chat.title === 'Nuevo Chat') {
-                    const conversationForTitle = `User: ${messages[0].content}\nAssistant: ${aiResponseContent}`;
-                    const newTitle = await generateChatTitle(conversationForTitle);
-                    await updateChatTitle(chat.id, newTitle);
-                }
-
-                // Trigger the chatbot's "reflection" process after a response
-                if (messages.length % 5 === 0) { // Example: reflect every 5 messages
-                  const fullChatHistory = messages.map(msg => `[${msg.timestamp.toDate().toISOString()}] ${msg.role}: ${msg.content}`).join('\n');
-                  updatePsychologicalBlueprint({
-                    userId: user.uid,
-                    fullChatHistory: fullChatHistory
-                  }).catch(err => console.error("Error updating blueprint:", err)); // Run in background
-                }
-
-
-            } catch (error) {
-                console.error("Error processing AI response:", error);
-                toast({
-                  variant: "destructive",
-                  title: "Error",
-                  description: "No se pudo obtener una respuesta de la IA.",
-                });
-            } finally {
-                setIsResponding(false);
-            }
+        // Save AI message to Firestore
+        await appendMessage(chat.id, aiMessage);
+        
+        const isNewChat = localMessages.length <= 1 && chat.title === 'Nuevo Chat';
+        if (isNewChat) {
+            const conversationForTitle = `User: ${userMessage.content}\nAssistant: ${aiResponseContent}`;
+            const newTitle = await generateChatTitle(conversationForTitle);
+            await updateChatTitle(chat.id, newTitle);
         }
-    };
-    processAIResponse();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages, user]);
+
+        // Trigger the chatbot's "reflection" process in the background
+        if (newMessages.length % 5 === 0) {
+          const fullChatHistory = newMessages.map(msg => `[${msg.timestamp.toDate().toISOString()}] ${msg.role}: ${msg.content}`).join('\n');
+          updatePsychologicalBlueprint({
+            userId: user.uid,
+            fullChatHistory: fullChatHistory
+          }).catch(err => console.error("Error updating blueprint:", err));
+        }
+
+    } catch (error) {
+        console.error("Error processing AI response:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No se pudo obtener una respuesta de la IA. Por favor, inténtalo de nuevo.",
+        });
+        // Revert user message on error
+        setLocalMessages(localMessages);
+    } finally {
+        setIsResponding(false);
+    }
+  }, [user, localMessages, appendMessage, chat.id, updateChatTitle, toast]);
 
 
   return (
@@ -117,13 +138,13 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
         </div>
       </header>
       <div className="flex-1 overflow-y-auto">
-        <ChatMessages messages={messages || []} isResponding={isResponding} />
+        <ChatMessages messages={localMessages} isResponding={isResponding} />
       </div>
       <div className="mt-auto px-2 py-4 md:px-4 md:py-4 border-t bg-background/95 backdrop-blur-sm">
         <ChatInput
           onSendMessage={handleSendMessage}
           isLoading={isResponding || messagesLoading}
-          chatHistory={messages || []}
+          chatHistory={localMessages}
         />
       </div>
     </div>

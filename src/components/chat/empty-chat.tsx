@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { AppLogo } from '@/components/logo';
 import ChatInput from './chat-input';
 import { getSuggestions } from '@/app/actions';
-import type { PromptSuggestion } from '@/lib/types';
+import type { Message, PromptSuggestion } from '@/lib/types';
 import {
   HeartHandshake,
   MessageCircleHeart,
@@ -20,9 +20,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { SidebarTrigger } from '../ui/sidebar';
+import { Timestamp } from 'firebase/firestore';
+import { v4 as uuidv4 } from 'uuid';
+
 
 interface EmptyChatProps {
-  createChat: (input: string, imageUrl?: string) => void;
+  createChat: (firstMessage: Omit<Message, 'id'>) => Promise<string | undefined>;
 }
 
 const categoryIcons: { [key: string]: React.ElementType } = {
@@ -48,6 +51,7 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
 
   const chatInputRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
+  const [isCreatingChat, setIsCreatingChat] = useState(false);
 
   useEffect(() => {
     const fetchSuggestions = async () => {
@@ -85,8 +89,22 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
     return newSuggestions.filter(Boolean);
   }, [suggestionsPool]);
   
+  const handleCreateChat = useCallback(async (input: string, imageUrl?: string) => {
+      if ((!input.trim() && !imageUrl) || isCreatingChat) return;
+
+      setIsCreatingChat(true);
+      const firstMessage: Omit<Message, 'id'> = {
+          role: 'user',
+          content: input,
+          timestamp: Timestamp.now(),
+          ...(imageUrl && { imageUrl }),
+      };
+      await createChat(firstMessage);
+      // isCreatingChat will remain true, as the page will redirect.
+  }, [createChat, isCreatingChat]);
+
   const handleSuggestionClick = (suggestion: string) => {
-    createChat(suggestion);
+    handleCreateChat(suggestion);
   };
 
   const handleNewConversation = () => {
@@ -189,7 +207,8 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
                     <button
                       key={i}
                       onClick={() => handleSuggestionClick(suggestion.text)}
-                      className="p-4 rounded-lg bg-card hover:bg-card/80 border border-card-border/50 text-left transition-all duration-200 hover:border-primary/50 hover:scale-[1.02] flex items-start gap-4"
+                      className="p-4 rounded-lg bg-card hover:bg-card/80 border border-card-border/50 text-left transition-all duration-200 hover:border-primary/50 hover:scale-[1.02] flex items-start gap-4 disabled:opacity-50"
+                      disabled={isCreatingChat}
                     >
                       <Icon className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
                       <span className="text-sm font-medium">{suggestion.text}</span>
@@ -201,8 +220,8 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
           )}
           <ChatInput
             ref={inputRef}
-            onSendMessage={createChat}
-            isLoading={false}
+            onSendMessage={handleCreateChat}
+            isLoading={isCreatingChat}
             chatHistory={[]}
           />
         </div>
