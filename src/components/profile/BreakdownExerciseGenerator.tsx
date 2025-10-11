@@ -80,6 +80,13 @@ export default function BreakdownExerciseGenerator({ habitLoop }: BreakdownExerc
 
               {exercise && (
                 <div className="animate-in fade-in duration-500">
+                  <DialogHeader className="sr-only">
+                    <DialogTitle>{exercise.title}</DialogTitle>
+                    <DialogDescription asChild>
+                       <ReactMarkdown>{exercise.introduction}</ReactMarkdown>
+                    </DialogDescription>
+                  </DialogHeader>
+
                   {/* Header */}
                   <header className="text-center mb-12">
                     <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-primary">{exercise.title}</h1>
