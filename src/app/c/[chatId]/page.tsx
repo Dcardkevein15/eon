@@ -1,13 +1,11 @@
 'use client';
 
 import ChatLayout from '@/components/chat/chat-layout';
+import { useParams } from 'next/navigation';
 
-type ChatPageProps = {
-  params: {
-    chatId: string;
-  };
-};
+export default function ChatPage() {
+  const params = useParams();
+  const chatId = params.chatId as string;
 
-export default function ChatPage({ params }: ChatPageProps) {
-  return <ChatLayout chatId={params.chatId} />;
+  return <ChatLayout chatId={chatId} />;
 }
