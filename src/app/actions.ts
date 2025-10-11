@@ -40,14 +40,16 @@ export async function getAIResponse(history: Message[], userId: string): Promise
         } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
     }
-    // Return null or throw a different error if it's not a permission issue
+    // Return null to signify an error occurred.
     return null;
   });
 
-  if (!chatbotStateSnap) {
+  // If the read operation failed (e.g., permission error), return the error message.
+  if (chatbotStateSnap === null) {
     return "Lo siento, estoy teniendo problemas para acceder a mi memoria interna en este momento. Por favor, inténtalo de nuevo en un momento.";
   }
 
+  // If the document doesn't exist, use an empty object. This is a valid state for a new user.
   const chatbotBlueprint = chatbotStateSnap.exists() ? chatbotStateSnap.data().blueprint : {};
 
   const prompt =
