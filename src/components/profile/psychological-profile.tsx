@@ -7,10 +7,10 @@ import type { Chat, Message } from '@/lib/types';
 import { generateUserProfile } from '@/ai/flows/generate-user-profile';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { BrainCircuit, UserCheck, ShieldCheck, ListChecks, ChevronLeft, Sparkles, Filter, ShieldQuestion, Info, RefreshCcw, LineChart } from 'lucide-react';
+import { BrainCircuit, UserCheck, ShieldCheck, ListChecks, ChevronLeft, Sparkles, Filter, ShieldQuestion, Info, RefreshCcw, LineChart, Target, Repeat, Star, Shield, AlertTriangle, GitCommit } from 'lucide-react';
 import Link from 'next/link';
 import { Progress } from '@/components/ui/progress';
 import { format } from 'date-fns';
@@ -38,6 +38,20 @@ type EmotionalConstellationData = {
   links: { source: string; target: string; sentiment: number }[];
 };
 
+type CoreArchetypeData = {
+  title: string;
+  description: string;
+  strengths: string;
+  challenges: string;
+};
+
+type HabitLoopData = {
+  trigger: string;
+  thought: string;
+  action: string;
+  result: string;
+};
+
 type ProfileData = {
   diagnosis: string;
   personality: string;
@@ -47,6 +61,9 @@ type ProfileData = {
   defenseMechanisms: string[];
   emotionalJourney: EmotionalStatePoint[];
   emotionalConstellation: EmotionalConstellationData;
+  coreArchetype?: CoreArchetypeData;
+  coreConflict?: string;
+  habitLoop?: HabitLoopData;
 };
 
 type CachedProfile = {
@@ -350,60 +367,226 @@ export default function PsychologicalProfile() {
             </p>
         </header>
 
-        <Accordion type="multiple" defaultValue={['item-1', 'item-6']} className="w-full space-y-4">
-            <AccordionItem value="item-1">
-                <Card>
-                    <AccordionTrigger className="w-full text-left p-6 hover:no-underline [&>svg]:ml-auto">
-                        <CardTitle className="flex items-center gap-3 text-xl">
-                            <BrainCircuit className="w-6 h-6 text-accent"/>
-                            Diagnóstico Descriptivo
-                        </CardTitle>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                        <CardContent className="prose prose-sm dark:prose-invert max-w-none">
-                             <ReactMarkdown className="text-foreground/80 whitespace-pre-wrap">{profile.diagnosis}</ReactMarkdown>
-                        </CardContent>
-                    </AccordionContent>
-                </Card>
-            </AccordionItem>
+        <div className="space-y-6">
+
+            {/* FASE 3: DINAMICA SUBYACENTE */}
+            { (profile.coreArchetype || profile.coreConflict || profile.habitLoop) && (
+              <Card className="border-accent/50 bg-accent/5">
+                <CardHeader>
+                  <CardTitle className="text-2xl font-bold text-accent">Dinámica Subyacente</CardTitle>
+                  <CardDescription>El motor de tus patrones de comportamiento.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {profile.coreArchetype && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className='flex items-center gap-3'><UserCheck className="w-6 h-6 text-accent"/> Arquetipo Central: {profile.coreArchetype.title}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <p className='prose prose-sm dark:prose-invert max-w-none text-foreground/80'>{profile.coreArchetype.description}</p>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div>
+                            <h4 className="font-semibold flex items-center gap-2"><Star className="w-4 h-4 text-green-400"/> Luces (Fortalezas)</h4>
+                            <p className="text-sm text-muted-foreground mt-1">{profile.coreArchetype.strengths}</p>
+                          </div>
+                          <div>
+                            <h4 className="font-semibold flex items-center gap-2"><Shield className="w-4 h-4 text-amber-400"/> Sombras (Desafíos)</h4>
+                            <p className="text-sm text-muted-foreground mt-1">{profile.coreArchetype.challenges}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                  {profile.coreConflict && (
+                     <Card>
+                      <CardHeader>
+                        <CardTitle className='flex items-center gap-3'><Target className="w-6 h-6 text-accent"/> Conflicto Nuclear</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className='text-lg font-medium text-center italic p-4 bg-background rounded-lg'>"{profile.coreConflict}"</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                   {profile.habitLoop && (
+                     <Card>
+                      <CardHeader>
+                        <CardTitle className='flex items-center gap-3'><Repeat className="w-6 h-6 text-accent"/> El Bucle del Hábito</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        <div className="flex items-start gap-3 p-3 bg-background/50 rounded-md">
+                          <GitCommit className="w-5 h-5 text-red-400 mt-1 -rotate-90"/>
+                          <div>
+                            <h4 className="font-semibold">Disparador</h4>
+                            <p className="text-sm text-muted-foreground">{profile.habitLoop.trigger}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3 p-3 bg-background/50 rounded-md">
+                          <BrainCircuit className="w-5 h-5 text-amber-400 mt-1"/>
+                           <div>
+                            <h4 className="font-semibold">Pensamiento (Sesgo)</h4>
+                            <p className="text-sm text-muted-foreground">{profile.habitLoop.thought}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3 p-3 bg-background/50 rounded-md">
+                          <ShieldQuestion className="w-5 h-5 text-blue-400 mt-1"/>
+                           <div>
+                            <h4 className="font-semibold">Acción (Defensa)</h4>
+                            <p className="text-sm text-muted-foreground">{profile.habitLoop.action}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3 p-3 bg-background/50 rounded-md">
+                          <AlertTriangle className="w-5 h-5 text-purple-400 mt-1"/>
+                           <div>
+                            <h4 className="font-semibold">Resultado</h4>
+                            <p className="text-sm text-muted-foreground">{profile.habitLoop.result}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+
+            {/* FASE 1 Y 2: ITEMS EXISTENTES */}
+            <Accordion type="multiple" defaultValue={['item-1']} className="w-full space-y-4">
+                <AccordionItem value="item-1">
+                    <Card>
+                        <AccordionTrigger className="w-full text-left p-6 hover:no-underline [&>svg]:ml-auto">
+                            <CardTitle className="flex items-center gap-3 text-xl">
+                                <BrainCircuit className="w-6 h-6 text-accent"/>
+                                Diagnóstico Descriptivo
+                            </CardTitle>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                            <CardContent className="prose prose-sm dark:prose-invert max-w-none">
+                                <ReactMarkdown className="text-foreground/80 whitespace-pre-wrap">{profile.diagnosis}</ReactMarkdown>
+                            </CardContent>
+                        </AccordionContent>
+                    </Card>
+                </AccordionItem>
+                
+                <AccordionItem value="item-2">
+                    <Card>
+                        <AccordionTrigger className="w-full text-left p-6 hover:no-underline [&>svg]:ml-auto">
+                            <CardTitle className="flex items-center gap-3 text-xl">
+                                <UserCheck className="w-6 h-6 text-accent"/>
+                                Caracterización de la Personalidad
+                            </CardTitle>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                            <CardContent className="prose prose-sm dark:prose-invert max-w-none">
+                                <ReactMarkdown className="text-foreground/80 whitespace-pre-wrap">{profile.personality}</ReactMarkdown>
+                            </CardContent>
+                        </AccordionContent>
+                    </Card>
+                </AccordionItem>
+                
+                <AccordionItem value="item-3">
+                    <Card>
+                        <AccordionTrigger className="w-full text-left p-6 hover:no-underline [&>svg]:ml-auto">
+                            <CardTitle className="flex items-center gap-3 text-xl">
+                                <Sparkles className="w-6 h-6 text-accent"/>
+                                Fortalezas Psicológicas
+                            </CardTitle>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                            <CardContent className="prose prose-sm dark:prose-invert max-w-none">
+                                <ReactMarkdown className="text-foreground/80 whitespace-pre-wrap">{profile.strengths}</ReactMarkdown>
+                            </CardContent>
+                        </AccordionContent>
+                    </Card>
+                </AccordionItem>
+
+                <AccordionItem value="item-4">
+                    <Card>
+                        <AccordionTrigger className="w-full text-left p-6 hover:no-underline [&>svg]:ml-auto">
+                            <CardTitle className="flex items-center gap-3 text-xl">
+                                <Filter className="w-6 h-6 text-accent"/>
+                                Sesgos Cognitivos Potenciales
+                            </CardTitle>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                            <CardContent>
+                            {profile.cognitiveBiases && profile.cognitiveBiases.length > 0 ? (
+                               <ul className="space-y-3">
+                                {profile.cognitiveBiases.map((rec, index) => (
+                                    <li key={index} className="flex items-start gap-3">
+                                        <ShieldCheck className="w-5 h-5 text-amber-500 flex-shrink-0 mt-1"/>
+                                        <ReactMarkdown className="text-foreground/80 prose prose-sm dark:prose-invert max-w-none prose-p:m-0">{rec}</ReactMarkdown>
+                                    </li>
+                                ))}
+                               </ul>
+                               ) : (
+                                <p className="text-muted-foreground text-sm">No se identificaron sesgos cognitivos significativos.</p>
+                               )}
+                            </CardContent>
+                        </AccordionContent>
+                    </Card>
+                </AccordionItem>
+                
+                <AccordionItem value="item-5">
+                    <Card>
+                        <AccordionTrigger className="w-full text-left p-6 hover:no-underline [&>svg]:ml-auto">
+                            <CardTitle className="flex items-center gap-3 text-xl">
+                                <ShieldQuestion className="w-6 h-6 text-accent"/>
+                                Mecanismos de Defensa
+                            </CardTitle>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                            <CardContent>
+                              {profile.defenseMechanisms && profile.defenseMechanisms.length > 0 ? (
+                               <ul className="space-y-3">
+                                {profile.defenseMechanisms.map((rec, index) => (
+                                    <li key={index} className="flex items-start gap-3">
+                                        <ShieldCheck className="w-5 h-5 text-blue-500 flex-shrink-0 mt-1"/>
+                                        <ReactMarkdown className="text-foreground/80 prose prose-sm dark:prose-invert max-w-none prose-p:m-0">{rec}</ReactMarkdown>
+                                    </li>
+                                ))}
+                               </ul>
+                               ) : (
+                                <p className="text-muted-foreground text-sm">No se identificaron mecanismos de defensa significativos.</p>
+                               )}
+                            </CardContent>
+                        </AccordionContent>
+                    </Card>
+                </AccordionItem>
+
+                <AccordionItem value="item-6">
+                    <Card>
+                        <AccordionTrigger className="w-full text-left p-6 hover:no-underline [&>svg]:ml-auto">
+                            <CardTitle className="flex items-center gap-3 text-xl">
+                                <ListChecks className="w-6 h-6 text-accent"/>
+                                Recomendaciones
+                            </CardTitle>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                            <CardContent>
+                              {profile.recommendations && profile.recommendations.length > 0 ? (
+                               <ul className="space-y-3">
+                                {profile.recommendations.map((rec, index) => (
+                                    <li key={index} className="flex items-start gap-3">
+                                        <ShieldCheck className="w-5 h-5 text-green-500 flex-shrink-0 mt-1"/>
+                                        <ReactMarkdown className="text-foreground/80 prose prose-sm dark:prose-invert max-w-none prose-p:m-0">{rec}</ReactMarkdown>
+                                    </li>
+                                ))}
+                               </ul>
+                               ) : (
+                                <p className="text-muted-foreground text-sm">No hay recomendaciones específicas en este momento.</p>
+                               )}
+                            </CardContent>
+                        </AccordionContent>
+                    </Card>
+                </AccordionItem>
+            </Accordion>
             
-            {profile.emotionalConstellation && profile.emotionalConstellation.nodes.length > 0 && isClient && (
+            {/* FASE DE DATOS VISUALES */}
+             {profile.emotionalConstellation && profile.emotionalConstellation.nodes.length > 0 && isClient && (
               <EmotionalConstellation data={profile.emotionalConstellation} />
             )}
 
-            <AccordionItem value="item-2">
-                 <Card>
-                    <AccordionTrigger className="w-full text-left p-6 hover:no-underline [&>svg]:ml-auto">
-                        <CardTitle className="flex items-center gap-3 text-xl">
-                            <UserCheck className="w-6 h-6 text-accent"/>
-                            Caracterización de la Personalidad
-                        </CardTitle>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                        <CardContent className="prose prose-sm dark:prose-invert max-w-none">
-                            <ReactMarkdown className="text-foreground/80 whitespace-pre-wrap">{profile.personality}</ReactMarkdown>
-                        </CardContent>
-                    </AccordionContent>
-                </Card>
-            </AccordionItem>
-            
-            <AccordionItem value="item-3">
-                 <Card>
-                    <AccordionTrigger className="w-full text-left p-6 hover:no-underline [&>svg]:ml-auto">
-                         <CardTitle className="flex items-center gap-3 text-xl">
-                            <Sparkles className="w-6 h-6 text-accent"/>
-                            Fortalezas Psicológicas
-                        </CardTitle>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                        <CardContent className="prose prose-sm dark:prose-invert max-w-none">
-                            <ReactMarkdown className="text-foreground/80 whitespace-pre-wrap">{profile.strengths}</ReactMarkdown>
-                        </CardContent>
-                    </AccordionContent>
-                </Card>
-            </AccordionItem>
-
-             {profile.emotionalJourney && profile.emotionalJourney.length > 0 && (
+            {profile.emotionalJourney && profile.emotionalJourney.length > 0 && (
                 <Card>
                     <CardHeader>
                     <CardTitle className="flex items-center gap-3 text-xl">
@@ -417,75 +600,7 @@ export default function PsychologicalProfile() {
                 </Card>
             )}
 
-            <AccordionItem value="item-4">
-                 <Card>
-                    <AccordionTrigger className="w-full text-left p-6 hover:no-underline [&>svg]:ml-auto">
-                         <CardTitle className="flex items-center gap-3 text-xl">
-                            <Filter className="w-6 h-6 text-accent"/>
-                            Sesgos Cognitivos Potenciales
-                        </CardTitle>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                        <CardContent>
-                           <ul className="space-y-3">
-                            {profile.cognitiveBiases && profile.cognitiveBiases.length > 0 && profile.cognitiveBiases.map((rec, index) => (
-                                <li key={index} className="flex items-start gap-3">
-                                    <ShieldCheck className="w-5 h-5 text-amber-500 flex-shrink-0 mt-1"/>
-                                    <ReactMarkdown className="text-foreground/80 prose prose-sm dark:prose-invert max-w-none prose-p:m-0">{rec}</ReactMarkdown>
-                                </li>
-                            ))}
-                           </ul>
-                        </CardContent>
-                    </AccordionContent>
-                </Card>
-            </AccordionItem>
-            
-            <AccordionItem value="item-5">
-                 <Card>
-                    <AccordionTrigger className="w-full text-left p-6 hover:no-underline [&>svg]:ml-auto">
-                         <CardTitle className="flex items-center gap-3 text-xl">
-                            <ShieldQuestion className="w-6 h-6 text-accent"/>
-                            Mecanismos de Defensa
-                        </CardTitle>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                        <CardContent>
-                           <ul className="space-y-3">
-                            {profile.defenseMechanisms && profile.defenseMechanisms.length > 0 && profile.defenseMechanisms.map((rec, index) => (
-                                <li key={index} className="flex items-start gap-3">
-                                    <ShieldCheck className="w-5 h-5 text-blue-500 flex-shrink-0 mt-1"/>
-                                    <ReactMarkdown className="text-foreground/80 prose prose-sm dark:prose-invert max-w-none prose-p:m-0">{rec}</ReactMarkdown>
-                                </li>
-                            ))}
-                           </ul>
-                        </CardContent>
-                    </AccordionContent>
-                </Card>
-            </AccordionItem>
-
-            <AccordionItem value="item-6">
-                 <Card>
-                    <AccordionTrigger className="w-full text-left p-6 hover:no-underline [&>svg]:ml-auto">
-                         <CardTitle className="flex items-center gap-3 text-xl">
-                            <ListChecks className="w-6 h-6 text-accent"/>
-                            Recomendaciones
-                        </CardTitle>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                        <CardContent>
-                           <ul className="space-y-3">
-                            {profile.recommendations && profile.recommendations.length > 0 && profile.recommendations.map((rec, index) => (
-                                <li key={index} className="flex items-start gap-3">
-                                    <ShieldCheck className="w-5 h-5 text-green-500 flex-shrink-0 mt-1"/>
-                                    <ReactMarkdown className="text-foreground/80 prose prose-sm dark:prose-invert max-w-none prose-p:m-0">{rec}</ReactMarkdown>
-                                </li>
-                            ))}
-                           </ul>
-                        </CardContent>
-                    </AccordionContent>
-                </Card>
-            </AccordionItem>
-        </Accordion>
+        </div>
     </div>
   );
 }

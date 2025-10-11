@@ -54,6 +54,21 @@ const EmotionalConstellationSchema = z.object({
     links: z.array(EmotionalConstellationLinkSchema).describe('Una lista de las conexiones u "órbitas" entre los temas, describiendo cómo se relacionan entre sí. Un nodo no puede estar conectado a sí mismo.'),
 });
 
+const CoreArchetypeSchema = z.object({
+  title: z.string().describe('El nombre del arquetipo principal identificado (ej. "El Cuidador", "El Perfeccionista").'),
+  description: z.string().describe('Una descripción detallada de este patrón arquetípico de ser, explicando cómo se manifiesta en el comportamiento del usuario.'),
+  strengths: z.string().describe('Las luces o "superpoderes" de este arquetipo; sus cualidades positivas.'),
+  challenges: z.string().describe('Las sombras o dificultades típicas asociadas con este arquetipo.'),
+});
+
+const HabitLoopSchema = z.object({
+  trigger: z.string().describe('El disparador o situación recurrente que activa el patrón de comportamiento problemático.'),
+  thought: z.string().describe('El pensamiento automático (sesgo cognitivo) que aparece inmediatamente después del disparador.'),
+  action: z.string().describe('La acción o respuesta conductual (mecanismo de defensa) que se ejecuta como resultado del pensamiento.'),
+  result: z.string().describe('La consecuencia a corto y largo plazo de este bucle, explicando cómo refuerza el problema.'),
+});
+
+
 const GenerateUserProfileOutputSchema = z.object({
   diagnosis: z
     .string()
@@ -91,6 +106,9 @@ const GenerateUserProfileOutputSchema = z.object({
       'Una línea de tiempo de la evolución del estado de ánimo del usuario, extraída de los chats. Cada punto representa un día.'
     ),
   emotionalConstellation: EmotionalConstellationSchema.describe('Un grafo de conexiones que representa el universo temático y emocional del usuario.'),
+  coreArchetype: CoreArchetypeSchema.describe('El arquetipo central que mejor representa el patrón de comportamiento del usuario.'),
+  coreConflict: z.string().describe('El principal dilema o tensión interna que impulsa la mayor parte de la tensión psicológica del usuario (ej. "Independencia vs. Necesidad de Pertenencia").'),
+  habitLoop: HabitLoopSchema.describe('Un análisis del principal bucle de comportamiento recurrente, mostrando cómo un disparador lleva a un resultado a través de un pensamiento y una acción.'),
 });
 export type GenerateUserProfileOutput = z.infer<
   typeof GenerateUserProfileOutputSchema
@@ -106,35 +124,28 @@ const prompt = ai.definePrompt({
   name: 'generateUserProfilePrompt',
   input: { schema: GenerateUserProfileInputSchema },
   output: { schema: GenerateUserProfileOutputSchema },
-  prompt: `Eres un psicólogo clínico experto y un analista de perfiles de IA. Tu tarea es analizar el historial completo de chats de un usuario para crear un perfil psicológico profundo, integrado y útil. Cada mensaje está precedido por su fecha y hora en formato ISO 8601. Debes sintetizar la información de todas las conversaciones para construir una comprensión continua de la persona. Sé innovador y proporciona información que sea genuinamente útil.
+  prompt: `Eres un psicólogo clínico experto y un analista de perfiles de IA. Tu tarea es analizar el historial completo de chats de un usuario para crear un "Cianotipo Psicológico": un perfil profundo, integrado y útil. Cada mensaje está precedido por su fecha y hora en formato ISO 8601. Debes sintetizar la información de todas las conversaciones para construir una comprensión continua de la persona. Sé innovador y proporciona información que sea genuinamente útil.
 
 Mantén un tono profesional, empático y clínico en todo momento. Toda la salida DEBE estar en español.
 
-Basado en el historial completo de chats proporcionado, genera un informe estructurado con las siguientes secciones:
+Basado en el historial completo de chats proporcionado, genera un informe estructurado que incluya TODOS los siguientes ítems:
 
+**ANÁLISIS CLÍNICO TRADICIONAL:**
 1.  **Diagnóstico Descriptivo**: Identifica el estado psicológico más probable. Describe las tendencias emocionales y cognitivas observadas de forma profesional (ej. "El usuario muestra patrones persistentes de pensamiento ansioso y rumiación sobre eventos pasados", en lugar de "El usuario tiene ansiedad").
+2.  **Caracterización de la Personalidad**: Detalla la personalidad del usuario. Menciona rasgos dominantes, su estilo cognitivo, emociones frecuentes y patrones de comportamiento recurrentes.
+3.  **Fortalezas Psicológicas**: Identifica y describe los recursos y puntos fuertes del usuario (resiliencia, introspección, empatía, etc.).
+4.  **Sesgos Cognitivos Potenciales**: Lista 2-3 sesgos cognitivos prominentes con ejemplos del chat (ej. "Pensamiento de todo o nada: 'Si no logro esto, soy un completo fracaso'").
+5.  **Mecanismos de Defensa**: Infiere 2-3 mecanismos de defensa con justificación (ej. "Racionalización: Justifica resultados negativos con explicaciones lógicas.").
+6.  **Recomendaciones**: Ofrece una lista de recomendaciones accionables y personalizadas para el bienestar.
 
-2.  **Caracterización de la Personalidad**: Detalla la personalidad del usuario. Menciona rasgos dominantes (ej. introversión, neuroticismo, apertura a la experiencia), su estilo cognitivo (ej. analítico, asociativo, rumiante), las emociones más frecuentes (ej. frustración, alegría, tristeza) y patrones de comportamiento recurrentes.
+**OBSERVACIÓN DE DATOS:**
+7.  **Línea de Tiempo Emocional (emotionalJourney)**: Analiza el historial cronológicamente. Agrupa por día. Para cada día, crea un objeto con \`date\` (AAAA-MM-DD), \`sentiment\` (-1 a 1), \`summary\` y \`keyEvents\` (array de hasta 3 strings).
+8.  **Constelador Emocional (emotionalConstellation)**: Construye un grafo con 5-8 temas centrales (\`nodes\`) y sus relaciones (\`links\`). Cada nodo tiene \`id\` y \`val\` (importancia). Cada link tiene \`source\`, \`target\` y \`sentiment\` (-1 a 1).
 
-3.  **Fortalezas Psicológicas**: Identifica y describe los recursos y puntos fuertes del usuario. Busca signos de resiliencia, capacidad de introspección, empatía, autoconciencia, disciplina, creatividad o cualquier otra cualidad positiva que se manifieste.
-
-4.  **Sesgos Cognitivos Potenciales**: Analiza el lenguaje para identificar posibles sesgos cognitivos. Proporciona una lista de 2-3 sesgos que parezcan más prominentes (ej. "Pensamiento de todo o nada: 'Si no logro esto, soy un completo fracaso'", "Filtro mental: Se enfoca en un solo detalle negativo de una situación, ignorando los aspectos positivos.").
-
-5.  **Mecanismos de Defensa**: Infiere los posibles mecanismos de defensa que el usuario emplea para manejar el estrés o la disonancia cognitiva. Proporciona una lista de 2-3 mecanismos con una breve justificación (ej. "Racionalización: Justifica decisiones o resultados negativos con explicaciones lógicas para evitar sentir decepción.", "Evitación: Cambia de tema o minimiza la importancia de asuntos que le generan ansiedad.").
-
-6.  **Recomendaciones Personalizadas**: Ofrece una lista de recomendaciones accionables y personalizadas para el bienestar y desarrollo del usuario. Estas deben estar directamente conectadas con los hallazgos de las secciones anteriores.
-
-7.  **Línea de Tiempo Emocional (emotionalJourney)**: Analiza el historial de chat cronológicamente. Agrupa las conversaciones por día. Para cada día con actividad, crea un objeto que contenga:
-    - \`date\`: La fecha en formato "AAAA-MM-DD", extraída directamente de la porción de la fecha de la marca de tiempo UTC/Zulu (Z).
-    - \`sentiment\`: Un puntaje de sentimiento numérico de -1.0 (muy negativo) a 1.0 (muy positivo) para ese día.
-    - \`summary\`: Un resumen de 1-2 frases sobre de qué se habló ese día.
-    - \`keyEvents\`: Un array de hasta 3 strings describiendo picos de estrés o eventos clave (ej: "Conflicto laboral", "Reflexión sobre el futuro", "Pico de ansiedad").
-
-8.  **Constelador Emocional (emotionalConstellation)**: Analiza la totalidad de las conversaciones para construir un grafo de conexiones temáticas.
-    - Identifica entre 5 y 8 temas centrales y recurrentes en la vida del usuario (ej. "Trabajo", "Familia", "Ansiedad", "Autoestima", "Planes a Futuro"). Estos serán los \`nodes\`. El valor \`val\` de cada nodo debe representar su importancia o frecuencia (un entero, ej: 10 para el tema más importante).
-    - Identifica las relaciones entre estos temas. Por ejemplo, si el usuario habla de "Trabajo" y "Ansiedad" juntos con frecuencia, crea un \`link\`.
-    - Para cada \`link\`, determina el \`sentiment\` de la relación: -1 si la conexión es predominantemente negativa (ej. Trabajo causa Ansiedad), 1 si es positiva (ej. Amigos mejora la Autoestima), y 0 si es neutral o mixta. Un nodo no puede estar enlazado a sí mismo.
-    - El resultado debe ser un objeto con dos arrays: \`nodes\` y \`links\`.
+**DINÁMICA SUBYACENTE (NUEVO ANÁLISIS INTEGRADO):**
+9.  **Arquetipo Central (coreArchetype)**: Basado en todo lo anterior, identifica UN arquetipo dominante (ej. "El Cuidador", "El Héroe", "El Perfeccionista"). Proporciona el \`title\`, una \`description\` detallada, sus \`strengths\` (luces) y sus \`challenges\` (sombras).
+10. **Conflicto Nuclear (coreConflict)**: Infiere y describe la principal tensión o dilema interno que causa la mayor parte del estrés psicológico del usuario. Debe ser una frase concisa (ej: "El deseo de independencia contra el miedo a la soledad").
+11. **Bucle del Hábito (habitLoop)**: Identifica el patrón de comportamiento problemático más recurrente y descríbelo en cuatro pasos: \`trigger\` (la situación que lo inicia), \`thought\` (el sesgo cognitivo que aparece), \`action\` (el mecanismo de defensa que se ejecuta) y \`result\` (la consecuencia que refuerza el ciclo).
 
 Historial completo del chat (cada mensaje incluye su fecha en formato ISO 8601):
 {{{fullChatHistory}}}
