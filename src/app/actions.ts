@@ -10,6 +10,8 @@ import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { SUGGESTIONS_FALLBACK } from '@/lib/suggestions-fallback';
 import { generateBreakdownExercise as genExercise } from '@/ai/flows/generate-breakdown-exercise';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 const getAIResponseSchema = z.object({
   history: z.array(
@@ -29,9 +31,24 @@ export async function getAIResponse(history: Message[], userId: string): Promise
 
   // Fetch the chatbot's current psychological blueprint
   const chatbotStateRef = doc(firestore, `users/${validatedInput.userId}/chatbotState/main`);
-  const chatbotStateSnap = await getDoc(chatbotStateRef);
-  const chatbotBlueprint = chatbotStateSnap.exists() ? chatbotStateSnap.data().blueprint : {};
+  
+  const chatbotStateSnap = await getDoc(chatbotStateRef).catch(serverError => {
+    if (serverError.code === 'permission-denied') {
+        const permissionError = new FirestorePermissionError({
+            path: chatbotStateRef.path,
+            operation: 'get',
+        } satisfies SecurityRuleContext);
+        errorEmitter.emit('permission-error', permissionError);
+    }
+    // Return null or throw a different error if it's not a permission issue
+    return null;
+  });
 
+  if (!chatbotStateSnap) {
+    return "Lo siento, estoy teniendo problemas para acceder a mi memoria interna en este momento. Por favor, inténtalo de nuevo en un momento.";
+  }
+
+  const chatbotBlueprint = chatbotStateSnap.exists() ? chatbotStateSnap.data().blueprint : {};
 
   const prompt =
     `Eres ¡tu-psicologo-ya!, un asistente profesional y psicólogo virtual. Tu objetivo es brindar un espacio de desahogo para llevar un control emocional. 
