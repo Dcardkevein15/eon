@@ -12,31 +12,45 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Wand2, Loader2, X } from 'lucide-react';
-import type { HabitLoopData } from './psychological-profile';
-import { generateBreakdownExerciseAction } from '@/app/actions';
-import type { GenerateBreakdownExerciseOutput } from '@/lib/types';
+import type { BreakdownExercise, HabitLoopData } from '@/lib/types';
+import { generateAndSaveBreakdownExerciseAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import ReactMarkdown from 'react-markdown';
 import { Card, CardContent } from '../ui/card';
 import { Separator } from '../ui/separator';
+import { useAuth } from '@/firebase';
 
 interface BreakdownExerciseGeneratorProps {
   habitLoop: HabitLoopData;
+  onExerciseGenerated: (newExercise: BreakdownExercise) => void;
 }
 
-export default function BreakdownExerciseGenerator({ habitLoop }: BreakdownExerciseGeneratorProps) {
+export default function BreakdownExerciseGenerator({ habitLoop, onExerciseGenerated }: BreakdownExerciseGeneratorProps) {
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [exercise, setExercise] = useState<GenerateBreakdownExerciseOutput | null>(null);
+  const [exercise, setExercise] = useState<BreakdownExercise | null>(null);
   const { toast } = useToast();
 
   const handleGenerate = async () => {
+    if (!user) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Debes iniciar sesión para generar un ejercicio.',
+      });
+      return;
+    }
     setIsLoading(true);
     setExercise(null); // Clear previous exercise
     setIsOpen(true);
     try {
-      const result = await generateBreakdownExerciseAction({ habitLoop });
+      const result = await generateAndSaveBreakdownExerciseAction({ 
+        habitLoop,
+        userId: user.uid,
+       });
       setExercise(result);
+      onExerciseGenerated(result);
     } catch (error) {
       console.error(error);
       toast({
@@ -63,6 +77,13 @@ export default function BreakdownExerciseGenerator({ habitLoop }: BreakdownExerc
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="p-0 m-0 w-screen h-screen max-w-full sm:max-w-full block rounded-none border-none">
+          <DialogHeader className="sr-only">
+            <DialogTitle>{exercise ? exercise.title : 'Ejercicio de Ruptura'}</DialogTitle>
+            <DialogDescription>
+              {exercise ? <ReactMarkdown>{exercise.introduction}</ReactMarkdown> : 'Un ejercicio personalizado para ayudarte a romper un bucle de hábito.'}
+            </DialogDescription>
+          </DialogHeader>
+
           <DialogClose className="fixed top-4 right-4 z-50 h-9 w-9 bg-red-600/80 hover:bg-red-700 text-white rounded-full flex items-center justify-center transition-colors">
             <X className="h-5 w-5" />
             <span className="sr-only">Cerrar</span>
@@ -80,13 +101,6 @@ export default function BreakdownExerciseGenerator({ habitLoop }: BreakdownExerc
 
               {exercise && (
                 <div className="animate-in fade-in duration-500">
-                  <DialogHeader className="sr-only">
-                    <DialogTitle>{exercise.title}</DialogTitle>
-                    <DialogDescription>
-                      <ReactMarkdown>{exercise.introduction}</ReactMarkdown>
-                    </DialogDescription>
-                  </DialogHeader>
-
                   {/* Header */}
                   <header className="text-center mb-12">
                     <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-primary">{exercise.title}</h1>
