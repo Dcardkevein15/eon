@@ -77,7 +77,7 @@ export default function BreakdownExerciseGenerator({ habitLoop }: BreakdownExerc
           <DialogHeader className="sr-only">
             <DialogTitle>{exercise ? exercise.title : 'Ejercicio de Ruptura'}</DialogTitle>
              {exercise && (
-                 <DialogDescription>
+                 <DialogDescription asChild>
                     <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground">
                         {exercise.introduction}
                     </ReactMarkdown>
