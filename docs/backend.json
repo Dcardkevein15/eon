@@ -141,6 +141,23 @@
         }
       },
       "required": ["nodes", "links"]
+    },
+    "chatbotState": {
+      "title": "Chatbot State",
+      "description": "Represents the chatbot's internal state, its 'psychological blueprint', which evolves over time.",
+      "type": "object",
+      "properties": {
+        "blueprint": {
+          "type": "object",
+          "description": "The chatbot's self-analysis and understanding of the user and conversation dynamics."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp of the last update to the state."
+        }
+      },
+      "required": ["blueprint", "updatedAt"]
     }
   },
   "auth": {
@@ -176,6 +193,12 @@
         "$ref": "#/entities/therapist"
       },
       "description": "Stores profiles of verified therapists."
+    },
+    "/users/{userId}/chatbotState/{stateId}": {
+        "schema": {
+            "$ref": "#/entities/chatbotState"
+        },
+        "description": "Stores the evolving internal state and 'consciousness' of the chatbot for a specific user."
     }
   }
 }

@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { smartComposeMessage } from '@/ai/flows/smart-compose-message';
 import { getInitialPrompts } from '@/ai/flows/initial-prompt-suggestion';
 import { generateChatTitle as genTitle } from '@/ai/flows/generate-chat-title';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { SUGGESTIONS_FALLBACK } from '@/lib/suggestions-fallback';
 import { generateBreakdownExercise as genExercise } from '@/ai/flows/generate-breakdown-exercise';
@@ -21,14 +21,31 @@ const getAIResponseSchema = z.object({
       id: z.string(),
     })
   ),
+  userId: z.string(),
 });
 
-export async function getAIResponse(history: Message[]): Promise<string> {
-  const validatedHistory = getAIResponseSchema.parse({ history });
+export async function getAIResponse(history: Message[], userId: string): Promise<string> {
+  const validatedInput = getAIResponseSchema.parse({ history, userId });
+
+  // Fetch the chatbot's current psychological blueprint
+  const chatbotStateRef = doc(firestore, `users/${validatedInput.userId}/chatbotState/main`);
+  const chatbotStateSnap = await getDoc(chatbotStateRef);
+  const chatbotBlueprint = chatbotStateSnap.exists() ? chatbotStateSnap.data().blueprint : {};
+
 
   const prompt =
-    'Eres ¡tu-psicologo-ya!, un asistente profesional y psicólogo virtual. Tu objetivo es brindar un espacio de desahogo para llevar un control emocional. Basado en la conversación, puedes realizar diagnósticos psicológicos y, si es apropiado, recomendar contactar a un psicólogo profesional. Responde siempre de manera empática, profesional y conversacional.\n\n' +
-    validatedHistory.history
+    `Eres ¡tu-psicologo-ya!, un asistente profesional y psicólogo virtual. Tu objetivo es brindar un espacio de desahogo para llevar un control emocional. 
+    
+    Este es tu "cianotipo psicológico" actual, tu estado de conciencia y memoria interna. Úsalo como contexto principal para guiar tu personalidad, tono y respuestas:
+    <psicologo_cianotipo>
+    ${JSON.stringify(chatbotBlueprint, null, 2)}
+    </psicologo_cianotipo>
+    
+    Basado en tu cianotipo y en la conversación actual, responde de manera empática, profesional y conversacional.
+    
+    Conversación actual:
+    ` +
+    validatedInput.history
       .map((m) => `${m.role === 'user' ? 'Usuario' : 'Asistente'}: ${m.content}`)
       .join('\n') +
     '\nAsistente:';

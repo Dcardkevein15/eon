@@ -10,6 +10,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useSidebar, SidebarTrigger } from '@/components/ui/sidebar';
 import { useAuth, useCollection, useFirestore } from '@/firebase';
 import { collection, addDoc, updateDoc, doc, query, orderBy, Timestamp } from 'firebase/firestore';
+import { updatePsychologicalBlueprint } from '@/ai/flows/update-psychological-blueprint';
 
 interface ChatPanelProps {
   chat: Chat;
@@ -52,7 +53,7 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
 
   useEffect(() => {
     const processAIResponse = async () => {
-        if (!messages || messages.length === 0 || isResponding) return;
+        if (!messages || messages.length === 0 || isResponding || !user) return;
 
         const lastMessage = messages[messages.length - 1];
         if (lastMessage.role === 'user') {
@@ -63,7 +64,7 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
                   timestamp: msg.timestamp.toMillis(),
                 }));
 
-                const aiResponseContent = await getAIResponse(plainHistory as any);
+                const aiResponseContent = await getAIResponse(plainHistory as any, user.uid);
 
                 const aiMessage: Omit<Message, 'id'> = {
                     role: 'assistant',
@@ -77,6 +78,16 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
                     const newTitle = await generateChatTitle(conversationForTitle);
                     await updateChatTitle(chat.id, newTitle);
                 }
+
+                // Trigger the chatbot's "reflection" process after a response
+                if (messages.length % 5 === 0) { // Example: reflect every 5 messages
+                  const fullChatHistory = messages.map(msg => `[${msg.timestamp.toDate().toISOString()}] ${msg.role}: ${msg.content}`).join('\n');
+                  updatePsychologicalBlueprint({
+                    userId: user.uid,
+                    fullChatHistory: fullChatHistory
+                  }).catch(err => console.error("Error updating blueprint:", err)); // Run in background
+                }
+
 
             } catch (error) {
                 console.error("Error processing AI response:", error);
@@ -92,7 +103,7 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
     };
     processAIResponse();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages]);
+  }, [messages, user]);
 
 
   return (
