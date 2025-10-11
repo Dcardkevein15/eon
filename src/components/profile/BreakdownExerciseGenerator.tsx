@@ -14,7 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Wand2, Loader2 } from 'lucide-react';
 import type { HabitLoopData } from './psychological-profile';
 import { generateBreakdownExerciseAction } from '@/app/actions';
-import type { GenerateBreakdownExerciseOutput } from '@/ai/flows/generate-breakdown-exercise';
+import type { GenerateBreakdownExerciseOutput } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import ReactMarkdown from 'react-markdown';
 
@@ -63,10 +63,10 @@ export default function BreakdownExerciseGenerator({ habitLoop }: BreakdownExerc
           <DialogHeader>
             <DialogTitle className="text-2xl text-primary">{exercise?.title || 'Generando Ejercicio...'}</DialogTitle>
             {exercise && (
-                 <DialogDescription>
-                    <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground">
-                        {exercise.introduction}
-                    </ReactMarkdown>
+                 <DialogDescription asChild>
+                    <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground">
+                      <ReactMarkdown>{exercise.introduction}</ReactMarkdown>
+                    </div>
                 </DialogDescription>
             )}
           </DialogHeader>
