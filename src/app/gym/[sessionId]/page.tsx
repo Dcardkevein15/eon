@@ -105,7 +105,6 @@ function SimulationPage() {
     [user, firestore, sessionId]
   );
   
-  // THIS IS THE FIX: Default `data` to an empty array `[]` to prevent error.
   const { data: messages = [], loading: messagesLoading } = useCollection<Message>(messagesQuery);
 
   const appendMessage = useCallback(async (message: Omit<Message, 'id'>) => {
@@ -330,3 +329,5 @@ function SimulationPage() {
 }
 
 export default memo(SimulationPage);
+
+    
