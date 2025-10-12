@@ -75,6 +75,7 @@ function SimulationPage() {
           }
         } else {
           console.error("Session not found");
+          toast({ variant: "destructive", title: "Error", description: "Sesión no encontrada." });
           router.push('/gym');
         }
       } catch (serverError: any) {
@@ -104,6 +105,7 @@ function SimulationPage() {
     [user, firestore, sessionId]
   );
   
+  // THIS IS THE FIX: Default `data` to an empty array `[]` to prevent error.
   const { data: messages = [], loading: messagesLoading } = useCollection<Message>(messagesQuery);
 
   const appendMessage = useCallback(async (message: Omit<Message, 'id'>) => {
