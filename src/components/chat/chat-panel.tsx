@@ -105,7 +105,12 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
 
         // Trigger the chatbot's "reflection" process in the background
         if (newMessages.length % 5 === 0) {
-          const fullChatHistory = newMessages.map(msg => `[${msg.timestamp.toDate().toISOString()}] ${msg.role}: ${msg.content}`).join('\n');
+          const fullChatHistory = newMessages.map(msg => {
+            const date = msg.timestamp && typeof (msg.timestamp as any).toDate === 'function' 
+              ? (msg.timestamp as Timestamp).toDate() 
+              : new Date(); // Fallback to current date if timestamp is not a Firestore Timestamp
+            return `[${date.toISOString()}] ${msg.role}: ${msg.content}`;
+          }).join('\n');
           updatePsychologicalBlueprint({
             userId: user.uid,
             fullChatHistory: fullChatHistory
