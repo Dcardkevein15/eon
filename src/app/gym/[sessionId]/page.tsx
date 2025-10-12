@@ -3,7 +3,7 @@
 import { useState, useCallback, memo, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth, useCollection, useFirestore } from '@/firebase';
-import { collection, query, orderBy, Timestamp, doc, getDoc, updateDoc, addDoc } from 'firebase/firestore';
+import { collection, query, orderBy, Timestamp, doc, getDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import type { Message, SimulationSession, SimulationScenario } from '@/lib/types';
 import { runSimulation } from '@/ai/flows/run-simulation';
 import { generateSimulationFeedback } from '@/ai/flows/generate-simulation-feedback';
@@ -25,6 +25,10 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
+import type { SecurityRuleContext } from '@/firebase/errors';
+
 
 function SimulationPage() {
   const params = useParams();
@@ -49,26 +53,41 @@ function SimulationPage() {
     const fetchSessionData = async () => {
       setSessionLoading(true);
       const sessionRef = doc(firestore, `users/${user.uid}/gymSessions`, sessionId);
-      const sessionSnap = await getDoc(sessionRef);
+      try {
+        const sessionSnap = await getDoc(sessionRef);
 
-      if (sessionSnap.exists()) {
-        const sessionData = sessionSnap.data() as SimulationSession;
-        setSession(sessionData);
-        // In a real app, scenarios might be in Firestore. Here we get from placeholder.
-        const scenarioData = SIMULATION_SCENARIOS.find(s => s.id === sessionData.scenarioId);
-        setScenario(scenarioData || null);
-        if (sessionData.feedback) {
-            setFeedback(sessionData.feedback);
+        if (sessionSnap.exists()) {
+          const sessionData = sessionSnap.data() as SimulationSession;
+          setSession(sessionData);
+          // In a real app, scenarios might be in Firestore. Here we get from placeholder.
+          const scenarioData = SIMULATION_SCENARIOS.find(s => s.id === sessionData.scenarioId);
+          setScenario(scenarioData || null);
+          if (sessionData.feedback) {
+              setFeedback(sessionData.feedback);
+          }
+        } else {
+          console.error("Session not found");
+          router.push('/gym');
         }
-      } else {
-        console.error("Session not found");
-        router.push('/gym');
+      } catch (serverError: any) {
+         if (serverError.code === 'permission-denied') {
+            const permissionError = new FirestorePermissionError({
+              path: sessionRef.path,
+              operation: 'get',
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+        } else {
+            console.error("Error fetching session data:", serverError);
+            toast({ variant: "destructive", title: "Error", description: "No se pudo cargar la sesión." });
+        }
+         router.push('/gym');
+      } finally {
+        setSessionLoading(false);
       }
-      setSessionLoading(false);
     };
 
     fetchSessionData();
-  }, [user, firestore, sessionId, router]);
+  }, [user, firestore, sessionId, router, toast]);
 
   const messagesQuery = useMemo(
     () => user?.uid && firestore && sessionId
@@ -82,8 +101,23 @@ function SimulationPage() {
   const appendMessage = useCallback(async (message: Omit<Message, 'id'>) => {
     if (!user || !firestore || !sessionId) return;
     const messagesColRef = collection(firestore, `users/${user.uid}/gymSessions/${sessionId}/messages`);
-    await addDoc(messagesColRef, message);
-  }, [user, firestore, sessionId]);
+    
+    try {
+        await addDoc(messagesColRef, message);
+    } catch (serverError: any) {
+        if (serverError.code === 'permission-denied') {
+            const permissionError = new FirestorePermissionError({
+                path: messagesColRef.path,
+                operation: 'create',
+                requestResourceData: message
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+        } else {
+            console.error("Error appending message:", serverError);
+            toast({ variant: "destructive", title: "Error", description: "No se pudo guardar tu mensaje." });
+        }
+    }
+  }, [user, firestore, sessionId, toast]);
 
   const handleSendMessage = useCallback(async (input: string) => {
     if (!input.trim() || !user || !scenario) return;
@@ -123,27 +157,45 @@ function SimulationPage() {
     if (!user || !firestore || !sessionId || !scenario) return;
     
     setIsFinishing(true);
+    const sessionRef = doc(firestore, `users/${user.uid}/gymSessions`, sessionId);
+    let generatedFeedback = '';
+    
     try {
         const transcript = messages.map(m => `${m.role === 'user' ? 'Usuario' : 'Personaje'}: ${m.content}`).join('\n');
         
-        const { feedback: generatedFeedback } = await generateSimulationFeedback({
+        const feedbackResult = await generateSimulationFeedback({
             scenarioTitle: scenario.title,
             scenarioDescription: scenario.description,
             simulationTranscript: transcript,
         });
-
+        generatedFeedback = feedbackResult.feedback;
         setFeedback(generatedFeedback);
-
-        const sessionRef = doc(firestore, `users/${user.uid}/gymSessions`, sessionId);
-        await updateDoc(sessionRef, {
-            feedback: generatedFeedback,
-            completedAt: serverTimestamp(),
-        });
-        
-        setShowFeedbackModal(true);
     } catch (error) {
       console.error("Error generating feedback:", error);
       toast({ variant: "destructive", title: "Error", description: "No se pudo generar el feedback." });
+      setIsFinishing(false);
+      return; // Stop if feedback generation fails
+    }
+    
+    try {
+        const updateData = {
+            feedback: generatedFeedback,
+            completedAt: serverTimestamp(),
+        };
+        await updateDoc(sessionRef, updateData);
+        setShowFeedbackModal(true);
+    } catch(serverError: any) {
+         if (serverError.code === 'permission-denied') {
+            const permissionError = new FirestorePermissionError({
+                path: sessionRef.path,
+                operation: 'update',
+                requestResourceData: { feedback: 'Generated by AI', completedAt: 'serverTimestamp' }
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+        } else {
+            console.error("Error updating session with feedback:", serverError);
+            toast({ variant: "destructive", title: "Error", description: "No se pudo guardar el feedback." });
+        }
     } finally {
       setIsFinishing(false);
     }

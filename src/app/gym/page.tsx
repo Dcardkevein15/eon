@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { ArrowRight, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth, useFirestore } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { SIMULATION_SCENARIOS } from '@/lib/placeholder-data';
 import type { SimulationScenario } from '@/lib/types';
@@ -17,6 +17,10 @@ import { useCollection } from '@/firebase';
 import { query } from 'firebase/firestore';
 import type { Chat } from '@/lib/types';
 import { useMemo } from 'react';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
+import type { SecurityRuleContext } from '@/firebase/errors';
+
 
 export default function EmotionalGymPage() {
   const router = useRouter();
@@ -48,30 +52,39 @@ export default function EmotionalGymPage() {
     setIsCreating(true);
     setSelectedScenario(scenario);
 
+    const sessionsCollectionRef = collection(firestore, `users/${user.uid}/gymSessions`);
+    const newSessionData = {
+      userId: user.uid,
+      scenarioId: scenario.id,
+      scenarioTitle: scenario.title,
+      createdAt: serverTimestamp(),
+      path: '', // This will be updated after creation
+    };
+
     try {
-      const newSessionData = {
-        userId: user.uid,
-        scenarioId: scenario.id,
-        scenarioTitle: scenario.title,
-        createdAt: serverTimestamp(),
-        path: '',
-      };
-      
-      const sessionsCollectionRef = collection(firestore, `users/${user.uid}/gymSessions`);
       const newSessionRef = await addDoc(sessionsCollectionRef, newSessionData);
-      
       const path = `/gym/${newSessionRef.id}`;
-      // This is not standard Firestore API, but let's assume it's a placeholder for updateDoc
-      // await newSessionRef.update({ path }); 
+      
+      // Update the document with its own path
+      await updateDoc(newSessionRef, { path });
 
       router.push(path);
-    } catch (error) {
-      console.error('Error creating simulation session:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error al crear la sesión',
-        description: 'No se pudo iniciar la simulación. Por favor, inténtalo de nuevo.',
-      });
+    } catch (serverError: any) {
+      if (serverError.code === 'permission-denied') {
+        const permissionError = new FirestorePermissionError({
+          path: sessionsCollectionRef.path,
+          operation: 'create',
+          requestResourceData: { ...newSessionData, createdAt: 'serverTimestamp' }
+        } satisfies SecurityRuleContext);
+        errorEmitter.emit('permission-error', permissionError);
+      } else {
+        console.error('Error creating simulation session:', serverError);
+        toast({
+          variant: 'destructive',
+          title: 'Error al crear la sesión',
+          description: 'No se pudo iniciar la simulación. Por favor, inténtalo de nuevo.',
+        });
+      }
       setIsCreating(false);
       setSelectedScenario(null);
     }
