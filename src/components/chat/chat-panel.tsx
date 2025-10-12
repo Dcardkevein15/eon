@@ -47,36 +47,12 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
   }, [remoteMessages]);
 
 
-  const handleSendMessage = useCallback(async (input: string, imageUrl?: string) => {
-    if ((!input || !input.trim()) && !imageUrl) return;
-    if (!user) {
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Debes iniciar sesión para chatear.",
-        });
-        return;
-    }
+  const getAIResponseAndUpdate = useCallback(async (currentMessages: Message[]) => {
+    if (!user) return;
 
     setIsResponding(true);
-
-    const userMessage: Message = {
-      id: uuidv4(),
-      role: 'user',
-      content: input,
-      timestamp: Timestamp.now(),
-      ...(imageUrl && { imageUrl }),
-    };
-
-    // Optimistic UI update
-    const newMessages = [...localMessages, userMessage];
-    setLocalMessages(newMessages);
-
-    // Save user message to Firestore
-    await appendMessage(chat.id, userMessage);
-    
     try {
-        const plainHistory = newMessages.map(msg => ({
+        const plainHistory = currentMessages.map(msg => ({
             role: msg.role,
             content: msg.content,
         }));
@@ -96,16 +72,18 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
         // Save AI message to Firestore
         await appendMessage(chat.id, aiMessage);
         
-        const isNewChat = localMessages.length <= 1 && chat.title === 'Nuevo Chat';
-        if (isNewChat) {
+        // Check if it was a brand new chat to set the title
+        if (currentMessages.length === 1) {
+            const userMessage = currentMessages[0];
             const conversationForTitle = `User: ${userMessage.content}\nAssistant: ${aiResponseContent}`;
             const newTitle = await generateChatTitle(conversationForTitle);
             await updateChatTitle(chat.id, newTitle);
         }
 
+        const updatedMessages = [...currentMessages, aiMessage];
         // Trigger the chatbot's "reflection" process in the background
-        if (newMessages.length % 5 === 0) {
-          const fullChatHistory = newMessages.map(msg => {
+        if (updatedMessages.length % 5 === 0) {
+          const fullChatHistory = updatedMessages.map(msg => {
             const date = msg.timestamp && typeof (msg.timestamp as any).toDate === 'function' 
               ? (msg.timestamp as Timestamp).toDate() 
               : new Date(); // Fallback to current date if timestamp is not a Firestore Timestamp
@@ -124,12 +102,56 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
           title: "Error",
           description: "No se pudo obtener una respuesta de la IA. Por favor, inténtalo de nuevo.",
         });
-        // Revert user message on error
-        setLocalMessages(localMessages);
     } finally {
         setIsResponding(false);
     }
-  }, [user, localMessages, appendMessage, chat.id, updateChatTitle, toast]);
+  }, [user, chat.id, appendMessage, updateChatTitle, toast]);
+
+
+  // Effect to handle the very first response in a new chat
+  useEffect(() => {
+    // Only run if we have messages, are not loading, and not already responding
+    if (!messagesLoading && localMessages.length === 1 && !isResponding) {
+      const firstMessage = localMessages[0];
+      // Check if the first and only message is from the user
+      if (firstMessage.role === 'user') {
+        getAIResponseAndUpdate(localMessages);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messagesLoading, localMessages.length]); // Dependency on length is key
+
+
+  const handleSendMessage = useCallback(async (input: string, imageUrl?: string) => {
+    if ((!input || !input.trim()) && !imageUrl) return;
+    if (!user) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Debes iniciar sesión para chatear.",
+        });
+        return;
+    }
+
+    const userMessage: Message = {
+      id: uuidv4(),
+      role: 'user',
+      content: input,
+      timestamp: Timestamp.now(),
+      ...(imageUrl && { imageUrl }),
+    };
+
+    // Optimistic UI update for user message
+    const newMessages = [...localMessages, userMessage];
+    setLocalMessages(newMessages);
+
+    // Save user message to Firestore
+    await appendMessage(chat.id, userMessage);
+    
+    // Immediately trigger AI response
+    await getAIResponseAndUpdate(newMessages);
+
+  }, [user, localMessages, appendMessage, chat.id, getAIResponseAndUpdate, toast]);
 
 
   return (
