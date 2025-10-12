@@ -293,7 +293,7 @@ function SimulationPage() {
             onSendMessage={handleSendMessage}
             isLoading={isResponding || messagesLoading}
             scenario={scenario}
-            conversationHistory={messages}
+            conversationHistory={messages || []}
             sentimentHistory={sentimentHistory}
           />
         )}
@@ -327,5 +327,3 @@ function SimulationPage() {
 }
 
 export default memo(SimulationPage);
-
-    
