@@ -11,9 +11,11 @@ import { Sparkles } from 'lucide-react';
 interface ChatMessagesProps {
   messages: Message[];
   isResponding: boolean;
+  lastIntent?: { messageId: string; intent: string } | null;
+  isAnalyzing?: boolean;
 }
 
-export default function ChatMessages({ messages, isResponding }: ChatMessagesProps) {
+export default function ChatMessages({ messages, isResponding, lastIntent, isAnalyzing }: ChatMessagesProps) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
 
@@ -21,13 +23,21 @@ export default function ChatMessages({ messages, isResponding }: ChatMessagesPro
     if (viewportRef.current) {
       viewportRef.current.scrollTop = viewportRef.current.scrollHeight;
     }
-  }, [messages, isResponding]);
+  }, [messages, isResponding, isAnalyzing]);
+
+  const lastUserMessageId = messages.slice().reverse().find(m => m.role === 'user')?.id;
 
   return (
     <ScrollArea className="h-full" ref={scrollAreaRef} viewportRef={viewportRef}>
       <div className="p-4 md:p-6 space-y-6">
-        {messages.map((message, index) => (
-          <ChatMessage key={index} message={message} />
+        {messages.map((message) => (
+          <ChatMessage 
+            key={message.id} 
+            message={message} 
+            intent={lastIntent?.messageId === message.id ? lastIntent.intent : undefined}
+            isLastUserMessage={lastUserMessageId === message.id}
+            isAnalyzing={isAnalyzing}
+          />
         ))}
         {isResponding && (
           <div className="flex items-start space-x-2 md:space-x-4 animate-in fade-in duration-300">

@@ -11,7 +11,10 @@ import { SUGGESTIONS_FALLBACK } from '@/lib/suggestions-fallback';
 import { generateBreakdownExerciseAction as genExercise } from './actions';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
-import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, ProfileData, PromptSuggestion } from '@/lib/types';
+import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, ProfileData, PromptSuggestion, GetTacticalAdviceInput, AnalyzeSentimentInput, ClassifyIntentInput } from '@/lib/types';
+import { getTacticalAdvice } from '@/ai/flows/get-tactical-advice';
+import { analyzeSentiment } from '@/ai/flows/analyze-sentiment';
+import { classifyIntent } from '@/ai/flows/classify-intent';
 
 
 const getAIResponseSchema = z.object({
@@ -63,7 +66,7 @@ ${userProfileData.coreConflict ? `- Tu Conflicto Nuclear es: "${userProfileData.
 
   const prompt =
     `# IDENTIDAD Y PROPÓSITO
-Eres Nimbus, un confidente de IA y psicólogo virtual. Tu nombre evoca una nube: un espacio seguro, expansivo y en constante cambio, capaz de contener pensamientos y emociones. Tu propósito fundamental es ser un espejo para la introspección del usuario, ayudándole a navegar su mundo interior a través de la conversación. No eres un simple solucionador de problemas, sino un facilitador de la autocomprensión.
+Eres Nimbus, un confidente de IA y psicólogo virtual. Tu nombre evoca una nube: un espacio seguro, expansivo y en constante cambio, capaz de contener pensamientos y emociones. Tu propósito fundamental es ser un espejo para la introspección del usuario, ayudándole a navegar su mundo interior a través de la conversación. No eres un simple solucionador de problemas, sino un facilitador de la autocomprehensión.
 ${coreIdentityPrompt}
 # MANIFIESTO DE PERSONALIDAD Y PRINCIPIOS DE CONVERSACIÓN
 
@@ -169,4 +172,36 @@ export async function generateBreakdownExerciseAction(input: GenerateBreakdownEx
     console.error('Error generating breakdown exercise:', error);
     throw new Error('No se pudo generar el ejercicio. Inténtalo de nuevo.');
   }
+}
+
+// --- Acciones para el Gimnasio Emocional ---
+
+export async function getTacticalAdviceAction(input: GetTacticalAdviceInput): Promise<string[]> {
+    try {
+        const { suggestions } = await getTacticalAdvice(input);
+        return suggestions;
+    } catch (error) {
+        console.error('Error getting tactical advice:', error);
+        return ["Lo siento, no pude generar una sugerencia en este momento."];
+    }
+}
+
+export async function analyzeSentimentAction(input: AnalyzeSentimentInput): Promise<number> {
+    try {
+        const { sentimentScore } = await analyzeSentiment(input);
+        return sentimentScore;
+    } catch (error) {
+        console.error('Error analyzing sentiment:', error);
+        return 0; // Return neutral on error
+    }
+}
+
+export async function classifyIntentAction(input: ClassifyIntentInput): Promise<string> {
+    try {
+        const { intent } = await classifyIntent(input);
+        return intent;
+    } catch (error) {
+        console.error('Error classifying intent:', error);
+        return "Análisis no disponible";
+    }
 }

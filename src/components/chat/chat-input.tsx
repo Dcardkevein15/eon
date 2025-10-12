@@ -113,7 +113,9 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
     useEffect(() => {
       if (localTextareaRef.current) {
         localTextareaRef.current.style.height = 'auto';
-        localTextareaRef.current.style.height = `${localTextareaRef.current.scrollHeight}px`;
+        const scrollHeight = localTextareaRef.current.scrollHeight;
+        const maxHeight = 160; // Approx 4rem * 4 lines
+        localTextareaRef.current.style.height = `${Math.min(scrollHeight, maxHeight)}px`;
       }
     }, [messageValue]);
 

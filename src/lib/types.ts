@@ -124,3 +124,39 @@ export type SimulationSession = {
   feedback?: string;
   path: string;
 };
+
+// Schemas for new real-time trainer AI flows
+
+// Tactical Advisor
+export const GetTacticalAdviceInputSchema = z.object({
+  scenarioTitle: z.string(),
+  conversationHistory: z.string(),
+});
+export type GetTacticalAdviceInput = z.infer<typeof GetTacticalAdviceInputSchema>;
+
+export const GetTacticalAdviceOutputSchema = z.object({
+  suggestions: z.array(z.string()).length(3),
+});
+export type GetTacticalAdviceOutput = z.infer<typeof GetTacticalAdviceOutputSchema>;
+
+// Sentiment Analysis
+export const AnalyzeSentimentInputSchema = z.object({
+  text: z.string(),
+});
+export type AnalyzeSentimentInput = z.infer<typeof AnalyzeSentimentInputSchema>;
+
+export const AnalyzeSentimentOutputSchema = z.object({
+  sentimentScore: z.number().min(-1).max(1),
+});
+export type AnalyzeSentimentOutput = z.infer<typeof AnalyzeSentimentOutputSchema>;
+
+// Intent Classification
+export const ClassifyIntentInputSchema = z.object({
+  text: z.string(),
+});
+export type ClassifyIntentInput = z.infer<typeof ClassifyIntentInputSchema>;
+
+export const ClassifyIntentOutputSchema = z.object({
+  intent: z.string(),
+});
+export type ClassifyIntentOutput = z.infer<typeof ClassifyIntentOutputSchema>;
