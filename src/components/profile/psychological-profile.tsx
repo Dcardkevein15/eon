@@ -284,7 +284,7 @@ export default function PsychologicalProfile() {
                 <AlertTitle>Perfil no encontrado</AlertTitle>
                 <AlertDescription>
                     No se pudo cargar tu perfil. Es posible que aún no se haya generado.
-                </AlerDescription>
+                </AlertDescription>
             </Alert>
             <Button onClick={handleGenerateNew} className="mt-4">
                 <RefreshCcw className="mr-2 h-4 w-4" />
