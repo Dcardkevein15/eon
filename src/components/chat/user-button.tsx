@@ -12,17 +12,19 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
-import { LogIn, LogOut, User, Camera, Loader2 } from 'lucide-react';
+import { LogIn, LogOut, User, Camera, Loader2, Moon, Sun } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { useStorage } from '@/firebase/storage';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { updateProfile } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
+import { useTheme } from 'next-themes';
 
 export default function UserButton() {
   const { user, loading, signInWithGoogle, signOut, auth } = useAuth();
   const storage = useStorage();
   const { toast } = useToast();
+  const { setTheme, theme } = useTheme();
   
   const [isClient, setIsClient] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -135,14 +137,23 @@ export default function UserButton() {
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+            {theme === 'dark' ? (
+              <Sun className="mr-2 h-4 w-4" />
+            ) : (
+              <Moon className="mr-2 h-4 w-4" />
+            )}
+            <span>Cambiar a modo {theme === 'dark' ? 'claro' : 'oscuro'}</span>
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={handleUploadClick} disabled={isUploading}>
             {isUploading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <Camera className="mr-2 h-4 w-4" />
             )}
-            <span>{isUploading ? 'Subiendo...' : 'Cambiar foto de perfil'}</span>
+            <span>{isUploading ? 'Subiendo...' : 'Cambiar foto'}</span>
           </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={signOut}>
             <LogOut className="mr-2 h-4 w-4" />
             <span>Cerrar sesión</span>
