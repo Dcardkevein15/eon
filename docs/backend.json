@@ -111,7 +111,61 @@
       },
       "required": ["id", "name", "photoUrl", "specialties", "pricePerSession", "languages", "verified", "credentials", "bio"]
     },
-    "emotionalConstellation": {
+    "chatbotState": {
+      "title": "Chatbot State",
+      "description": "Represents the chatbot's internal state, its 'psychological blueprint', which evolves over time.",
+      "type": "object",
+      "properties": {
+        "blueprint": {
+          "type": "object",
+          "description": "The chatbot's self-analysis and understanding of the user and conversation dynamics."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp of the last update to the state."
+        }
+      },
+      "required": ["blueprint", "updatedAt"]
+    },
+    "userProfile": {
+      "title": "User Profile",
+      "description": "A comprehensive AI-generated psychological profile of the user.",
+      "type": "object",
+      "properties": {
+        "diagnosis": { "type": "string" },
+        "personality": { "type": "string" },
+        "recommendations": { "type": "array", "items": { "type": "string" } },
+        "strengths": { "type": "string" },
+        "cognitiveBiases": { "type": "array", "items": { "type": "string" } },
+        "defenseMechanisms": { "type": "array", "items": { "type": "string" } },
+        "emotionalJourney": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "date": { "type": "string" },
+              "sentiment": { "type": "number" },
+              "summary": { "type": "string" },
+              "keyEvents": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "emotionalConstellation": { "$ref": "#/entities/emotionalConstellation" },
+        "coreArchetype": {
+          "type": "object",
+          "properties": {
+            "title": { "type": "string" },
+            "description": { "type": "string" },
+            "strengths": { "type": "string" },
+            "challenges": { "type": "string" }
+          }
+        },
+        "coreConflict": { "type": "string" },
+        "habitLoop": { "$ref": "#/entities/habitLoop" }
+      }
+    },
+     "emotionalConstellation": {
       "title": "Emotional Constellation",
       "description": "A graph-based representation of a user's emotional and thematic landscape.",
       "type": "object",
@@ -142,22 +196,16 @@
       },
       "required": ["nodes", "links"]
     },
-    "chatbotState": {
-      "title": "Chatbot State",
-      "description": "Represents the chatbot's internal state, its 'psychological blueprint', which evolves over time.",
-      "type": "object",
-      "properties": {
-        "blueprint": {
-          "type": "object",
-          "description": "The chatbot's self-analysis and understanding of the user and conversation dynamics."
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The timestamp of the last update to the state."
+    "habitLoop": {
+        "title": "Habit Loop",
+        "description": "Analysis of a recurring behavioral loop.",
+        "type": "object",
+        "properties": {
+            "trigger": { "type": "string" },
+            "thought": { "type": "string" },
+            "action": { "type": "string" },
+            "result": { "type": "string" }
         }
-      },
-      "required": ["blueprint", "updatedAt"]
     }
   },
   "auth": {
@@ -199,6 +247,12 @@
             "$ref": "#/entities/chatbotState"
         },
         "description": "Stores the evolving internal state and 'consciousness' of the chatbot for a specific user."
+    },
+    "/users/{userId}/profile/main": {
+        "schema": {
+            "$ref": "#/entities/userProfile"
+        },
+        "description": "Stores the main, comprehensive AI-generated psychological profile for a user."
     }
   }
 }

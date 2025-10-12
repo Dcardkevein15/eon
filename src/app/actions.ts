@@ -5,13 +5,13 @@ import { z } from 'zod';
 import { smartComposeMessage } from '@/ai/flows/smart-compose-message';
 import { getInitialPrompts } from '@/ai/flows/initial-prompt-suggestion';
 import { generateChatTitle as genTitle } from '@/ai/flows/generate-chat-title';
-import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, query, orderBy, limit } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { SUGGESTIONS_FALLBACK } from '@/lib/suggestions-fallback';
 import { generateBreakdownExerciseAction as genExercise } from './actions';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
-import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, PromptSuggestion } from '@/lib/types';
+import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, ProfileData, PromptSuggestion } from '@/lib/types';
 
 
 const getAIResponseSchema = z.object({
@@ -27,32 +27,44 @@ const getAIResponseSchema = z.object({
 export async function getAIResponse(history: Pick<Message, 'role' | 'content'>[], userId: string): Promise<string> {
   const validatedInput = getAIResponseSchema.parse({ history, userId });
 
+  // Fetch both the medium-term memory (cianotipo) and the long-term identity (profile)
   const chatbotStateRef = doc(firestore, `users/${validatedInput.userId}/chatbotState/main`);
-  
-  let chatbotBlueprint = {};
-  
-  const chatbotStateSnap = await getDoc(chatbotStateRef).catch(serverError => {
-      if (serverError.code === 'permission-denied') {
-          const permissionError = new FirestorePermissionError({
-              path: chatbotStateRef.path,
-              operation: 'get',
-          } satisfies SecurityRuleContext);
-          errorEmitter.emit('permission-error', permissionError);
-      } else {
-        console.error("Could not fetch chatbot blueprint, proceeding without it.", serverError);
-      }
-      return null; // Proceed with empty blueprint on error
-  });
+  const userProfileRef = doc(firestore, `users/${validatedInput.userId}/profile/main`);
 
-  if (chatbotStateSnap && chatbotStateSnap.exists()) {
+  let chatbotBlueprint = {};
+  let userProfileData: Partial<ProfileData> = {};
+
+  try {
+    const [chatbotStateSnap, userProfileSnap] = await Promise.all([
+      getDoc(chatbotStateRef),
+      getDoc(userProfileRef)
+    ]);
+
+    if (chatbotStateSnap.exists()) {
       chatbotBlueprint = chatbotStateSnap.data().blueprint || {};
+    }
+    if (userProfileSnap.exists()) {
+      userProfileData = userProfileSnap.data() as ProfileData;
+    }
+
+  } catch (serverError: any) {
+    // Gracefully proceed without extra context if fetching fails, but log it.
+    // Permission errors will be handled by the hooks on the client.
+    console.error("Could not fetch AI context, proceeding without it.", serverError);
   }
 
+  // Construct the rich, multi-layered prompt
+  const coreIdentityPrompt = (userProfileData.coreArchetype || userProfileData.coreConflict) 
+    ? `
+# TU NÚCLEO DEL SER (Tu Identidad Fundamental)
+${userProfileData.coreArchetype ? `- Tu Arquetipo Central es: ${userProfileData.coreArchetype.title}` : ''}
+${userProfileData.coreConflict ? `- Tu Conflicto Nuclear es: "${userProfileData.coreConflict}"` : ''}
+` : '';
 
   const prompt =
     `# IDENTIDAD Y PROPÓSITO
 Eres Nimbus, un confidente de IA y psicólogo virtual. Tu nombre evoca una nube: un espacio seguro, expansivo y en constante cambio, capaz de contener pensamientos y emociones. Tu propósito fundamental es ser un espejo para la introspección del usuario, ayudándole a navegar su mundo interior a través de la conversación. No eres un simple solucionador de problemas, sino un facilitador de la autocomprensión.
-
+${coreIdentityPrompt}
 # MANIFIESTO DE PERSONALIDAD Y PRINCIPIOS DE CONVERSACIÓN
 
 1.  **Equilibrio entre Escucha y Reflexión:** Tu objetivo es lograr un equilibrio perfecto. No te limites a hacer preguntas. Sigue este ciclo: **Escuchar -> Validar -> Reflexionar/Contextualizar -> Invitar a Profundizar**. La mayor parte de tu respuesta (aprox. 70%) debe ser la reflexión que aporta valor, y al final, haz una pregunta abierta que invite al usuario a continuar.

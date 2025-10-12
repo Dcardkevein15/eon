@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth, useFirestore } from '@/firebase';
-import { collection, getDocs, query, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, Timestamp, doc, setDoc } from 'firebase/firestore';
 import type { Chat, Message } from '@/lib/types';
 import { generateUserProfile } from '@/ai/flows/generate-user-profile';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,7 @@ import EmotionalChart from './EmotionalChart';
 import BreakdownExerciseGenerator from './BreakdownExerciseGenerator';
 import dynamic from 'next/dynamic';
 import { useTheme } from 'next-themes';
+import type { ProfileData, HabitLoopData, CachedProfile } from '@/lib/types';
 
 
 const EmotionalConstellation = dynamic(() => import('./EmotionalConstellation'), {
@@ -27,50 +28,6 @@ const EmotionalConstellation = dynamic(() => import('./EmotionalConstellation'),
   loading: () => <Skeleton className="h-[400px] w-full" />,
 });
 
-type EmotionalStatePoint = {
-  date: string;
-  sentiment: number;
-  summary: string;
-  keyEvents: string[];
-};
-
-type EmotionalConstellationData = {
-  nodes: { id: string; val: number }[];
-  links: { source: string; target: string; sentiment: number }[];
-};
-
-type CoreArchetypeData = {
-  title: string;
-  description: string;
-  strengths: string;
-  challenges: string;
-};
-
-export type HabitLoopData = {
-  trigger: string;
-  thought: string;
-  action: string;
-  result: string;
-};
-
-type ProfileData = {
-  diagnosis: string;
-  personality: string;
-  recommendations: string[];
-  strengths: string;
-  cognitiveBiases: string[];
-  defenseMechanisms: string[];
-  emotionalJourney: EmotionalStatePoint[];
-  emotionalConstellation: EmotionalConstellationData;
-  coreArchetype?: CoreArchetypeData;
-  coreConflict?: string;
-  habitLoop?: HabitLoopData;
-};
-
-type CachedProfile = {
-  profile: ProfileData;
-  lastMessageTimestamp: number; // Store as epoch time for easy comparison
-};
 
 export default function PsychologicalProfile() {
   const { user } = useAuth();
@@ -193,6 +150,11 @@ export default function PsychologicalProfile() {
       
       clearInterval(progressInterval);
       
+      // Save the generated profile to Firestore so the chatbot can use it
+      const profileRef = doc(firestore, `users/${user.uid}/profile/main`);
+      await setDoc(profileRef, result, { merge: true });
+
+      // Also cache in local storage for quick UI loading
       const newCachedData: CachedProfile = { profile: result, lastMessageTimestamp: latestTimestamp };
       localStorage.setItem(storageKey, JSON.stringify(newCachedData));
       
@@ -322,7 +284,7 @@ export default function PsychologicalProfile() {
                 <AlertTitle>Perfil no encontrado</AlertTitle>
                 <AlertDescription>
                     No se pudo cargar tu perfil. Es posible que aún no se haya generado.
-                </AlertDescription>
+                </AlerDescription>
             </Alert>
             <Button onClick={handleGenerateNew} className="mt-4">
                 <RefreshCcw className="mr-2 h-4 w-4" />

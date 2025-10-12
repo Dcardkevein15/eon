@@ -63,3 +63,43 @@ export type GenerateBreakdownExerciseOutput = z.infer<typeof GenerateBreakdownEx
 
 export type BreakdownExercise = z.infer<typeof GenerateBreakdownExerciseOutputSchema>;
 export type HabitLoopData = z.infer<typeof HabitLoopSchema>;
+
+
+// Types for Psychological Profile
+type EmotionalStatePoint = {
+  date: string;
+  sentiment: number;
+  summary: string;
+  keyEvents: string[];
+};
+
+type EmotionalConstellationData = {
+  nodes: { id: string; val: number }[];
+  links: { source: string; target: string; sentiment: number }[];
+};
+
+type CoreArchetypeData = {
+  title: string;
+  description: string;
+  strengths: string;
+  challenges: string;
+};
+
+export type ProfileData = {
+  diagnosis: string;
+  personality: string;
+  recommendations: string[];
+  strengths: string;
+  cognitiveBiases: string[];
+  defenseMechanisms: string[];
+  emotionalJourney: EmotionalStatePoint[];
+  emotionalConstellation: EmotionalConstellationData;
+  coreArchetype?: CoreArchetypeData;
+  coreConflict?: string;
+  habitLoop?: HabitLoopData;
+};
+
+export type CachedProfile = {
+  profile: ProfileData;
+  lastMessageTimestamp: number; // Store as epoch time for easy comparison
+};
