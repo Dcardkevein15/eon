@@ -105,7 +105,7 @@ function SimulationPage() {
     [user, firestore, sessionId]
   );
   
-  const { data: messages = [], loading: messagesLoading } = useCollection<Message>(messagesQuery);
+  const { data: messages, loading: messagesLoading } = useCollection<Message>(messagesQuery);
 
   const appendMessage = useCallback(async (message: Omit<Message, 'id'>) => {
     if (!user || !firestore || !sessionId) return;
@@ -166,8 +166,8 @@ function SimulationPage() {
     
     setIsResponding(true);
     try {
-      // Use the latest messages from Firestore for context
-      const currentMessages = [...messages, { ...userMessage, id: firestoreId }];
+      // Use the latest messages from Firestore for context. Handle null case.
+      const currentMessages = [...(messages || []), { ...userMessage, id: firestoreId }];
       const history = currentMessages.map(m => ({ role: m.role, content: m.content }));
 
       const aiResponseContent = await runSimulation({
@@ -199,7 +199,7 @@ function SimulationPage() {
     let generatedFeedback = '';
     
     try {
-        const transcript = messages.map(m => `${m.role === 'user' ? 'Usuario' : 'Personaje'}: ${m.content}`).join('\n');
+        const transcript = (messages || []).map(m => `${m.role === 'user' ? 'Usuario' : 'Personaje'}: ${m.content}`).join('\n');
         
         const feedbackResult = await generateSimulationFeedback({
             scenarioTitle: scenario.title,
@@ -264,7 +264,7 @@ function SimulationPage() {
         </Button>
       </header>
 
-      {messages.length === 0 && !messagesLoading && (
+      {messages && messages.length === 0 && !messagesLoading && (
         <Alert className="m-4 max-w-2xl mx-auto">
             <Bot className="h-4 w-4" />
             <AlertTitle>¡Estás en el Gimnasio Emocional!</AlertTitle>
@@ -276,7 +276,7 @@ function SimulationPage() {
 
       <div className="flex-1 overflow-y-auto">
         <ChatMessages 
-            messages={messages} 
+            messages={messages || []} 
             isResponding={isResponding || messagesLoading}
             lastIntent={lastIntent}
             isAnalyzing={analyzingPostMessage}
