@@ -94,13 +94,8 @@ ${JSON.stringify(chatbotBlueprint, null, 2)}
       .join('\n') +
     '\nAsistente:';
 
-  try {
-    const { text } = await ai.generate({prompt});
-    return text;
-  } catch (error) {
-    console.error('Error getting AI response:', error);
-    return "Lo siento, estoy teniendo problemas para conectarme en este momento. Por favor, inténtalo de nuevo en un momento.";
-  }
+  const { text } = await ai.generate({prompt});
+  return text;
 }
 
 export async function getSmartComposeSuggestions(
