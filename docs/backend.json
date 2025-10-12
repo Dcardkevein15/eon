@@ -206,6 +206,34 @@
             "action": { "type": "string" },
             "result": { "type": "string" }
         }
+    },
+    "simulationScenario": {
+      "title": "Simulation Scenario",
+      "description": "A predefined scenario for the Emotional Gym.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "personaPrompt": { "type": "string", "description": "The system prompt for the AI persona." }
+      },
+      "required": ["id", "title", "description", "category", "personaPrompt"]
+    },
+    "simulationSession": {
+      "title": "Simulation Session",
+      "description": "A record of a user's practice session in the Emotional Gym.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "scenarioId": { "type": "string" },
+        "scenarioTitle": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "completedAt": { "type": "string", "format": "date-time" },
+        "feedback": { "type": "string", "description": "AI-generated feedback on the user's performance." },
+        "path": { "type": "string" }
+      },
+      "required": ["userId", "scenarioId", "scenarioTitle", "createdAt", "path"]
     }
   },
   "auth": {
@@ -253,6 +281,24 @@
             "$ref": "#/entities/userProfile"
         },
         "description": "Stores the main, comprehensive AI-generated psychological profile for a user."
+    },
+    "/simulationScenarios": {
+      "schema": {
+        "$ref": "#/entities/simulationScenario"
+      },
+      "description": "A collection of predefined simulation scenarios for the Emotional Gym."
+    },
+    "/users/{userId}/gymSessions/{sessionId}": {
+      "schema": {
+        "$ref": "#/entities/simulationSession"
+      },
+      "description": "Metadata for a user's simulation session."
+    },
+    "/users/{userId}/gymSessions/{sessionId}/messages/{messageId}": {
+      "schema": {
+        "$ref": "#/entities/message"
+      },
+      "description": "Individual messages within a simulation session."
     }
   }
 }

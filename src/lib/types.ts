@@ -80,7 +80,7 @@ type EmotionalConstellationData = {
 
 type CoreArchetypeData = {
   title: string;
-  description: string;
+  description:string;
   strengths: string;
   challenges: string;
 };
@@ -102,4 +102,25 @@ export type ProfileData = {
 export type CachedProfile = {
   profile: ProfileData;
   lastMessageTimestamp: number; // Store as epoch time for easy comparison
+};
+
+
+// Types for Emotional Gym
+export type SimulationScenario = {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  personaPrompt: string;
+};
+
+export type SimulationSession = {
+  id: string;
+  userId: string;
+  scenarioId: string;
+  scenarioTitle: string;
+  createdAt: Timestamp;
+  completedAt?: Timestamp;
+  feedback?: string;
+  path: string;
 };
