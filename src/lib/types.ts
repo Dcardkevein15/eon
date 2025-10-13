@@ -19,6 +19,7 @@ export type Chat = {
   createdAt: Timestamp;
   userId: string;
   path: string;
+  latestMessageAt?: Timestamp;
 };
 
 export type PromptSuggestion = {
@@ -160,5 +161,3 @@ export const ClassifyIntentOutputSchema = z.object({
   intent: z.string(),
 });
 export type ClassifyIntentOutput = z.infer<typeof ClassifyIntentOutputSchema>;
-
-    

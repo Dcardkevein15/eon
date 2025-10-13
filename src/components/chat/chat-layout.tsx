@@ -65,6 +65,7 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
         userId: user.uid,
         createdAt: serverTimestamp(),
         path: '',
+        latestMessageAt: firstMessage.timestamp,
       };
       
       const chatsCollectionRef = collection(firestore, `users/${user.uid}/chats`);
@@ -101,19 +102,24 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
     async (chatId: string, message: Omit<Message, 'id'>) => {
         if (!user || !firestore) return;
         const messagesColRef = collection(firestore, `users/${user.uid}/chats/${chatId}/messages`);
+        const chatRef = doc(firestore, `users/${user.uid}/chats/${chatId}`);
         
-        addDoc(messagesColRef, message).catch((serverError) => {
+        try {
+          await addDoc(messagesColRef, message);
+          // Also update the latestMessageAt timestamp on the parent chat document
+          await updateDoc(chatRef, { latestMessageAt: message.timestamp });
+        } catch (serverError: any) {
           if (serverError.code === 'permission-denied') {
             const permissionError = new FirestorePermissionError({
               path: messagesColRef.path,
-              operation: 'create',
+              operation: 'write', // Covers create (message) and update (chat)
               requestResourceData: message,
             } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
           } else {
-             console.error("Error appending message:", serverError);
+             console.error("Error appending message and updating chat:", serverError);
           }
-        });
+        }
     },
     [user, firestore]
   );

@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore, useCollection } from '@/firebase';
 import { collection, getDocs, query, orderBy, limit, Timestamp, doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import type { Chat, Message, ProfileData, CachedProfile } from '@/lib/types';
 import { generateUserProfile } from '@/ai/flows/generate-user-profile';
@@ -39,48 +39,20 @@ export default function PsychologicalProfile() {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isOutdated, setIsOutdated] = useState(false);
-  const [cachedData, setCachedData] = useState<CachedProfile | null>(null);
   const [isClient, setIsClient] = useState(false);
 
   const storageKey = useMemo(() => user ? `psych-profile-${user.uid}` : null, [user]);
 
-  const getLatestMessageTimestamp = useCallback(async (): Promise<number | null> => {
-    if (!user || !firestore) return null;
-    
-    try {
-      const chatsQuery = query(collection(firestore, `users/${user.uid}/chats`));
-      const chatsSnapshot = await getDocs(chatsQuery);
-      if (chatsSnapshot.empty) return null;
-
-      let latestTimestamp: number = 0;
-      for (const chatDoc of chatsSnapshot.docs) {
-        const messagesQuery = query(collection(chatDoc.ref, 'messages'), orderBy('timestamp', 'desc'), limit(1));
-        const messagesSnapshot = await getDocs(messagesQuery);
-        if (!messagesSnapshot.empty) {
-          const timestamp = messagesSnapshot.docs[0].data().timestamp as Timestamp | Date;
-          if (timestamp) {
-            const currentMillis = (timestamp instanceof Timestamp) 
-              ? timestamp.toMillis() 
-              : (timestamp instanceof Date) ? timestamp.getTime() : 0;
-            
-            if (currentMillis > latestTimestamp) {
-              latestTimestamp = currentMillis;
-            }
-          }
-        }
-      }
-      return latestTimestamp > 0 ? latestTimestamp : null;
-    } catch (e: any) {
-        console.error("Permission error likely in getLatestMessageTimestamp:", e);
-        // This is a critical error. We must inform the user.
-        throw new Error("Missing or insufficient permissions.");
-    }
-  }, [user, firestore]);
+  const chatsQuery = useMemo(
+    () => (user?.uid && firestore ? query(collection(firestore, `users/${user.uid}/chats`), orderBy('createdAt', 'asc')) : undefined),
+    [user?.uid, firestore]
+  );
+  const { data: chats, loading: chatsLoading } = useCollection<Chat>(chatsQuery);
 
   const fetchAndGenerateProfile = useCallback(async () => {
-    if (!user || !firestore || !storageKey) {
+    if (!user || !firestore || !storageKey || !chats) {
       setLoading(false);
-      setError('Debes iniciar sesión para generar tu perfil.');
+      setError('Datos insuficientes o no has iniciado sesión.');
       return;
     }
 
@@ -94,10 +66,6 @@ export default function PsychologicalProfile() {
 
     try {
       setProgress(10);
-      const chatsQuery = query(collection(firestore, `users/${user.uid}/chats`), orderBy('createdAt', 'asc'));
-      const chatsSnapshot = await getDocs(chatsQuery);
-      const chats = chatsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Chat));
-
       if (chats.length === 0) {
         throw new Error('No hay conversaciones para analizar. ¡Inicia un chat para generar tu perfil!');
       }
@@ -117,8 +85,16 @@ export default function PsychologicalProfile() {
           const msgTimestamp = date.getTime();
           
           fullChatHistory += `[${date.toISOString()}] ${msg.role}: ${msg.content}\n`;
-          if (msgTimestamp > latestTimestamp) latestTimestamp = msgTimestamp;
         });
+
+        const chatTimestamp = chat.latestMessageAt 
+            ? (chat.latestMessageAt as Timestamp).toMillis()
+            : (chat.createdAt as Timestamp).toMillis();
+        
+        if (chatTimestamp > latestTimestamp) {
+            latestTimestamp = chatTimestamp;
+        }
+
         fullChatHistory += `--- FIN DEL CHAT ---\n\n`;
       }
       setProgress(50);
@@ -145,7 +121,6 @@ export default function PsychologicalProfile() {
       localStorage.setItem(storageKey, JSON.stringify(newCachedData));
       
       setProfile(result);
-      setCachedData(newCachedData);
       setIsOutdated(false);
       setProgress(100);
 
@@ -156,7 +131,7 @@ export default function PsychologicalProfile() {
       clearInterval(progressInterval);
       setTimeout(() => setGenerating(false), 500);
     }
-  }, [user, firestore, storageKey]);
+  }, [user, firestore, storageKey, chats]);
 
   useEffect(() => {
     setIsClient(true);
@@ -175,29 +150,36 @@ export default function PsychologicalProfile() {
   }, []);
 
   useEffect(() => {
-    if (!isClient || !user || !storageKey) {
-      if (!user && isClient) {
-        setError('Debes iniciar sesión para ver tu perfil.');
-        setLoading(false);
-      }
+    if (!isClient || !user || !storageKey || chatsLoading) {
+       if (isClient && !authLoading && !user) {
+         setError('Debes iniciar sesión para ver tu perfil.');
+         setLoading(false);
+       }
       return;
     };
 
     const loadInitialData = async () => {
       try {
         const cachedItem = localStorage.getItem(storageKey);
-        const latestTimestamp = await getLatestMessageTimestamp();
+        
+        let latestTimestamp = 0;
+        if (chats && chats.length > 0) {
+            latestTimestamp = Math.max(...chats.map(c => 
+                c.latestMessageAt 
+                ? (c.latestMessageAt as Timestamp).toMillis()
+                : (c.createdAt as Timestamp).toMillis()
+            ));
+        }
 
         if (cachedItem) {
           const data: CachedProfile = JSON.parse(cachedItem);
-          setCachedData(data);
           setProfile(data.profile);
           if (latestTimestamp && data.lastMessageTimestamp < latestTimestamp) {
             setIsOutdated(true);
           }
           setLoading(false);
         } else {
-          if (latestTimestamp !== null) {
+          if (latestTimestamp > 0) {
             fetchAndGenerateProfile();
           } else {
             setError('No hay conversaciones para analizar. ¡Inicia un chat para generar tu perfil!');
@@ -209,16 +191,15 @@ export default function PsychologicalProfile() {
          setLoading(false);
       }
     };
-    if(user) {
-        loadInitialData();
-    }
-  }, [user, storageKey, isClient, getLatestMessageTimestamp, fetchAndGenerateProfile]);
+    
+    loadInitialData();
+    
+  }, [user, storageKey, isClient, fetchAndGenerateProfile, chats, chatsLoading, authLoading]);
 
-  const lastConversationDate = cachedData?.lastMessageTimestamp
-      ? format(new Date(cachedData.lastMessageTimestamp), "d 'de' MMMM 'de' yyyy", { locale: es })
-      : null;
+  const authLoading = !isClient || !user;
 
-  if (loading) {
+
+  if (loading || chatsLoading) {
     return (
       <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full space-y-6">
         <div className="mb-6">
@@ -266,7 +247,7 @@ export default function PsychologicalProfile() {
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
-        {error.includes("permissions") === false &&
+        {error.includes("permisos") === false &&
           <Button onClick={() => fetchAndGenerateProfile()} className="mt-4">
             <RefreshCcw className="mr-2 h-4 w-4" />
             Intentar de nuevo
@@ -585,4 +566,3 @@ export default function PsychologicalProfile() {
   );
 }
 
-    
