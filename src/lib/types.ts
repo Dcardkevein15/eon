@@ -20,6 +20,7 @@ export type Chat = {
   userId: string;
   path: string;
   latestMessageAt?: Timestamp;
+  anchorRole?: string;
 };
 
 export type PromptSuggestion = {

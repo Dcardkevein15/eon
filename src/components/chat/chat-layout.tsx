@@ -26,6 +26,7 @@ import EmptyChat from '@/components/chat/empty-chat';
 import { cn } from '@/lib/utils';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { determineAnchorRole } from '@/app/actions';
 
 interface ChatLayoutProps {
   chatId?: string;
@@ -60,12 +61,15 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
     async (firstMessage: Omit<Message, 'id'>): Promise<string | undefined> => {
       if (!user || !firestore) return;
 
+      const anchorRole = await determineAnchorRole(firstMessage.content);
+
       const newChatData = {
         title: 'Nuevo Chat',
         userId: user.uid,
         createdAt: serverTimestamp(),
         path: '',
         latestMessageAt: firstMessage.timestamp,
+        anchorRole: anchorRole,
       };
       
       const chatsCollectionRef = collection(firestore, `users/${user.uid}/chats`);

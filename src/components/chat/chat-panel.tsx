@@ -93,7 +93,8 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
     try {
       const aiResponseContent = await getAIResponse(
         currentMessages.map(m => ({...m, timestamp: new Date()})), // Pass plain objects
-        user.uid
+        user.uid,
+        chat.anchorRole || null
       );
 
       const aiMessage: Omit<Message, 'id'> = {
@@ -105,7 +106,8 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
       
       const updatedMessages = [...currentMessages, { ...aiMessage, id: uuidv4() }];
 
-      if (currentMessages.length === 1) {
+      // Title is generated only if it's the default "Nuevo Chat"
+      if (currentMessages.length === 1 && chat.title === 'Nuevo Chat') {
           const userMessage = currentMessages[0];
           const conversationForTitle = `User: ${userMessage.content}\nAssistant: ${aiResponseContent}`;
           const newTitle = await generateChatTitle(conversationForTitle);
@@ -126,7 +128,7 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
     } finally {
         setIsResponding(false);
     }
-  }, [user, chat.id, appendMessage, updateChatTitle, toast, triggerBlueprintUpdate]);
+  }, [user, chat.id, chat.anchorRole, chat.title, appendMessage, updateChatTitle, toast, triggerBlueprintUpdate]);
 
 
   const handleSendMessage = useCallback(async (input: string, imageUrl?: string) => {
@@ -169,9 +171,14 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
        <header className="flex h-14 items-center justify-between p-2 md:p-4 border-b">
         <div className="flex items-center gap-2">
           {isMobile && <SidebarTrigger />}
-           <h2 className="text-base md:text-lg font-semibold truncate">
-            {chat.title}
-          </h2>
+           <div className='min-w-0'>
+            <h2 className="text-base md:text-lg font-semibold truncate">
+              {chat.title}
+            </h2>
+            {chat.anchorRole && (
+              <p className='text-xs text-muted-foreground truncate'>Rol: {chat.anchorRole}</p>
+            )}
+           </div>
         </div>
       </header>
       <div className="flex-1 overflow-y-auto">
