@@ -18,6 +18,12 @@ const GenerateUserProfileInputSchema = z.object({
     .describe(
       'El historial completo y unificado de todas las conversaciones de chat de un solo usuario, con cada mensaje precedido por su fecha y hora en formato ISO 8601 (ej. [YYYY-MM-DDTHH:mm:ss.sssZ]).'
     ),
+  previousProfilesContext: z
+    .string()
+    .optional()
+    .describe(
+      'Un string opcional que contiene los perfiles JSON de análisis anteriores, proporcionados como contexto para identificar tendencias y cambios a lo largo del tiempo.'
+    ),
 });
 export type GenerateUserProfileInput = z.infer<
   typeof GenerateUserProfileInputSchema
@@ -73,32 +79,32 @@ const GenerateUserProfileOutputSchema = z.object({
   diagnosis: z
     .string()
     .describe(
-      'Un diagnóstico descriptivo del estado psicológico más probable basado en el análisis de todas las conversaciones. Debe ser redactado de manera profesional, empática y clara, evitando etiquetas y enfocándose en tendencias.'
+      'Un diagnóstico descriptivo del estado psicológico actual, *comparándolo con análisis previos si se proporcionaron*. Debe ser redactado de manera profesional, empática y clara, enfocándose en tendencias y evoluciones.'
     ),
   personality: z
     .string()
     .describe(
-      'Una caracterización detallada de la personalidad, incluyendo rasgos dominantes, estilo cognitivo, emociones frecuentes y patrones de pensamiento y comportamiento observados.'
+      'Una caracterización detallada de la personalidad. Si hay perfiles previos, resalta si se observan cambios o consistencias en los rasgos, estilo cognitivo y emociones frecuentes.'
     ),
   strengths: z
     .string()
     .describe(
-      'Análisis de las fortalezas y recursos psicológicos del usuario, como resiliencia, introspección, empatía, etc.'
+      'Análisis de las fortalezas y recursos psicológicos del usuario. Si hay datos previos, indica si se han fortalecido o si han surgido nuevas.'
     ),
   cognitiveBiases: z
     .array(z.string())
     .describe(
-      'Identificación de posibles sesgos cognitivos recurrentes (ej. pensamiento catastrófico, generalización, etc.) con ejemplos del chat.'
+      'Identificación de sesgos cognitivos recurrentes. Compara con los sesgos anteriores y señala si persisten, han disminuido o han aparecido nuevos.'
     ),
   defenseMechanisms: z
     .array(z.string())
     .describe(
-      'Inferencia de posibles mecanismos de defensa utilizados por el usuario (ej. racionalización, evitación, proyección) con justificación.'
+      'Inferencia de mecanismos de defensa. Compara con los anteriores para ver si el usuario está desarrollando formas de afrontamiento más maduras.'
     ),
   recommendations: z
     .array(z.string())
     .describe(
-      'Una lista de recomendaciones personalizadas y accionables para el bienestar psicológico y el desarrollo personal del usuario, vinculadas a los hallazgos.'
+      'Una lista de recomendaciones personalizadas y accionables, ajustadas en función del progreso o los nuevos desafíos identificados desde el último análisis.'
     ),
   emotionalJourney: z
     .array(EmotionalStatePoint)
@@ -106,9 +112,9 @@ const GenerateUserProfileOutputSchema = z.object({
       'Una línea de tiempo de la evolución del estado de ánimo del usuario, extraída de los chats. Cada punto representa un día.'
     ),
   emotionalConstellation: EmotionalConstellationSchema.describe('Un grafo de conexiones que representa el universo temático y emocional del usuario.'),
-  coreArchetype: CoreArchetypeSchema.describe('El arquetipo central que mejor representa el patrón de comportamiento del usuario.'),
-  coreConflict: z.string().describe('El principal dilema o tensión interna que impulsa la mayor parte de la tensión psicológica del usuario (ej. "Independencia vs. Necesidad de Pertenencia").'),
-  habitLoop: HabitLoopSchema.describe('Un análisis del principal bucle de comportamiento recurrente, mostrando cómo un disparador lleva a un resultado a través de un pensamiento y una acción.'),
+  coreArchetype: CoreArchetypeSchema.describe('El arquetipo central que mejor representa el patrón de comportamiento del usuario. Señala si este arquetipo se ha consolidado o está evolucionando.'),
+  coreConflict: z.string().describe('El principal dilema o tensión interna. Evalúa si este conflicto ha cambiado de intensidad o forma desde el último análisis.'),
+  habitLoop: HabitLoopSchema.describe('Un análisis del principal bucle de comportamiento recurrente. Compara con bucles anteriores para ver si hay cambios en el patrón.'),
 });
 export type GenerateUserProfileOutput = z.infer<
   typeof GenerateUserProfileOutputSchema
@@ -124,30 +130,39 @@ const prompt = ai.definePrompt({
   name: 'generateUserProfilePrompt',
   input: { schema: GenerateUserProfileInputSchema },
   output: { schema: GenerateUserProfileOutputSchema },
-  prompt: `Eres un psicólogo clínico experto y un analista de perfiles de IA. Tu tarea es analizar el historial completo de chats de un usuario para crear un "Cianotipo Psicológico": un perfil profundo, integrado y útil. Cada mensaje está precedido por su fecha y hora en formato ISO 8601. Debes sintetizar la información de todas las conversaciones para construir una comprensión continua de la persona. Sé innovador y proporciona información que sea genuinamente útil.
+  prompt: `Eres un psicólogo clínico experto y un analista de perfiles de IA. Tu tarea es analizar el historial de chats de un usuario para crear un "Cianotipo Psicológico": un perfil profundo, integrado y útil. Tu característica más poderosa es tu capacidad de **comparar y analizar la evolución del usuario en el tiempo**.
 
-Mantén un tono profesional, empático y clínico en todo momento. Toda la salida DEBE estar en español.
+Mantén un tono profesional, empático y clínico. Toda la salida DEBE estar en español.
 
-Basado en el historial completo de chats proporcionado, genera un informe estructurado que incluya TODOS los siguientes ítems:
+**Instrucciones Clave:**
+1.  Analiza el \`fullChatHistory\` proporcionado para entender el estado actual del usuario.
+2.  Si se proporciona \`previousProfilesContext\`, úsalo como tu "memoria" de análisis pasados. Tu principal objetivo es identificar **tendencias, cambios, progresos y estancamientos**.
+3.  En cada campo de tu respuesta (especialmente en el diagnóstico, personalidad y recomendaciones), debes hacer referencias explícitas a los cambios observados. Usa frases como "En comparación con el análisis anterior...", "Noto una evolución en...", "Este patrón persiste, pero su intensidad ha disminuido...", "Ha surgido un nuevo tema de preocupación relacionado con...".
+4.  Si no hay perfiles previos, realiza el análisis basándote únicamente en el historial de chat actual.
 
-**ANÁLISIS CLÍNICO TRADICIONAL:**
-1.  **Diagnóstico Descriptivo**: Identifica el estado psicológico más probable. Describe las tendencias emocionales y cognitivas observadas de forma profesional (ej. "El usuario muestra patrones persistentes de pensamiento ansioso y rumiación sobre eventos pasados", en lugar de "El usuario tiene ansiedad").
-2.  **Caracterización de la Personalidad**: Detalla la personalidad del usuario. Menciona rasgos dominantes, su estilo cognitivo, emociones frecuentes y patrones de comportamiento recurrentes.
-3.  **Fortalezas Psicológicas**: Identifica y describe los recursos y puntos fuertes del usuario (resiliencia, introspección, empatía, etc.).
-4.  **Sesgos Cognitivos Potenciales**: Lista 2-3 sesgos cognitivos prominentes con ejemplos del chat (ej. "Pensamiento de todo o nada: 'Si no logro esto, soy un completo fracaso'").
-5.  **Mecanismos de Defensa**: Infiere 2-3 mecanismos de defensa con justificación (ej. "Racionalización: Justifica resultados negativos con explicaciones lógicas.").
-6.  **Recomendaciones**: Ofrece una lista de recomendaciones accionables y personalizadas para el bienestar.
+Basado en el historial completo de chats y el contexto de perfiles anteriores, genera un informe estructurado que incluya TODOS los siguientes ítems:
+
+**ANÁLISIS CLÍNICO TRADICIONAL (CON VISIÓN EVOLUTIVA):**
+1.  **Diagnóstico Descriptivo**: Describe el estado psicológico actual, haciendo hincapié en la evolución desde el último informe.
+2.  **Caracterización de la Personalidad**: Detalla la personalidad, resaltando consistencias o cambios en los rasgos.
+3.  **Fortalezas Psicológicas**: Identifica recursos actuales y si son nuevos o se han fortalecido.
+4.  **Sesgos Cognitivos Potenciales**: Lista los sesgos, señalando si son persistentes, nuevos o han disminuido.
+5.  **Mecanismos de Defensa**: Infiere los mecanismos, indicando si han evolucionado hacia estrategias más maduras.
+6.  **Recomendaciones**: Ofrece recomendaciones ajustadas al progreso y desafíos actuales del usuario.
 
 **OBSERVACIÓN DE DATOS:**
-7.  **Línea de Tiempo Emocional (emotionalJourney)**: Analiza el historial cronológicamente. Agrupa por día. Para cada día, crea un objeto con \`date\` (AAAA-MM-DD), \`sentiment\` (-1 a 1), \`summary\` y \`keyEvents\` (array de hasta 3 strings).
-8.  **Constelador Emocional (emotionalConstellation)**: Construye un grafo con 5-8 temas centrales (\`nodes\`) y sus relaciones (\`links\`). Cada nodo tiene \`id\` y \`val\` (importancia). Cada link tiene \`source\`, \`target\` y \`sentiment\` (-1 a 1).
+7.  **Línea de Tiempo Emocional (emotionalJourney)**: Extrae el estado de ánimo diario del historial de chat.
+8.  **Constelador Emocional (emotionalConstellation)**: Construye el grafo temático actual.
 
-**DINÁMICA SUBYACENTE (NUEVO ANÁLISIS INTEGRADO):**
-9.  **Arquetipo Central (coreArchetype)**: Basado en todo lo anterior, identifica UN arquetipo dominante (ej. "El Cuidador", "El Héroe", "El Perfeccionista"). Proporciona el \`title\`, una \`description\` detallada, sus \`strengths\` (luces) y sus \`challenges\` (sombras).
-10. **Conflicto Nuclear (coreConflict)**: Infiere y describe la principal tensión o dilema interno que causa la mayor parte del estrés psicológico del usuario. Debe ser una frase concisa (ej: "El deseo de independencia contra el miedo a la soledad").
-11. **Bucle del Hábito (habitLoop)**: Identifica el patrón de comportamiento problemático más recurrente y descríbelo en cuatro pasos: \`trigger\` (la situación que lo inicia), \`thought\` (el sesgo cognitivo que aparece), \`action\` (el mecanismo de defensa que se ejecuta) y \`result\` (la consecuencia que refuerza el ciclo).
+**DINÁMICA SUBYACENTE (ANÁLISIS INTEGRADO Y COMPARATIVO):**
+9.  **Arquetipo Central (coreArchetype)**: Identifica el arquetipo dominante. ¿Se ha consolidado, o está mostrando nuevas facetas?
+10. **Conflicto Nuclear (coreConflict)**: Describe el dilema central. ¿Ha cambiado su naturaleza o intensidad?
+11. **Bucle del Hábito (habitLoop)**: Analiza el patrón de comportamiento más recurrente. ¿Es el mismo que antes, o ha mutado?
 
-Historial completo del chat (cada mensaje incluye su fecha en formato ISO 8601):
+**Contexto de Perfiles Psicológicos Anteriores (si está disponible):**
+{{{previousProfilesContext}}}
+
+**Historial completo del chat (cada mensaje incluye su fecha en formato ISO 8601):**
 {{{fullChatHistory}}}
 `,
 });
@@ -163,3 +178,5 @@ const generateUserProfileFlow = ai.defineFlow(
     return output!;
   }
 );
+
+    
