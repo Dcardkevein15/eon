@@ -1,8 +1,9 @@
 
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useAuth, useFirestore, useCollection } from '@/firebase';
+import { useAuth, useCollection, useFirestore } from '@/firebase';
 import { collection, getDocs, query, orderBy, limit, Timestamp, doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import type { Chat, Message, ProfileData, CachedProfile } from '@/lib/types';
 import { generateUserProfile } from '@/ai/flows/generate-user-profile';
@@ -29,7 +30,7 @@ const EmotionalConstellation = dynamic(() => import('./EmotionalConstellation'),
 });
 
 export default function PsychologicalProfile() {
-  const { user } = useAuth();
+  const { user, loading: authLoadingFromHook } = useAuth();
   const firestore = useFirestore();
   const { theme, setTheme } = useTheme();
   
@@ -149,37 +150,39 @@ export default function PsychologicalProfile() {
     }
   }, []);
 
+  const authLoading = authLoadingFromHook || !isClient;
+
   useEffect(() => {
-    if (!isClient || !user || !storageKey || chatsLoading) {
-       if (isClient && !authLoading && !user) {
-         setError('Debes iniciar sesión para ver tu perfil.');
-         setLoading(false);
-       }
+    if (authLoading || chatsLoading) {
       return;
-    };
+    }
+    if (!user) {
+      setError('Debes iniciar sesión para ver tu perfil.');
+      setLoading(false);
+      return;
+    }
 
     const loadInitialData = async () => {
       try {
-        const cachedItem = localStorage.getItem(storageKey);
+        const cachedItem = localStorage.getItem(storageKey!);
         
-        let latestTimestamp = 0;
+        let latestConversationTimestamp = 0;
         if (chats && chats.length > 0) {
-            latestTimestamp = Math.max(...chats.map(c => 
-                c.latestMessageAt 
-                ? (c.latestMessageAt as Timestamp).toMillis()
-                : (c.createdAt as Timestamp).toMillis()
+            latestConversationTimestamp = Math.max(...chats.map(c => 
+                (c.latestMessageAt ? (c.latestMessageAt as Timestamp).toMillis() : 0) || 
+                (c.createdAt ? (c.createdAt as Timestamp).toMillis() : 0)
             ));
         }
 
         if (cachedItem) {
           const data: CachedProfile = JSON.parse(cachedItem);
           setProfile(data.profile);
-          if (latestTimestamp && data.lastMessageTimestamp < latestTimestamp) {
+          if (latestConversationTimestamp > data.lastMessageTimestamp) {
             setIsOutdated(true);
           }
           setLoading(false);
         } else {
-          if (latestTimestamp > 0) {
+          if (latestConversationTimestamp > 0) {
             fetchAndGenerateProfile();
           } else {
             setError('No hay conversaciones para analizar. ¡Inicia un chat para generar tu perfil!');
@@ -195,8 +198,6 @@ export default function PsychologicalProfile() {
     loadInitialData();
     
   }, [user, storageKey, isClient, fetchAndGenerateProfile, chats, chatsLoading, authLoading]);
-
-  const authLoading = !isClient || !user;
 
 
   if (loading || chatsLoading) {
@@ -565,4 +566,5 @@ export default function PsychologicalProfile() {
     </div>
   );
 }
+
 
