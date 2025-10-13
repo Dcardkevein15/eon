@@ -1,3 +1,4 @@
+
 'use client';
 
 import { cn } from '@/lib/utils';
@@ -9,15 +10,20 @@ import ReactMarkdown from 'react-markdown';
 import { memo } from 'react';
 import Image from 'next/image';
 
+// Componente para el cursor parpadeante
+const BlinkingCursor = () => (
+  <span className="animate-pulse inline-block w-2 h-4 bg-foreground/70 ml-1 translate-y-0.5" />
+);
 
 interface ChatMessageProps {
   message: Message;
   intent?: string;
   isLastUserMessage?: boolean;
   isAnalyzing?: boolean;
+  isStreaming?: boolean;
 }
 
-function ChatMessage({ message, intent, isLastUserMessage, isAnalyzing }: ChatMessageProps) {
+function ChatMessage({ message, intent, isLastUserMessage, isAnalyzing, isStreaming }: ChatMessageProps) {
   const { user: authUser } = useAuth();
   const isUser = message.role === 'user';
 
@@ -51,6 +57,7 @@ function ChatMessage({ message, intent, isLastUserMessage, isAnalyzing }: ChatMe
               </div>
           )}
           <ReactMarkdown>{message.content}</ReactMarkdown>
+          {isStreaming && <BlinkingCursor />}
         </div>
 
         {isUser && isLastUserMessage && isAnalyzing && (
@@ -81,3 +88,5 @@ function ChatMessage({ message, intent, isLastUserMessage, isAnalyzing }: ChatMe
 }
 
 export default memo(ChatMessage);
+
+    

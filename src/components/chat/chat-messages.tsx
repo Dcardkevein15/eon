@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -26,6 +27,7 @@ export default function ChatMessages({ messages, isResponding, lastIntent, isAna
   }, [messages, isResponding, isAnalyzing]);
 
   const lastUserMessageId = messages.slice().reverse().find(m => m.role === 'user')?.id;
+  const lastMessage = messages[messages.length - 1];
 
   return (
     <ScrollArea className="h-full" ref={scrollAreaRef} viewportRef={viewportRef}>
@@ -37,9 +39,10 @@ export default function ChatMessages({ messages, isResponding, lastIntent, isAna
             intent={lastIntent?.messageId === message.id ? lastIntent.intent : undefined}
             isLastUserMessage={lastUserMessageId === message.id}
             isAnalyzing={isAnalyzing}
+            isStreaming={isResponding && lastMessage?.id === message.id}
           />
         ))}
-        {isResponding && (
+        {isResponding && messages.length > 0 && lastMessage.role !== 'assistant' && (
           <div className="flex items-start space-x-2 md:space-x-4 animate-in fade-in duration-300">
             <Avatar className="h-8 w-8 bg-primary/20 text-primary">
               <AvatarFallback>
@@ -57,3 +60,5 @@ export default function ChatMessages({ messages, isResponding, lastIntent, isAna
     </ScrollArea>
   );
 }
+
+    

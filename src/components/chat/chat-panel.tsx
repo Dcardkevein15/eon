@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useState, useCallback, memo, useEffect, useMemo } from 'react';
 import type { Chat, Message } from '@/lib/types';
-import { getAIResponse, generateChatTitle } from '@/app/actions';
+import { generateChatTitle } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import ChatMessages from './chat-messages';
 import ChatInput from './chat-input';
@@ -56,13 +57,11 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
 
       const stateDocRef = doc(firestore, `users/${user.uid}/chatbotState/main`);
       try {
-        // 1. Client reads previous state
         const previousStateSnap = await getDoc(stateDocRef);
         const previousBlueprint = previousStateSnap.exists()
             ? JSON.stringify(previousStateSnap.data().blueprint, null, 2)
             : "No previous state. This is my first reflection.";
 
-        // 2. Client prepares the full history
         const fullChatHistory = currentMessages.map(msg => {
             const date = msg.timestamp && typeof (msg.timestamp as any).toDate === 'function' 
               ? (msg.timestamp as Timestamp).toDate() 
@@ -70,13 +69,11 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
             return `[${date.toISOString()}] ${msg.role}: ${msg.content}`;
           }).join('\n');
         
-        // 3. Client calls the AI flow with all data
         const newBlueprint = await updatePsychologicalBlueprint({
             fullChatHistory,
             previousBlueprint,
         });
 
-        // 4. Client writes the new state back to Firestore
         const dataToSave = {
             blueprint: newBlueprint,
             updatedAt: serverTimestamp(),
@@ -93,56 +90,99 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
             errorEmitter.emit('permission-error', permissionError);
          } else {
              console.error("Error updating blueprint:", error);
-             // We don't show a toast here to not interrupt the user flow
          }
       }
   }, [user, firestore]);
 
   const getAIResponseAndUpdate = useCallback(async (currentMessages: Message[]) => {
     if (!user) return;
-
     setIsResponding(true);
+
+    const plainHistory = currentMessages.map(msg => ({
+      role: msg.role as 'user' | 'assistant',
+      content: msg.content,
+    }));
+
+    const aiMessageId = uuidv4();
+    let fullResponse = '';
+
     try {
-        const plainHistory = currentMessages.map(msg => ({
-            role: msg.role,
-            content: msg.content,
-        }));
-        
-        const aiResponseContent = await getAIResponse(plainHistory as any, user.uid);
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          history: plainHistory,
+          userId: user.uid,
+        }),
+      });
 
-        const aiMessage: Message = {
-            id: uuidv4(),
-            role: 'assistant',
-            content: aiResponseContent,
-            timestamp: Timestamp.now(),
-        };
-        
-        setLocalMessages(prev => [...prev, aiMessage]);
-        await appendMessage(chat.id, aiMessage);
-        
-        if (currentMessages.length === 1) {
-            const userMessage = currentMessages[0];
-            const conversationForTitle = `User: ${userMessage.content}\nAssistant: ${aiResponseContent}`;
-            const newTitle = await generateChatTitle(conversationForTitle);
-            await updateChatTitle(chat.id, newTitle);
-        }
+      if (!response.body) {
+        throw new Error('La respuesta del servidor no contiene un cuerpo.');
+      }
+      
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let done = false;
 
-        const updatedMessages = [...currentMessages, aiMessage];
-        // Trigger the chatbot's "reflection" process in the background every 5 messages
-        if (updatedMessages.length % 5 === 0) {
-            triggerBlueprintUpdate(updatedMessages);
-        }
+      // Add the empty assistant message shell to start streaming into
+      const assistantMessage: Message = {
+        id: aiMessageId,
+        role: 'assistant',
+        content: '',
+        timestamp: Timestamp.now(),
+      };
+      setLocalMessages(prev => [...prev, assistantMessage]);
 
+      while (!done) {
+        const { value, done: readerDone } = await reader.read();
+        done = readerDone;
+        const chunk = decoder.decode(value, { stream: true });
+        fullResponse += chunk;
+        
+        // Update the content of the last message (the AI's)
+        setLocalMessages(prev =>
+          prev.map(msg =>
+            msg.id === aiMessageId ? { ...msg, content: fullResponse } : msg
+          )
+        );
+      }
+      
     } catch (error) {
-        console.error("Error processing AI response:", error);
+        console.error("Error procesando la respuesta de la IA:", error);
         toast({
           variant: "destructive",
           title: "Error",
           description: "No se pudo obtener una respuesta de la IA. Por favor, inténtalo de nuevo.",
         });
-    } finally {
+        // Remove the empty assistant message if an error occurred
+        setLocalMessages(prev => prev.filter(msg => msg.id !== aiMessageId));
         setIsResponding(false);
+        return; // Stop execution on error
     }
+
+    setIsResponding(false);
+    
+    // Once streaming is complete, save the full message to Firestore
+    const finalAiMessage: Omit<Message, 'id'> = {
+      role: 'assistant',
+      content: fullResponse,
+      timestamp: Timestamp.now(),
+    };
+    await appendMessage(chat.id, finalAiMessage);
+
+    // After-streaming logic
+    if (currentMessages.length === 1) {
+      const userMessage = currentMessages[0];
+      const conversationForTitle = `User: ${userMessage.content}\nAssistant: ${fullResponse}`;
+      const newTitle = await generateChatTitle(conversationForTitle);
+      await updateChatTitle(chat.id, newTitle);
+    }
+    
+    const updatedMessages = [...currentMessages, { ...finalAiMessage, id: aiMessageId }];
+    if (updatedMessages.length % 5 === 0) {
+      triggerBlueprintUpdate(updatedMessages);
+    }
+
   }, [user, chat.id, appendMessage, updateChatTitle, toast, triggerBlueprintUpdate]);
 
 
@@ -177,7 +217,7 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
     };
 
     const newMessages = [...localMessages, userMessage];
-    setLocalMessages(newMessages);
+    setLocalMessages(newMessages); // Optimistic UI update
     await appendMessage(chat.id, userMessage);
     await getAIResponseAndUpdate(newMessages);
 
@@ -209,3 +249,5 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
 }
 
 export default memo(ChatPanel);
+
+    
