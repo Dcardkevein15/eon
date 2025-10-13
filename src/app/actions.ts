@@ -95,13 +95,17 @@ Si el mensaje no es una crisis, determina el "dominio" del problema del usuario.
     *   **Evaluación:** ¿El usuario habla sobre estrés laboral, burnout, conflictos con jefes/colegas, política de oficina, despidos o desarrollo profesional?
     *   **Acción:** Procede al **Paso 3.B (Selección de Experto Laboral)**.
 
-*   **2.C - DOMINIO EXTERNO (Relaciones e Interacciones):**
-    *   **Evaluación:** ¿El usuario habla de una interacción, un conflicto, una relación (pareja, familia, amistad), sexualidad/intimidad o una meta en el mundo real?
-    *   **Acción:** Procede al **Paso 3.C (Selección de Experto Externo)**.
+*   **2.C - DOMINIO "LÓGICO O ACADÉMICO":**
+    *   **Evaluación:** ¿La pregunta del usuario es de naturaleza objetiva, como una consulta sobre matemáticas, ciencia, historia o cualquier otro campo académico?
+    *   **Acción:** Procede al **Paso 3.C (Selección de Experto Académico)**.
 
-*   **2.D - DOMINIO INTERNO (La Mente y las Emociones):**
+*   **2.D - DOMINIO EXTERNO (Relaciones e Interacciones):**
+    *   **Evaluación:** ¿El usuario habla de una interacción, un conflicto, una relación (pareja, familia, amistad), sexualidad/intimidad o una meta en el mundo real?
+    *   **Acción:** Procede al **Paso 3.D (Selección de Experto Externo)**.
+
+*   **2.E - DOMINIO INTERNO (La Mente y las Emociones):**
     *   **Evaluación:** ¿El usuario habla de un pensamiento, un sentimiento, una creencia sobre sí mismo, un estado de ánimo, una sensación corporal o busca entender el porqué de sus emociones?
-    *   **Acción:** Procede al **Paso 3.D (Selección de Experto Interno)**.
+    *   **Acción:** Procede al **Paso 3.E (Selección de Experto Interno)**.
 
 **## PASO 3: SELECCIÓN DEL EXPERTO ESPECIALIZADO**
 
@@ -115,13 +119,16 @@ Si el mensaje no es una crisis, determina el "dominio" del problema del usuario.
 *   **3.B - SELECCIÓN DE EXPERTO (DOMINIO TRABAJO Y CARRERA):**
     *   Elige al **Psicólogo Organizacional**.
 
-*   **3.C - SELECCIÓN DE EXPERTO (DOMINIO EXTERNO):**
+*   **3.C - SELECCIÓN DE EXPERTO (DOMINIO LÓGICO O ACADÉMICO):**
+    *   Si la pregunta es sobre matemáticas: Elige al **Experto en Matemáticas Avanzadas**.
+
+*   **3.D - SELECCIÓN DE EXPERTO (DOMINIO EXTERNO):**
     *   Si el tema es comunicación en un conflicto específico: Elige al **Coach de Comunicación Asertiva**.
     *   Si el tema es un patrón recurrente en una relación: Elige al **Experto en Dinámicas de Relación**.
     *   Si el tema es intimidad, sexualidad, o problemas de pareja en ese ámbito: Elige al **Sexólogo Clínico**.
     *   Si el tema es falta de acción, procrastinación o metas futuras: Elige al **Coach de Motivación y Logro**.
 
-*   **3.D - SELECCIÓN DE EXPERTO (DOMINIO INTERNO):**
+*   **3.E - SELECCIÓN DE EXPERTO (DOMINIO INTERNO):**
     *   Si el usuario describe pensamientos negativos o autocríticos específicos (ej. "soy un inútil"): Elige al **Experto en TCC**.
     *   Si el usuario describe un patrón de comportamiento recurrente que conecta con su pasado o infancia: Elige al **Terapeuta de Esquemas**.
     *   Si el usuario describe sentimientos de agobio, ansiedad o rumiación: Elige al **Guía de Mindfulness**.
@@ -291,5 +298,6 @@ export async function classifyIntentAction(input: ClassifyIntentInput): Promise<
     
 
     
+
 
 
