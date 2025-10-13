@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -289,10 +290,19 @@ export default function PsychologicalProfile() {
         </header>
         
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="overview"><LayoutDashboard className="mr-2" /> Resumen</TabsTrigger>
-            <TabsTrigger value="metrics"><BarChart3 className="mr-2" /> Métricas</TabsTrigger>
-            <TabsTrigger value="deep-dive"><Search className="mr-2" /> Análisis Profundo</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 md:inline-flex md:w-auto">
+             <TabsTrigger value="overview" className="gap-2">
+                <LayoutDashboard className="h-4 w-4" />
+                <span className="hidden md:inline">Resumen</span>
+            </TabsTrigger>
+            <TabsTrigger value="metrics" className="gap-2">
+                <BarChart3 className="h-4 w-4" />
+                <span className="hidden md:inline">Métricas</span>
+            </TabsTrigger>
+            <TabsTrigger value="deep-dive" className="gap-2">
+                <Search className="h-4 w-4" />
+                <span className="hidden md:inline">Análisis Profundo</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="mt-6 space-y-6">
