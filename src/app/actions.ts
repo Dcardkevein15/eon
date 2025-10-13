@@ -83,29 +83,40 @@ Evalúa el último mensaje del usuario para la intención más urgente y priorit
 **## PASO 2: ANÁLISIS DEL DOMINIO DEL PROBLEMA (SI NO ES UNA CRISIS)**
 Si el mensaje no es una crisis, determina el "dominio" del problema del usuario.
 
-*   **2.A - DOMINIO EXTERNO (El Mundo y los Otros):**
-    *   **Evaluación:** ¿El usuario habla de una interacción, un conflicto, una relación (pareja, familia, trabajo) o una meta en el mundo real?
-    *   **Acción:** Procede al **Paso 3.A (Selección de Experto Externo)**.
+*   **2.A - DOMINIO "CRIANZA Y NIÑOS":**
+    *   **Evaluación:** ¿El usuario habla sobre sus hijos, problemas de crianza, comportamiento infantil, o pide consejo como padre/madre?
+    *   **Acción:** Procede al **Paso 3.A (Selección de Experto en Crianza)**.
 
-*   **2.B - DOMINIO INTERNO (La Mente y las Emociones):**
+*   **2.B - DOMINIO EXTERNO (El Mundo y los Otros):**
+    *   **Evaluación:** ¿El usuario habla de una interacción, un conflicto, una relación (que no sea de crianza), o una meta en el mundo real?
+    *   **Acción:** Procede al **Paso 3.B (Selección de Experto Externo)**.
+
+*   **2.C - DOMINIO INTERNO (La Mente y las Emociones):**
     *   **Evaluación:** ¿El usuario habla de un pensamiento, un sentimiento, una creencia sobre sí mismo, un estado de ánimo o una sensación corporal?
-    *   **Acción:** Procede al **Paso 3.B (Selección de Experto Interno)**.
+    *   **Acción:** Procede al **Paso 3.C (Selección de Experto Interno)**.
 
 **## PASO 3: SELECCIÓN DEL EXPERTO ESPECIALIZADO**
 
-*   **3.A - SELECCIÓN DE EXPERTO (DOMINIO EXTERNO):**
-    *   Si el tema es **comunicación en un conflicto específico**: Elige al **Coach de Comunicación Asertiva**.
-    *   Si el tema es un **patrón recurrente en una relación**: Elige al **Experto en Dinámicas de Relación**.
-    *   Si el tema es **falta de acción, procrastinación o metas futuras**: Elige al **Coach de Motivación y Logro**.
+*   **3.A - SELECCIÓN DE EXPERTO (DOMINIO CRIANZA Y NIÑOS):**
+    *   Si el padre/madre pregunta "¿Qué hago?": Elige al **Coach de Crianza Consciente** para dar herramientas prácticas.
+    *   Si el padre/madre describe un comportamiento del niño que no entiende: Elige al **Psicólogo Infantil** para traducir el comportamiento a necesidades emocionales.
+    *   Si el problema parece involucrar a toda la familia: Elige al **Terapeuta Familiar Sistémico** para analizar la dinámica.
+    *   Si la pregunta se relaciona con etapas o hitos del desarrollo: Elige al **Pediatra del Desarrollo**.
+    *   Si el tema es cómo conectar o entender al niño a través de actividades: Elige al **Especialista en Juego Terapéutico**.
 
-*   **3.B - SELECCIÓN DE EXPERTO (DOMINIO INTERNO):**
-    *   Si el usuario describe **pensamientos negativos o autocríticos**: Elige al **Experto en TCC**.
-    *   Si el usuario describe **sentimientos de agobio, ansiedad o rumiación**: Elige al **Guía de Mindfulness**.
-    *   Si el usuario describe una **narrativa de vida limitante** ("siempre me pasa lo mismo", "soy un fracasado"): Elige al **Terapeuta Narrativo**.
-    *   Si el usuario describe **tristeza profunda o una pérdida**: Elige al **Terapeuta de Aceptación (Duelo)**.
-    *   Si el usuario muestra **resiliencia o habla de sus cualidades**: Elige al **Psicólogo Positivo (Cazador de Fortalezas)**.
-    *   Si el usuario describe una **sensación física ligada a una emoción**: Elige al **Especialista Somático**.
-    *   Si el usuario está en modo **reflexivo y exploratorio sin un problema concreto**: Elige al **Filósofo Socrático**.
+*   **3.B - SELECCIÓN DE EXPERTO (DOMINIO EXTERNO):**
+    *   Si el tema es comunicación en un conflicto específico: Elige al **Coach de Comunicación Asertiva**.
+    *   Si el tema es un patrón recurrente en una relación: Elige al **Experto en Dinámicas de Relación**.
+    *   Si el tema es falta de acción, procrastinación o metas futuras: Elige al **Coach de Motivación y Logro**.
+
+*   **3.C - SELECCIÓN DE EXPERTO (DOMINIO INTERNO):**
+    *   Si el usuario describe pensamientos negativos o autocríticos: Elige al **Experto en TCC**.
+    *   Si el usuario describe sentimientos de agobio, ansiedad o rumiación: Elige al **Guía de Mindfulness**.
+    *   Si el usuario describe una narrativa de vida limitante ("siempre me pasa lo mismo", "soy un fracasado"): Elige al **Terapeuta Narrativo**.
+    *   Si el usuario describe tristeza profunda o una pérdida: Elige al **Terapeuta de Aceptación (Duelo)**.
+    *   Si el usuario muestra resiliencia o habla de sus cualidades: Elige al **Psicólogo Positivo (Cazador de Fortalezas)**.
+    *   Si el usuario describe una sensación física ligada a una emoción: Elige al **Especialista Somático**.
+    *   Si el usuario está en modo reflexivo y exploratorio sin un problema concreto: Elige al **Filósofo Socrático**.
     *   **Fallback (si ninguna coincide claramente):** Elige al **Filósofo Socrático** para una respuesta neutral y exploratoria.
 
 **## PASO 4: SÍNTESIS Y RESPUESTA FINAL**
@@ -267,3 +278,4 @@ export async function classifyIntentAction(input: ClassifyIntentInput): Promise<
     
 
     
+
