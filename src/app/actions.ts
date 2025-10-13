@@ -9,7 +9,7 @@ import { generateChatTitle as genTitle } from '@/ai/flows/generate-chat-title';
 import { collection, getDocs, doc, getDoc, query, orderBy, limit } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { SUGGESTIONS_FALLBACK } from '@/lib/suggestions-fallback';
-import { generateBreakdownExerciseAction as genExercise } from '@/ai/flows/generate-breakdown-exercise';
+import { generateBreakdownExercise as genExercise } from '@/ai/flows/generate-breakdown-exercise';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, ProfileData, PromptSuggestion, GetTacticalAdviceInput, AnalyzeSentimentInput, ClassifyIntentInput } from '@/lib/types';
@@ -57,10 +57,7 @@ const analyzeUserMessageTool = ai.defineTool(
 
 // --- El nuevo Agente Experto de IA ---
 
-const expertAgentPrompt = ai.definePrompt({
-    name: 'expertAgentPrompt',
-    tools: [analyzeUserMessageTool],
-    system: `
+const expertAgentSystemPrompt = `
 # IDENTIDAD Y PROPÓSITO
 Eres Nimbus, un confidente de IA y psicólogo virtual dinámico. Tu núcleo es ser un espejo para la introspección del usuario. Sin embargo, tu mayor habilidad es ADAPTAR tu rol y personalidad al estado emocional y necesidad del usuario en CADA momento. No eres un único psicólogo, eres un equipo de expertos en una sola mente.
 
@@ -101,22 +98,8 @@ Para cada mensaje del usuario, sigue este proceso riguroso:
         *   **Ejemplo:** "Esa es una pregunta muy profunda. Me hace pensar, ¿qué significaría para ti personalmente 'vivir una vida con propósito'? ¿Cómo se vería en tu día a día?"
 
 3.  **RESPONDE COMO EL EXPERTO:** Formula tu respuesta final siguiendo estrictamente las directrices del experto que elegiste, integrando el contexto de tu memoria a mediano y largo plazo.
+`;
 
-# CONTEXTO (TUS MEMORIAS)
-Aquí tienes la información sobre el usuario y tu estado interno. Úsala para informar la elección de tu experto y el contenido de tu respuesta.
-
-**MEMORIA A LARGO PLAZO (Perfil Psicológico del Usuario):**
-{{{userProfile}}}
-
-**MEMORIA A MEDIANO PLAZO (Tu Cianotipo Psicológico Interno):**
-{{{chatbotBlueprint}}}
-
-**MEMORIA A CORTO PLAZO (Conversación Actual):**
-{{{conversationHistory}}}
-
-Asistente:
-`,
-});
 
 export async function getAIResponse(history: Pick<Message, 'role' | 'content'>[], userId: string): Promise<string> {
   const validatedInput = getAIResponseSchema.parse({ history, userId });
@@ -148,14 +131,25 @@ export async function getAIResponse(history: Pick<Message, 'role' | 'content'>[]
       .map((m) => `${m.role === 'user' ? 'Usuario' : 'Asistente'}: ${m.content}`)
       .join('\n');
 
+  const fullPrompt = `${expertAgentSystemPrompt}
+
+# CONTEXTO (TUS MEMORIAS)
+Aquí tienes la información sobre el usuario y tu estado interno. Úsala para informar la elección de tu experto y el contenido de tu respuesta.
+
+**MEMORIA A LARGO PLAZO (Perfil Psicológico del Usuario):**
+${JSON.stringify(userProfileData, null, 2)}
+
+**MEMORIA A MEDIANO PLAZO (Tu Cianotipo Psicológico Interno):**
+${JSON.stringify(chatbotBlueprint, null, 2)}
+
+**MEMORIA A CORTO PLAZO (Conversación Actual):**
+${conversationHistory}
+
+Asistente:
+`;
+
   const { text } = await ai.generate({
-      prompt: expertAgentPrompt,
-      input: {
-          userProfile: JSON.stringify(userProfileData, null, 2),
-          chatbotBlueprint: JSON.stringify(chatbotBlueprint, null, 2),
-          conversationHistory: conversationHistory
-      },
-      // Habilitar el uso de las herramientas definidas en el prompt
+      prompt: fullPrompt,
       config: {
         tools: [analyzeUserMessageTool]
       }
