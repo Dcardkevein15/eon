@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth, useFirestore } from '@/firebase';
-import { collection, getDocs, query, orderBy, limit, Timestamp, doc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, Timestamp, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import type { Chat, Message, ProfileData, CachedProfile } from '@/lib/types';
 import { generateUserProfile } from '@/ai/flows/generate-user-profile';
 import { Button } from '@/components/ui/button';
@@ -32,7 +32,7 @@ const EmotionalConstellation = dynamic(() => import('./EmotionalConstellation'),
 export default function PsychologicalProfile() {
   const { user } = useAuth();
   const firestore = useFirestore();
-  const { setTheme } = useTheme();
+  const { setTheme, theme } = useTheme();
   
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,28 +45,35 @@ export default function PsychologicalProfile() {
 
   const storageKey = useMemo(() => user ? `psych-profile-${user.uid}` : null, [user]);
 
+  // Fetches the timestamp of the very last message across all chats for a user.
   const getLatestMessageTimestamp = useCallback(async (): Promise<number | null> => {
     if (!user || !firestore) return null;
     
-    const lastChatQuery = query(collection(firestore, `users/${user.uid}/chats`), orderBy('createdAt', 'desc'), limit(1));
-    const lastChatSnap = await getDocs(lastChatQuery);
+    // In a real high-scale app, this would be inefficient.
+    // A better approach would be to have a 'lastActivity' field on the user's profile document.
+    // For this project's scale, this is acceptable.
+    const chatsQuery = query(collection(firestore, `users/${user.uid}/chats`));
+    const chatsSnapshot = await getDocs(chatsQuery);
+    if (chatsSnapshot.empty) return null;
 
-    if (lastChatSnap.empty) return null;
-
-    const lastChatId = lastChatSnap.docs[0].id;
-    const lastMessageQuery = query(collection(firestore, `users/${user.uid}/chats/${lastChatId}/messages`), orderBy('timestamp', 'desc'), limit(1));
-    const lastMessageSnap = await getDocs(lastMessageQuery);
-
-    if (lastMessageSnap.empty) return null;
-
-    const timestamp = lastMessageSnap.docs[0].data().timestamp;
-    return timestamp instanceof Timestamp ? timestamp.toMillis() : new Date(timestamp as any).getTime();
+    let latestTimestamp: number = 0;
+    for (const chatDoc of chatsSnapshot.docs) {
+      const messagesQuery = query(collection(chatDoc.ref, 'messages'), orderBy('timestamp', 'desc'), limit(1));
+      const messagesSnapshot = await getDocs(messagesQuery);
+      if (!messagesSnapshot.empty) {
+        const timestamp = messagesSnapshot.docs[0].data().timestamp as Timestamp;
+        if (timestamp && timestamp.toMillis() > latestTimestamp) {
+          latestTimestamp = timestamp.toMillis();
+        }
+      }
+    }
+    return latestTimestamp > 0 ? latestTimestamp : null;
   }, [user, firestore]);
 
-  const fetchAndGenerateProfile = useCallback(async (forceGeneration: boolean = false) => {
+  const fetchAndGenerateProfile = useCallback(async () => {
     if (!user || !firestore || !storageKey) {
       setLoading(false);
-      setError('Debes iniciar sesión para ver tu perfil.');
+      setError('Debes iniciar sesión para generar tu perfil.');
       return;
     }
 
@@ -75,10 +82,12 @@ export default function PsychologicalProfile() {
     setError(null);
     
     const progressInterval = setInterval(() => {
-      setProgress(prev => Math.min(prev + Math.random() * 0.5, 99));
+      setProgress(prev => Math.min(prev + Math.random() * 5, 95));
     }, 400);
 
     try {
+      // Step 1: Frontend reads ALL necessary data from Firestore
+      setProgress(10);
       const chatsQuery = query(collection(firestore, `users/${user.uid}/chats`), orderBy('createdAt', 'asc'));
       const chatsSnapshot = await getDocs(chatsQuery);
       const chats = chatsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Chat));
@@ -90,6 +99,7 @@ export default function PsychologicalProfile() {
       let fullChatHistory = '';
       let latestTimestamp = 0;
 
+      setProgress(20);
       for (const chat of chats) {
         fullChatHistory += `--- INICIO DEL CHAT: ${chat.title} ---\n`;
         const messagesQuery = query(collection(firestore, `users/${user.uid}/chats/${chat.id}/messages`), orderBy('timestamp', 'asc'));
@@ -105,6 +115,7 @@ export default function PsychologicalProfile() {
         });
         fullChatHistory += `--- FIN DEL CHAT ---\n\n`;
       }
+      setProgress(50);
 
       if (!fullChatHistory.trim()) {
         throw new Error('Tus conversaciones están vacías. No se puede generar un perfil.');
@@ -113,9 +124,13 @@ export default function PsychologicalProfile() {
       const profileDocsQuery = query(collection(firestore, `users/${user.uid}/profileHistory`), orderBy('generatedAt', 'desc'), limit(2));
       const profileDocsSnap = await getDocs(profileDocsQuery);
       const previousProfilesContext = profileDocsSnap.docs.map(d => JSON.stringify(d.data().profile)).join('\n\n---\n\n');
-      
+      setProgress(60);
+
+      // Step 2: Frontend sends all data to the AI flow
       const result = await generateUserProfile({ fullChatHistory, previousProfilesContext });
-      
+      setProgress(90);
+
+      // Step 3: Frontend saves the result back to Firestore
       const newProfileDoc = {
         profile: result,
         generatedAt: serverTimestamp()
@@ -132,7 +147,7 @@ export default function PsychologicalProfile() {
       setProgress(100);
 
     } catch (e: any) {
-      console.error('Error generating psychological profile:', e);
+      console.error('Error in fetchAndGenerateProfile:', e);
       setError(e.message || 'Ocurrió un error al generar tu perfil. Por favor, inténtalo de nuevo más tarde.');
     } finally {
       clearInterval(progressInterval);
@@ -142,8 +157,15 @@ export default function PsychologicalProfile() {
 
   useEffect(() => {
     setIsClient(true);
-    setTheme('dark');
-  }, [setTheme]);
+    // Prefer dark theme for this specific page for better aesthetics
+    const originalTheme = theme;
+    setTheme('dark'); 
+    
+    // Cleanup function to restore original theme
+    return () => {
+      if(originalTheme) setTheme(originalTheme);
+    }
+  }, [setTheme, theme]);
 
   useEffect(() => {
     if (!isClient || !user || !storageKey) {
@@ -166,11 +188,12 @@ export default function PsychologicalProfile() {
           }
           setLoading(false);
         } else {
-          if (latestTimestamp === null) {
+          // If there's no cache, but there are messages, trigger generation.
+          if (latestTimestamp !== null) {
+            fetchAndGenerateProfile();
+          } else {
             setError('No hay conversaciones para analizar. ¡Inicia un chat para generar tu perfil!');
             setLoading(false);
-          } else {
-            fetchAndGenerateProfile();
           }
         }
       } catch (e) {
@@ -200,9 +223,9 @@ export default function PsychologicalProfile() {
 
   if (generating) {
     return (
-      <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full flex flex-col items-center justify-center min-h-[60vh]">
+      <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full flex flex-col items-center justify-center min-h-[60vh] text-center">
           <h2 className="text-2xl font-semibold mb-4">Generando tu perfil...</h2>
-          <p className="text-muted-foreground mb-8 text-center">La IA está analizando tu historial para crear un informe evolutivo.</p>
+          <p className="text-muted-foreground mb-8 max-w-md">La IA está analizando tu historial para crear un informe evolutivo. Este proceso puede tardar hasta un minuto.</p>
           <div className='w-full max-w-md space-y-4'>
             <Progress value={progress} className="w-full h-3" />
             <p className='text-center text-sm font-medium'>{Math.round(progress)}%</p>
@@ -224,7 +247,7 @@ export default function PsychologicalProfile() {
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
-        <Button onClick={() => fetchAndGenerateProfile(true)} className="mt-4">
+        <Button onClick={() => fetchAndGenerateProfile()} className="mt-4">
           <RefreshCcw className="mr-2 h-4 w-4" />
           Intentar de nuevo
         </Button>
@@ -247,7 +270,7 @@ export default function PsychologicalProfile() {
                 No se pudo cargar tu perfil. Es posible que aún no se haya generado.
               </AlertDescription>
             </Alert>
-            <Button onClick={() => fetchAndGenerateProfile(true)} className="mt-4">
+            <Button onClick={() => fetchAndGenerateProfile()} className="mt-4">
               <RefreshCcw className="mr-2 h-4 w-4" />
               Generar perfil ahora
             </Button>
@@ -268,12 +291,12 @@ export default function PsychologicalProfile() {
 
         {isOutdated && (
           <Alert className="mb-6 bg-blue-900/20 border-blue-500/30">
-            <Info className="h-4 w-4" />
+            <Info className="h-4 w-4 text-blue-400" />
             <AlertTitle className="text-blue-300">Nueva versión disponible</AlertTitle>
             <AlertDescription className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-2">
                 <p>Tu última conversación analizada es del {lastConversationDate}. Hay nuevas conversaciones disponibles para analizar.</p>
                 <div className="flex gap-2 flex-shrink-0">
-                    <Button onClick={() => fetchAndGenerateProfile(true)} size="sm">
+                    <Button onClick={() => fetchAndGenerateProfile()} size="sm">
                        <RefreshCcw className='mr-2 h-4 w-4'/>
                        Generar ahora
                     </Button>
@@ -290,7 +313,7 @@ export default function PsychologicalProfile() {
         </header>
         
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 md:inline-flex md:w-auto">
+          <TabsList className="grid w-full grid-cols-3 md:inline-flex md:w-auto mb-6">
              <TabsTrigger value="overview" className="gap-2">
                 <LayoutDashboard className="h-4 w-4" />
                 <span className="hidden md:inline">Resumen</span>
