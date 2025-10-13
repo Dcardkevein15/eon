@@ -17,8 +17,25 @@ import { getTacticalAdvice } from '@/ai/flows/get-tactical-advice';
 import { analyzeSentiment } from '@/ai/flows/analyze-sentiment';
 import { classifyIntent } from '@/ai/flows/classify-intent';
 
-// Note: The main getAIResponse logic has been moved to the /api/chat/route.ts
-// to support streaming. This file retains other server actions.
+// Main AI response logic restored here
+export async function getAIResponse(history: Message[], userId: string): Promise<string> {
+  const fullHistory = history.map(m => `${m.role}: ${m.content}`).join('\n');
+
+  try {
+    const { text } = await ai.generate({
+      prompt: `Eres un asistente de IA conversacional llamado Nimbus. Tu propósito es ser un confidente y psicólogo virtual, brindando un espacio seguro para la introspección del usuario. Responde de manera empática y reflexiva.
+
+      Historial de la conversación:
+      ${fullHistory}
+
+      Asistente:`,
+    });
+    return text;
+  } catch (error) {
+    console.error("Error getting AI response:", error);
+    return "Lo siento, estoy teniendo problemas para responder en este momento. Por favor, inténtalo de nuevo más tarde.";
+  }
+}
 
 
 export async function getSmartComposeSuggestions(

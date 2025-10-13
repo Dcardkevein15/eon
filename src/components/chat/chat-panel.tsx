@@ -3,7 +3,7 @@
 
 import { useState, useCallback, memo, useEffect, useMemo } from 'react';
 import type { Chat, Message } from '@/lib/types';
-import { generateChatTitle } from '@/app/actions';
+import { generateChatTitle, getAIResponse } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import ChatMessages from './chat-messages';
 import ChatInput from './chat-input';
@@ -42,15 +42,7 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
     [user?.uid, firestore, chat.id]
   );
   
-  const { data: remoteMessages, loading: messagesLoading } = useCollection<Message>(messagesQuery);
-  const [localMessages, setLocalMessages] = useState<Message[]>([]);
-
-  useEffect(() => {
-    if (remoteMessages) {
-        setLocalMessages(remoteMessages);
-    }
-  }, [remoteMessages]);
-
+  const { data: messages, loading: messagesLoading } = useCollection<Message>(messagesQuery);
 
   const triggerBlueprintUpdate = useCallback(async (currentMessages: Message[]) => {
       if (!user) return;
@@ -98,91 +90,42 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
     if (!user) return;
     setIsResponding(true);
 
-    const plainHistory = currentMessages.map(msg => ({
-      role: msg.role as 'user' | 'assistant',
-      content: msg.content,
-    }));
-
-    const aiMessageId = uuidv4();
-    let fullResponse = '';
-
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          history: plainHistory,
-          userId: user.uid,
-        }),
-      });
+      const aiResponseContent = await getAIResponse(
+        currentMessages.map(m => ({...m, timestamp: new Date()})), // Pass plain objects
+        user.uid
+      );
 
-      if (!response.body) {
-        throw new Error('La respuesta del servidor no contiene un cuerpo.');
-      }
-      
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let done = false;
-
-      // Add the empty assistant message shell to start streaming into
-      const assistantMessage: Message = {
-        id: aiMessageId,
+      const aiMessage: Omit<Message, 'id'> = {
         role: 'assistant',
-        content: '',
+        content: aiResponseContent,
         timestamp: Timestamp.now(),
       };
-      setLocalMessages(prev => [...prev, assistantMessage]);
+      await appendMessage(chat.id, aiMessage);
+      
+      const updatedMessages = [...currentMessages, { ...aiMessage, id: uuidv4() }];
 
-      while (!done) {
-        const { value, done: readerDone } = await reader.read();
-        done = readerDone;
-        const chunk = decoder.decode(value, { stream: true });
-        fullResponse += chunk;
-        
-        // Update the content of the last message (the AI's)
-        setLocalMessages(prev =>
-          prev.map(msg =>
-            msg.id === aiMessageId ? { ...msg, content: fullResponse } : msg
-          )
-        );
+      if (currentMessages.length === 1) {
+          const userMessage = currentMessages[0];
+          const conversationForTitle = `User: ${userMessage.content}\nAssistant: ${aiResponseContent}`;
+          const newTitle = await generateChatTitle(conversationForTitle);
+          await updateChatTitle(chat.id, newTitle);
       }
       
+      if (updatedMessages.length % 5 === 0) {
+        triggerBlueprintUpdate(updatedMessages);
+      }
+
     } catch (error) {
-        console.error("Error procesando la respuesta de la IA:", error);
+        console.error("Error getting AI response:", error);
         toast({
           variant: "destructive",
           title: "Error",
           description: "No se pudo obtener una respuesta de la IA. Por favor, inténtalo de nuevo.",
         });
-        // Remove the empty assistant message if an error occurred
-        setLocalMessages(prev => prev.filter(msg => msg.id !== aiMessageId));
+    } finally {
         setIsResponding(false);
-        return; // Stop execution on error
     }
-
-    setIsResponding(false);
-    
-    // Once streaming is complete, save the full message to Firestore
-    const finalAiMessage: Omit<Message, 'id'> = {
-      role: 'assistant',
-      content: fullResponse,
-      timestamp: Timestamp.now(),
-    };
-    await appendMessage(chat.id, finalAiMessage);
-
-    // After-streaming logic
-    if (currentMessages.length === 1) {
-      const userMessage = currentMessages[0];
-      const conversationForTitle = `User: ${userMessage.content}\nAssistant: ${fullResponse}`;
-      const newTitle = await generateChatTitle(conversationForTitle);
-      await updateChatTitle(chat.id, newTitle);
-    }
-    
-    const updatedMessages = [...currentMessages, { ...finalAiMessage, id: aiMessageId }];
-    if (updatedMessages.length % 5 === 0) {
-      triggerBlueprintUpdate(updatedMessages);
-    }
-
   }, [user, chat.id, appendMessage, updateChatTitle, toast, triggerBlueprintUpdate]);
 
 
@@ -197,34 +140,28 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
         return;
     }
 
-    const userMessage: Message = {
-      id: uuidv4(),
+    const userMessage: Omit<Message, 'id'> = {
       role: 'user',
       content: input,
       timestamp: Timestamp.now(),
       ...(imageUrl && { imageUrl }),
     };
 
-    const newMessages = [...localMessages, userMessage];
-    setLocalMessages(newMessages); // Optimistic UI update
+    // Optimistically update UI
+    const newMessages = [...(messages || []), { ...userMessage, id: uuidv4() }];
+    
     await appendMessage(chat.id, userMessage);
     await getAIResponseAndUpdate(newMessages);
 
-  }, [user, localMessages, appendMessage, chat.id, getAIResponseAndUpdate, toast]);
+  }, [user, messages, appendMessage, chat.id, getAIResponseAndUpdate, toast]);
 
   // Effect to handle the very first response in a new chat
   useEffect(() => {
     // Only trigger if we have exactly one message and it's from the user
-    if (localMessages.length === 1 && localMessages[0].role === 'user' && !isResponding) {
-      // Check if this message has already been processed by looking at remote messages
-      const remoteMessageExists = remoteMessages?.some(m => m.id === localMessages[0].id && m.role === 'user');
-      const isNewChatJustCreated = remoteMessages?.length === 1 && remoteMessages[0].id === localMessages[0].id;
-
-      if (isNewChatJustCreated) {
-         getAIResponseAndUpdate(localMessages);
-      }
+    if (messages && messages.length === 1 && messages[0].role === 'user' && !isResponding) {
+      getAIResponseAndUpdate(messages);
     }
-  }, [localMessages, remoteMessages, isResponding, getAIResponseAndUpdate]);
+  }, [messages, isResponding, getAIResponseAndUpdate]);
 
 
   return (
@@ -238,13 +175,13 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
         </div>
       </header>
       <div className="flex-1 overflow-y-auto">
-        <ChatMessages messages={localMessages} isResponding={isResponding || messagesLoading} />
+        <ChatMessages messages={messages || []} isResponding={isResponding || messagesLoading} />
       </div>
       <div className="mt-auto px-2 py-4 md:px-4 md:py-4 border-t bg-background/95 backdrop-blur-sm">
         <ChatInput
           onSendMessage={handleSendMessage}
           isLoading={isResponding || messagesLoading}
-          chatHistory={localMessages}
+          chatHistory={messages || []}
         />
       </div>
     </div>
