@@ -186,17 +186,6 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
   }, [user, chat.id, appendMessage, updateChatTitle, toast, triggerBlueprintUpdate]);
 
 
-  // Effect to handle the very first response in a new chat
-  useEffect(() => {
-    if (!messagesLoading && localMessages.length === 1 && !isResponding) {
-      const firstMessage = localMessages[0];
-      if (firstMessage.role === 'user') {
-        getAIResponseAndUpdate(localMessages);
-      }
-    }
-  }, [messagesLoading, localMessages, isResponding, getAIResponseAndUpdate]);
-
-
   const handleSendMessage = useCallback(async (input: string, imageUrl?: string) => {
     if ((!input || !input.trim()) && !imageUrl) return;
     if (!user) {
@@ -222,6 +211,20 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
     await getAIResponseAndUpdate(newMessages);
 
   }, [user, localMessages, appendMessage, chat.id, getAIResponseAndUpdate, toast]);
+
+  // Effect to handle the very first response in a new chat
+  useEffect(() => {
+    // Only trigger if we have exactly one message and it's from the user
+    if (localMessages.length === 1 && localMessages[0].role === 'user' && !isResponding) {
+      // Check if this message has already been processed by looking at remote messages
+      const remoteMessageExists = remoteMessages?.some(m => m.id === localMessages[0].id && m.role === 'user');
+      const isNewChatJustCreated = remoteMessages?.length === 1 && remoteMessages[0].id === localMessages[0].id;
+
+      if (isNewChatJustCreated) {
+         getAIResponseAndUpdate(localMessages);
+      }
+    }
+  }, [localMessages, remoteMessages, isResponding, getAIResponseAndUpdate]);
 
 
   return (
