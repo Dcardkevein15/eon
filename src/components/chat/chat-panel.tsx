@@ -174,11 +174,10 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
       ...(imageUrl && { imageUrl }),
     };
 
-    // Optimistically update UI
-    const newMessages = [...(messages || []), { ...userMessage, id: uuidv4() }];
+    const currentMessages = [...(messages || []), { ...userMessage, id: uuidv4() }];
     
     await appendMessage(chat.id, userMessage);
-    await getAIResponseAndUpdate(newMessages);
+    await getAIResponseAndUpdate(currentMessages);
 
   }, [user, messages, appendMessage, chat.id, getAIResponseAndUpdate, toast]);
 

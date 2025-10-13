@@ -43,15 +43,14 @@ Rol más adecuado:`;
 
     try {
         const { text } = await ai.generate({ prompt });
-        // Clean up the response to ensure it's just the role name
-        const role = text.trim().replace(/Rol más adecuado: /g, '');
+        const role = text.trim().replace(/Rol más adecuado: /g, '').replace(/[\n*]/g, '');
         if (expertRoles.includes(role)) {
             return role;
         }
-        return 'El Validador Empático'; // Fallback
+        return 'El Validador Empático'; // Fallback a un rol seguro
     } catch (error) {
         console.error("Error determining anchor role:", error);
-        return 'El Validador Empático'; // Fallback on error
+        return 'El Validador Empático'; // Fallback en caso de error
     }
 }
 
@@ -65,11 +64,14 @@ export async function getAIResponse(
 ): Promise<string> {
     
   const cleanHistory = history.map(m => {
-    const date = m.timestamp instanceof Timestamp ? m.timestamp.toDate() : m.timestamp;
+    // La conversión de Timestamp a Date debe ocurrir antes de pasar los datos a la Server Action
+    const date = (m.timestamp instanceof Date) ? m.timestamp : (m.timestamp as Timestamp).toDate();
     return `[${date.toISOString()}] ${m.role}: ${m.content}`;
   }).join('\n');
-
-  const roleToUse = anchorRole || 'El Validador Empático';
+  
+  // Asegurar que siempre haya un rol ancla válido
+  const roleToUse = anchorRole && expertRoles.includes(anchorRole) ? anchorRole : 'El Validador Empático';
+  
   const profileContext = userProfile ? JSON.stringify(userProfile) : 'No hay perfil de usuario disponible.';
 
 
@@ -112,7 +114,7 @@ Asistente:`;
 
   try {
     const { text } = await ai.generate({ prompt: expertAgentSystemPrompt });
-    return text;
+    return text || "No pude generar una respuesta en este momento.";
   } catch (error) {
     console.error("Error getting AI response:", error);
     return "Lo siento, estoy teniendo problemas para responder en este momento. Por favor, inténtalo de nuevo más tarde.";
