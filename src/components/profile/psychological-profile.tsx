@@ -1,10 +1,8 @@
-
-
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth, useFirestore } from '@/firebase';
-import { collection, getDocs, query, orderBy, limit, Timestamp, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, Timestamp, doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import type { Chat, Message, ProfileData, CachedProfile } from '@/lib/types';
 import { generateUserProfile } from '@/ai/flows/generate-user-profile';
 import { Button } from '@/components/ui/button';
@@ -32,7 +30,7 @@ const EmotionalConstellation = dynamic(() => import('./EmotionalConstellation'),
 export default function PsychologicalProfile() {
   const { user } = useAuth();
   const firestore = useFirestore();
-  const { setTheme, theme } = useTheme();
+  const { theme, setTheme } = useTheme();
   
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,29 +43,31 @@ export default function PsychologicalProfile() {
 
   const storageKey = useMemo(() => user ? `psych-profile-${user.uid}` : null, [user]);
 
-  // Fetches the timestamp of the very last message across all chats for a user.
   const getLatestMessageTimestamp = useCallback(async (): Promise<number | null> => {
     if (!user || !firestore) return null;
     
-    // In a real high-scale app, this would be inefficient.
-    // A better approach would be to have a 'lastActivity' field on the user's profile document.
-    // For this project's scale, this is acceptable.
-    const chatsQuery = query(collection(firestore, `users/${user.uid}/chats`));
-    const chatsSnapshot = await getDocs(chatsQuery);
-    if (chatsSnapshot.empty) return null;
+    try {
+      const chatsQuery = query(collection(firestore, `users/${user.uid}/chats`));
+      const chatsSnapshot = await getDocs(chatsQuery);
+      if (chatsSnapshot.empty) return null;
 
-    let latestTimestamp: number = 0;
-    for (const chatDoc of chatsSnapshot.docs) {
-      const messagesQuery = query(collection(chatDoc.ref, 'messages'), orderBy('timestamp', 'desc'), limit(1));
-      const messagesSnapshot = await getDocs(messagesQuery);
-      if (!messagesSnapshot.empty) {
-        const timestamp = messagesSnapshot.docs[0].data().timestamp as Timestamp;
-        if (timestamp && timestamp.toMillis() > latestTimestamp) {
-          latestTimestamp = timestamp.toMillis();
+      let latestTimestamp: number = 0;
+      for (const chatDoc of chatsSnapshot.docs) {
+        const messagesQuery = query(collection(chatDoc.ref, 'messages'), orderBy('timestamp', 'desc'), limit(1));
+        const messagesSnapshot = await getDocs(messagesQuery);
+        if (!messagesSnapshot.empty) {
+          const timestamp = messagesSnapshot.docs[0].data().timestamp as Timestamp;
+          if (timestamp && timestamp.toMillis() > latestTimestamp) {
+            latestTimestamp = timestamp.toMillis();
+          }
         }
       }
+      return latestTimestamp > 0 ? latestTimestamp : null;
+    } catch (e: any) {
+        console.error("Permission error likely in getLatestMessageTimestamp:", e);
+        // This is a critical error. We must inform the user.
+        throw new Error("Missing or insufficient permissions.");
     }
-    return latestTimestamp > 0 ? latestTimestamp : null;
   }, [user, firestore]);
 
   const fetchAndGenerateProfile = useCallback(async () => {
@@ -86,7 +86,6 @@ export default function PsychologicalProfile() {
     }, 400);
 
     try {
-      // Step 1: Frontend reads ALL necessary data from Firestore
       setProgress(10);
       const chatsQuery = query(collection(firestore, `users/${user.uid}/chats`), orderBy('createdAt', 'asc'));
       const chatsSnapshot = await getDocs(chatsQuery);
@@ -121,23 +120,21 @@ export default function PsychologicalProfile() {
         throw new Error('Tus conversaciones están vacías. No se puede generar un perfil.');
       }
       
-      const profileDocsQuery = query(collection(firestore, `users/${user.uid}/profileHistory`), orderBy('generatedAt', 'desc'), limit(2));
-      const profileDocsSnap = await getDocs(profileDocsQuery);
-      const previousProfilesContext = profileDocsSnap.docs.map(d => JSON.stringify(d.data().profile)).join('\n\n---\n\n');
+      const lastProfileDoc = await getDoc(doc(firestore, `users/${user.uid}/profile/main`));
+      const previousProfilesContext = lastProfileDoc.exists() ? JSON.stringify(lastProfileDoc.data(), null, 2) : '';
+      
       setProgress(60);
 
-      // Step 2: Frontend sends all data to the AI flow
       const result = await generateUserProfile({ fullChatHistory, previousProfilesContext });
       setProgress(90);
 
-      // Step 3: Frontend saves the result back to Firestore
-      const newProfileDoc = {
-        profile: result,
-        generatedAt: serverTimestamp()
+      const newProfileData = {
+          ...result,
+          generatedAt: serverTimestamp(),
+          lastMessageTimestamp
       };
-      const newDocRef = doc(collection(firestore, `users/${user.uid}/profileHistory`));
-      await setDoc(newDocRef, newProfileDoc);
-
+      await setDoc(doc(firestore, `users/${user.uid}/profile/main`), newProfileData, { merge: true });
+      
       const newCachedData: CachedProfile = { profile: result, lastMessageTimestamp: latestTimestamp };
       localStorage.setItem(storageKey, JSON.stringify(newCachedData));
       
@@ -157,20 +154,26 @@ export default function PsychologicalProfile() {
 
   useEffect(() => {
     setIsClient(true);
-    // Prefer dark theme for this specific page for better aesthetics
     const originalTheme = theme;
-    setTheme('dark'); 
-    
-    // Cleanup function to restore original theme
-    return () => {
-      if(originalTheme) setTheme(originalTheme);
+    // Set theme to dark for this page, but don't change if it's already dark
+    if (theme !== 'dark') {
+      setTheme('dark');
     }
-  }, [setTheme, theme]);
+    
+    return () => {
+      // Restore original theme only if it was changed
+      if (originalTheme && theme !== originalTheme) {
+        setTheme(originalTheme);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (!isClient || !user || !storageKey) {
-      if (!user && isClient) setError('Debes iniciar sesión para ver tu perfil.');
-      setLoading(false);
+      if (!user && isClient) {
+        setError('Debes iniciar sesión para ver tu perfil.');
+        setLoading(false);
+      }
       return;
     };
 
@@ -188,7 +191,6 @@ export default function PsychologicalProfile() {
           }
           setLoading(false);
         } else {
-          // If there's no cache, but there are messages, trigger generation.
           if (latestTimestamp !== null) {
             fetchAndGenerateProfile();
           } else {
@@ -196,13 +198,15 @@ export default function PsychologicalProfile() {
             setLoading(false);
           }
         }
-      } catch (e) {
-         setError('No se pudo cargar la información inicial.');
+      } catch (e: any) {
+         setError(e.message || 'No se pudo cargar la información inicial.');
          setLoading(false);
       }
     };
-    loadInitialData();
-  }, [storageKey, getLatestMessageTimestamp, fetchAndGenerateProfile, isClient, user]);
+    if(user) {
+        loadInitialData();
+    }
+  }, [user, storageKey, isClient, getLatestMessageTimestamp, fetchAndGenerateProfile]);
 
   const lastConversationDate = cachedData?.lastMessageTimestamp
       ? format(new Date(cachedData.lastMessageTimestamp), "d 'de' MMMM 'de' yyyy", { locale: es })
@@ -211,6 +215,14 @@ export default function PsychologicalProfile() {
   if (loading) {
     return (
       <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full space-y-6">
+        <div className="mb-6">
+           <Button asChild variant="ghost" className='-ml-4'>
+                <Link href="/">
+                    <ChevronLeft className="h-4 w-4 mr-2" />
+                    Volver al Chat
+                </Link>
+            </Button>
+        </div>
         <Skeleton className="h-10 w-1/3" />
         <Skeleton className="h-8 w-1/2" />
         <div className="space-y-4">
@@ -244,13 +256,16 @@ export default function PsychologicalProfile() {
           </Link>
         </Button>
         <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
-        <Button onClick={() => fetchAndGenerateProfile()} className="mt-4">
-          <RefreshCcw className="mr-2 h-4 w-4" />
-          Intentar de nuevo
-        </Button>
+        {error.includes("permissions") === false &&
+          <Button onClick={() => fetchAndGenerateProfile()} className="mt-4">
+            <RefreshCcw className="mr-2 h-4 w-4" />
+            Intentar de nuevo
+          </Button>
+        }
       </div>
     );
   }
@@ -265,14 +280,15 @@ export default function PsychologicalProfile() {
               </Link>
             </Button>
             <Alert>
+              <Info className="h-4 w-4" />
               <AlertTitle>Perfil no encontrado</AlertTitle>
               <AlertDescription>
-                No se pudo cargar tu perfil. Es posible que aún no se haya generado.
+                Aún no tienes un perfil generado o no hemos podido cargarlo.
               </AlertDescription>
             </Alert>
             <Button onClick={() => fetchAndGenerateProfile()} className="mt-4">
-              <RefreshCcw className="mr-2 h-4 w-4" />
-              Generar perfil ahora
+              <Sparkles className="mr-2 h-4 w-4" />
+              Generar mi perfil ahora
             </Button>
         </div>
     );
@@ -292,13 +308,13 @@ export default function PsychologicalProfile() {
         {isOutdated && (
           <Alert className="mb-6 bg-blue-900/20 border-blue-500/30">
             <Info className="h-4 w-4 text-blue-400" />
-            <AlertTitle className="text-blue-300">Nueva versión disponible</AlertTitle>
+            <AlertTitle className="text-blue-300">Tu perfil ha evolucionado</AlertTitle>
             <AlertDescription className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-2">
-                <p>Tu última conversación analizada es del {lastConversationDate}. Hay nuevas conversaciones disponibles para analizar.</p>
+                <p className="text-blue-200/80">Has tenido nuevas conversaciones desde el último análisis. ¡Actualiza tu perfil para ver qué ha cambiado!</p>
                 <div className="flex gap-2 flex-shrink-0">
                     <Button onClick={() => fetchAndGenerateProfile()} size="sm">
                        <RefreshCcw className='mr-2 h-4 w-4'/>
-                       Generar ahora
+                       Actualizar ahora
                     </Button>
                 </div>
             </AlertDescription>
@@ -317,14 +333,17 @@ export default function PsychologicalProfile() {
              <TabsTrigger value="overview" className="gap-2">
                 <LayoutDashboard className="h-4 w-4" />
                 <span className="hidden md:inline">Resumen</span>
+                <span className="md:hidden">Resumen</span>
             </TabsTrigger>
             <TabsTrigger value="metrics" className="gap-2">
                 <BarChart3 className="h-4 w-4" />
                 <span className="hidden md:inline">Métricas</span>
+                <span className="md:hidden">Métricas</span>
             </TabsTrigger>
             <TabsTrigger value="deep-dive" className="gap-2">
                 <Search className="h-4 w-4" />
                 <span className="hidden md:inline">Análisis Profundo</span>
+                <span className="md:hidden">Análisis</span>
             </TabsTrigger>
           </TabsList>
 
