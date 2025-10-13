@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -56,9 +57,15 @@ export default function PsychologicalProfile() {
         const messagesQuery = query(collection(chatDoc.ref, 'messages'), orderBy('timestamp', 'desc'), limit(1));
         const messagesSnapshot = await getDocs(messagesQuery);
         if (!messagesSnapshot.empty) {
-          const timestamp = messagesSnapshot.docs[0].data().timestamp as Timestamp;
-          if (timestamp && timestamp.toMillis() > latestTimestamp) {
-            latestTimestamp = timestamp.toMillis();
+          const timestamp = messagesSnapshot.docs[0].data().timestamp as Timestamp | Date;
+          if (timestamp) {
+            const currentMillis = (timestamp instanceof Timestamp) 
+              ? timestamp.toMillis() 
+              : (timestamp instanceof Date) ? timestamp.getTime() : 0;
+            
+            if (currentMillis > latestTimestamp) {
+              latestTimestamp = currentMillis;
+            }
           }
         }
       }
@@ -131,7 +138,6 @@ export default function PsychologicalProfile() {
       const newProfileData = {
           ...result,
           generatedAt: serverTimestamp(),
-          lastMessageTimestamp
       };
       await setDoc(doc(firestore, `users/${user.uid}/profile/main`), newProfileData, { merge: true });
       
@@ -330,7 +336,7 @@ export default function PsychologicalProfile() {
         
         <Tabs defaultValue="overview" className="w-full">
           <TabsList className="grid w-full grid-cols-3 md:inline-flex md:w-auto mb-6">
-             <TabsTrigger value="overview" className="gap-2">
+            <TabsTrigger value="overview" className="gap-2">
                 <LayoutDashboard className="h-4 w-4" />
                 <span className="hidden md:inline">Resumen</span>
                 <span className="md:hidden">Resumen</span>
@@ -578,3 +584,5 @@ export default function PsychologicalProfile() {
     </div>
   );
 }
+
+    
