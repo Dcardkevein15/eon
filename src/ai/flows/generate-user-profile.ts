@@ -2,7 +2,8 @@
 
 /**
  * @fileOverview A flow that generates a comprehensive psychological profile for a user
- * based on their entire chat history, including an emotional timeline.
+ * based on their entire chat history, including an emotional timeline. It can compare
+ * the new analysis with previous ones to track evolution over time.
  *
  * - generateUserProfile - A function that creates the profile.
  * - GenerateUserProfileInput - The input type for the function.

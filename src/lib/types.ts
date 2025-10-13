@@ -9,7 +9,7 @@ export type Message = {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  timestamp: Timestamp;
+  timestamp: Timestamp | Date;
   imageUrl?: string;
 };
 
@@ -160,12 +160,5 @@ export const ClassifyIntentOutputSchema = z.object({
   intent: z.string(),
 });
 export type ClassifyIntentOutput = z.infer<typeof ClassifyIntentOutputSchema>;
-
-// Input schema for the user profile generation flow
-export const GenerateUserProfileInputSchema = z.object({
-  fullChatHistory: z.string(),
-  previousProfilesContext: z.string().optional(),
-});
-export type GenerateUserProfileInput = z.infer<typeof GenerateUserProfileInputSchema>;
 
     
