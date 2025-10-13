@@ -249,5 +249,3 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
 }
 
 export default memo(ChatPanel);
-
-    
