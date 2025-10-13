@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useCallback, memo, useEffect, useMemo } from 'react';
-import type { Chat, Message } from '@/lib/types';
+import type { Chat, Message, ProfileData, CachedProfile } from '@/lib/types';
 import { generateChatTitle, getAIResponse } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import ChatMessages from './chat-messages';
@@ -30,6 +30,7 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
   const isMobile = useIsMobile();
   const { user } = useAuth();
   const firestore = useFirestore();
+  const [cachedProfile, setCachedProfile] = useState<ProfileData | null>(null);
 
   const messagesQuery = useMemo(
     () =>
@@ -43,6 +44,24 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
   );
   
   const { data: messages, loading: messagesLoading } = useCollection<Message>(messagesQuery);
+  
+  // Load cached profile on component mount
+  useEffect(() => {
+    if (user) {
+      const storageKey = `psych-profile-${user.uid}`;
+      const cachedItem = localStorage.getItem(storageKey);
+      if (cachedItem) {
+        try {
+          const data: CachedProfile = JSON.parse(cachedItem);
+          setCachedProfile(data.profile);
+        } catch (e) {
+          console.error("Failed to parse cached profile", e);
+          localStorage.removeItem(storageKey);
+        }
+      }
+    }
+  }, [user]);
+
 
   const triggerBlueprintUpdate = useCallback(async (currentMessages: Message[]) => {
       if (!user) return;
@@ -94,7 +113,8 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
       const aiResponseContent = await getAIResponse(
         currentMessages.map(m => ({...m, timestamp: new Date()})), // Pass plain objects
         user.uid,
-        chat.anchorRole || null
+        chat.anchorRole || null,
+        cachedProfile
       );
 
       const aiMessage: Omit<Message, 'id'> = {
@@ -128,7 +148,7 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
     } finally {
         setIsResponding(false);
     }
-  }, [user, chat.id, chat.anchorRole, chat.title, appendMessage, updateChatTitle, toast, triggerBlueprintUpdate]);
+  }, [user, chat.id, chat.anchorRole, chat.title, appendMessage, updateChatTitle, toast, triggerBlueprintUpdate, cachedProfile]);
 
 
   const handleSendMessage = useCallback(async (input: string, imageUrl?: string) => {

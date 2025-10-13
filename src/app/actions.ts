@@ -57,9 +57,16 @@ Rol más adecuado:`;
 
 
 // Main AI response logic
-export async function getAIResponse(history: Message[], userId: string, anchorRole: string | null): Promise<string> {
+export async function getAIResponse(
+  history: Message[], 
+  userId: string, 
+  anchorRole: string | null,
+  userProfile: ProfileData | null
+): Promise<string> {
   const fullHistory = history.map(m => `${m.role}: ${m.content}`).join('\n');
   const roleToUse = anchorRole || 'El Validador Empático';
+  const profileContext = userProfile ? JSON.stringify(userProfile) : 'No hay perfil de usuario disponible.';
+
 
   const expertAgentSystemPrompt = `Eres un asistente de IA conversacional llamado Nimbus. Tu propósito es ser un confidente y psicólogo virtual, brindando un espacio seguro para la introspección del usuario. Responde de manera empática y reflexiva.
 
@@ -89,6 +96,9 @@ Si el último mensaje del usuario sigue la línea de la conversación, responde 
 1.  **Síntesis Total:** Cada respuesta debe ser una síntesis informada por el perfil psicológico del usuario, la memoria interna de la IA (su 'cianotipo') y el contexto inmediato de la conversación. Demuestra que lo conoces.
 2.  **Profundidad Variable:** Adapta la longitud de tu respuesta. Si el usuario se desahoga, sé breve. Si explora una idea, ofrece más contexto y riqueza descriptiva.
 3.  **Pregunta Única y Poderosa:** Finaliza *siempre* tu respuesta con UNA SOLA pregunta abierta y reflexiva que invite a una introspección más profunda. Nunca dos.
+
+**Perfil Psicológico del Usuario (Contexto de Memoria):**
+${profileContext}
 
 Historial de la conversación:
 ${fullHistory}
@@ -197,5 +207,3 @@ export async function classifyIntentAction(input: ClassifyIntentInput): Promise<
         return "Análisis no disponible";
     }
 }
-
-    
