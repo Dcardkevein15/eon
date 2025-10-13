@@ -11,6 +11,7 @@ import {
   updateDoc,
   writeBatch,
   query,
+  orderBy,
 } from 'firebase/firestore';
 
 import { useAuth, useCollection, useFirestore } from '@/firebase';
@@ -40,7 +41,10 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
   const chatsQuery = useMemo(
     () =>
       user?.uid && firestore
-        ? query(collection(firestore, `users/${user.uid}/chats`))
+        ? query(
+            collection(firestore, `users/${user.uid}/chats`),
+            orderBy('latestMessageAt', 'desc')
+          )
         : undefined,
     [user?.uid, firestore]
   );

@@ -20,7 +20,7 @@ import { AppLogo } from '@/components/logo';
 import UserButton from '@/components/chat/user-button';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import React, { useState, useEffect, memo } from 'react';
+import React, { useState, useEffect, memo, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -52,6 +52,14 @@ function ChatSidebar({
   useEffect(() => {
     setIsClient(true);
   }, []);
+  
+  const sortedChats = useMemo(() => {
+    return [...chats].sort((a, b) => {
+      const timeA = a.latestMessageAt?.toMillis() || a.createdAt?.toMillis() || 0;
+      const timeB = b.latestMessageAt?.toMillis() || b.createdAt?.toMillis() || 0;
+      return timeB - timeA;
+    });
+  }, [chats]);
 
   const getFormattedDate = (timestamp: any) => {
     if (!timestamp) return '';
@@ -120,9 +128,9 @@ function ChatSidebar({
               <Skeleton className="h-12 w-full" />
               <Skeleton className="h-12 w-full" />
             </div>
-          ) : isClient && chats.length > 0 ? (
+          ) : isClient && sortedChats.length > 0 ? (
             <ul className="space-y-1 p-2">
-              {chats.map((chat) => (
+              {sortedChats.map((chat) => (
                 <li key={chat.id} className="relative group/menu-item">
                   <Link href={chat.path} className={cn(
                     "h-auto w-full justify-start text-left flex flex-col items-start p-2 rounded-md min-w-0 transition-colors",
@@ -133,7 +141,7 @@ function ChatSidebar({
                     <div className="flex-1 min-w-0">
                       <span className="block truncate w-full font-medium">{chat.title}</span>
                       <span className="text-xs text-muted-foreground block w-full">
-                        {getFormattedDate(chat.createdAt)}
+                        {getFormattedDate(chat.latestMessageAt || chat.createdAt)}
                       </span>
                     </div>
                   </Link>
