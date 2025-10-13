@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { smartComposeMessage } from '@/ai/flows/smart-compose-message';
 import { getInitialPrompts } from '@/ai/flows/initial-prompt-suggestion';
 import { generateChatTitle as genTitle } from '@/ai/flows/generate-chat-title';
-import { collection, getDocs, doc, getDoc, query, orderBy, limit } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, query, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { SUGGESTIONS_FALLBACK } from '@/lib/suggestions-fallback';
 import { generateBreakdownExercise as genExercise } from '@/ai/flows/generate-breakdown-exercise';
@@ -63,7 +63,12 @@ export async function getAIResponse(
   anchorRole: string | null,
   userProfile: ProfileData | null
 ): Promise<string> {
-  const fullHistory = history.map(m => `${m.role}: ${m.content}`).join('\n');
+    
+  const cleanHistory = history.map(m => {
+    const date = m.timestamp instanceof Timestamp ? m.timestamp.toDate() : m.timestamp;
+    return `[${date.toISOString()}] ${m.role}: ${m.content}`;
+  }).join('\n');
+
   const roleToUse = anchorRole || 'El Validador Empático';
   const profileContext = userProfile ? JSON.stringify(userProfile) : 'No hay perfil de usuario disponible.';
 
@@ -101,7 +106,7 @@ Si el último mensaje del usuario sigue la línea de la conversación, responde 
 ${profileContext}
 
 Historial de la conversación:
-${fullHistory}
+${cleanHistory}
 
 Asistente:`;
 

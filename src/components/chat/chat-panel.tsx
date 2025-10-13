@@ -110,8 +110,13 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
     setIsResponding(true);
 
     try {
+      const historyForAI: Message[] = currentMessages.map(m => ({
+          ...m,
+          timestamp: m.timestamp instanceof Timestamp ? m.timestamp.toDate() : m.timestamp,
+      }));
+
       const aiResponseContent = await getAIResponse(
-        currentMessages.map(m => ({...m, timestamp: new Date()})), // Pass plain objects
+        historyForAI,
         user.uid,
         chat.anchorRole || null,
         cachedProfile
