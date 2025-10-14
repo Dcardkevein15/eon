@@ -34,8 +34,6 @@ const EmotionalStatePoint = z.object({
   date: z.string().describe('La fecha de la entrada (formato AAAA-MM-DD).'),
   sentiment: z
     .number()
-    .min(-1)
-    .max(1)
     .describe(
       'Un valor numérico para el sentimiento general de ese día (-1 para muy negativo, 0 para neutral, 1 para muy positivo).'
     ),
@@ -52,8 +50,8 @@ const EmotionalConstellationNodeSchema = z.object({
 
 const EmotionalConstellationLinkSchema = z.object({
     source: z.string().describe('El ID del nodo de origen.'),
-    target: z.string().describe('El ID del nodo de destino. No puede ser el mismo que el de origen.'),
-    sentiment: z.number().min(-1).max(1).describe('Un valor de -1 (muy negativo), 0 (neutral) a 1 (muy positivo) que representa la relación sentimental entre los dos temas.'),
+    target: z.string().describe('El ID del nodo de destino.'),
+    sentiment: z.number().describe('Un valor de -1 (muy negativo), 0 (neutral) a 1 (muy positivo) que representa la relación sentimental entre los dos temas.'),
 });
 
 const EmotionalConstellationSchema = z.object({
