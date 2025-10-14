@@ -17,9 +17,54 @@ import { getTacticalAdvice } from '@/ai/flows/get-tactical-advice';
 import { analyzeSentiment } from '@/ai/flows/analyze-sentiment';
 import { classifyIntent } from '@/ai/flows/classify-intent';
 import { interpretDream } from '@/ai/flows/interpret-dream';
-import { getAdminApp } from '@/lib/firebase-admin';
-import type * as admin from 'firebase-admin';
+import * as admin from 'firebase-admin';
 import { getAuth as getAdminAuth } from 'firebase-admin/auth';
+
+
+// --- START: Firebase Admin SDK Initialization (Self-contained) ---
+
+// This ensures the SDK is initialized only once.
+function getAdminApp(): admin.app.App {
+  if (admin.apps.length > 0) {
+    return admin.apps[0]!;
+  }
+
+  // This environment variable is securely injected by Firebase App Hosting.
+  const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
+  if (!serviceAccount) {
+    throw new Error('La variable de entorno FIREBASE_SERVICE_ACCOUNT_BASE64 no está configurada.');
+  }
+
+  try {
+    const decodedServiceAccount = Buffer.from(serviceAccount, 'base64').toString('utf-8');
+    const credential = admin.credential.cert(JSON.parse(decodedServiceAccount));
+    
+    return admin.initializeApp({ credential });
+  } catch (error: any) {
+    console.error('Error al inicializar Firebase Admin SDK:', error.message);
+    throw new Error('La configuración del servidor es incorrecta debido a un error de inicialización del SDK de administrador.');
+  }
+}
+
+/**
+ * Helper function to verify the user's auth token and get their UID.
+ */
+async function getCurrentUserId(authToken?: string): Promise<string> {
+  if (!authToken) {
+    throw new Error('No se proporcionó token de autenticación.');
+  }
+  const adminApp = getAdminApp();
+  
+  try {
+    const decodedToken = await getAdminAuth(adminApp).verifyIdToken(authToken);
+    return decodedToken.uid;
+  } catch (error) {
+    console.error('Error verifying auth token:', error);
+    throw new Error('El token de autenticación no es válido.');
+  }
+}
+
+// --- END: Firebase Admin SDK Initialization ---
 
 
 const expertRoles = [
@@ -223,34 +268,13 @@ export async function classifyIntentAction(input: ClassifyIntentInput): Promise<
 
 // --- Acciones para el Portal de Sueños ---
 
-/**
- * Helper function to verify the user's auth token and get their UID.
- */
-async function getCurrentUserId(authToken?: string): Promise<string> {
-  if (!authToken) {
-    throw new Error('No se proporcionó token de autenticación.');
-  }
-  const adminApp = getAdminApp();
-  if (!adminApp) {
-    throw new Error('La configuración del servidor es incorrecta.');
-  }
-  
-  try {
-    const decodedToken = await getAdminAuth(adminApp).verifyIdToken(authToken);
-    return decodedToken.uid;
-  } catch (error) {
-    console.error('Error verifying auth token:', error);
-    throw new Error('El token de autenticación no es válido.');
-  }
-}
-
 export async function interpretDreamAction(input: InterpretDreamInput, authToken?: string): Promise<DreamInterpretationDoc> {
   const adminApp = getAdminApp();
   if (!adminApp) {
     throw new Error('La configuración del servidor es incorrecta.');
   }
 
-  const { firestore, FieldValue } = await import('firebase-admin/firestore');
+  const { getFirestore, FieldValue } = await import('firebase-admin/firestore');
 
   try {
     const userId = await getCurrentUserId(authToken);
@@ -262,7 +286,7 @@ export async function interpretDreamAction(input: InterpretDreamInput, authToken
       interpretation,
     };
     
-    const docRef = await firestore(adminApp).collection('dreams').add({
+    const docRef = await getFirestore(adminApp).collection('dreams').add({
       ...dreamDoc,
       createdAt: FieldValue.serverTimestamp(),
     });
@@ -279,10 +303,10 @@ export async function getDreamHistoryAction(authToken?: string): Promise<DreamIn
   if (!adminApp) {
     throw new Error('La configuración del servidor es incorrecta.');
   }
-  const { firestore } = await import('firebase-admin/firestore');
+  const { getFirestore } = await import('firebase-admin/firestore');
   try {
     const userId = await getCurrentUserId(authToken);
-    const snapshot = await firestore(adminApp)
+    const snapshot = await getFirestore(adminApp)
       .collection('dreams')
       .where('userId', '==', userId)
       .orderBy('createdAt', 'desc')
@@ -314,10 +338,10 @@ export async function getDreamAction(id: string, authToken?: string): Promise<Dr
     if (!adminApp) {
         throw new Error('La configuración del servidor es incorrecta.');
     }
-    const { firestore } = await import('firebase-admin/firestore');
+    const { getFirestore } = await import('firebase-admin/firestore');
     try {
         const userId = await getCurrentUserId(authToken);
-        const docRef = firestore(adminApp).collection('dreams').doc(id);
+        const docRef = getFirestore(adminApp).collection('dreams').doc(id);
         const docSnap = await docRef.get();
 
         if (!docSnap.exists) {
@@ -334,7 +358,7 @@ export async function getDreamAction(id: string, authToken?: string): Promise<Dr
         return {
             ...dreamData,
             id: docSnap.id,
-            createdAt: (dreamData.createdAt as admin.firestore.Timestamp).toDate().toISOString(),
+            createdAt: (dreamData.createdAt as any).toDate().toISOString(),
         };
     } catch (error) {
         console.error(`Error fetching dream ${id}:`, error);
@@ -347,10 +371,10 @@ export async function deleteDreamAction(id: string, authToken?: string): Promise
     if (!adminApp) {
         throw new Error('La configuración del servidor es incorrecta.');
     }
-    const { firestore } = await import('firebase-admin/firestore');
+    const { getFirestore } = await import('firebase-admin/firestore');
     try {
         const userId = await getCurrentUserId(authToken);
-        const docRef = firestore(adminApp).collection('dreams').doc(id);
+        const docRef = getFirestore(adminApp).collection('dreams').doc(id);
         const docSnap = await docRef.get();
 
         if (docSnap.exists) {
