@@ -127,6 +127,37 @@ export type SimulationSession = {
   path: string;
 };
 
+// --- Dream Portal Types ---
+export type InterpretDreamInput = {
+    dreamDescription: string;
+    userProfile: string; // JSON string of ProfileData
+};
+
+export type SymbolAnalysis = {
+    symbol: string;
+    universalMeaning: string;
+    personalMeaning: string;
+    icon: string;
+};
+
+export type DreamInterpretation = {
+    dreamTitle: string;
+    dominantFeeling: string;
+    coreArchetype: string;
+    symbolAnalysis: SymbolAnalysis[];
+    narrativeInterpretation: string;
+    reflectiveQuestion: string;
+};
+
+export type DreamInterpretationDoc = {
+    id: string;
+    userId: string;
+    dreamDescription: string;
+    interpretation: DreamInterpretation;
+    createdAt: Timestamp | string; // Firestore returns Timestamp, but we may serialize to string
+};
+
+
 // Schemas for new real-time trainer AI flows
 
 // Tactical Advisor

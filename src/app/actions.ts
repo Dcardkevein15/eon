@@ -6,17 +6,20 @@ import { z } from 'zod';
 import { smartComposeMessage } from '@/ai/flows/smart-compose-message';
 import { getInitialPrompts } from '@/ai/flows/initial-prompt-suggestion';
 import { generateChatTitle as genTitle } from '@/ai/flows/generate-chat-title';
-import { collection, getDocs, doc, getDoc, query, orderBy, limit, Timestamp, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, query, orderBy, limit, Timestamp, addDoc, serverTimestamp, deleteDoc, updateDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { SUGGESTIONS_FALLBACK } from '@/lib/suggestions-fallback';
 import { generateBreakdownExercise as genExercise } from '@/ai/flows/generate-breakdown-exercise';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
-import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, ProfileData, PromptSuggestion, GetTacticalAdviceInput, AnalyzeSentimentInput, ClassifyIntentInput } from '@/lib/types';
+import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, ProfileData, PromptSuggestion, GetTacticalAdviceInput, AnalyzeSentimentInput, ClassifyIntentInput, InterpretDreamInput, DreamInterpretation, DreamInterpretationDoc } from '@/lib/types';
 import { getTacticalAdvice } from '@/ai/flows/get-tactical-advice';
 import { analyzeSentiment } from '@/ai/flows/analyze-sentiment';
 import { classifyIntent } from '@/ai/flows/classify-intent';
-
+import { interpretDream as interpretDreamFlow } from '@/ai/flows/interpret-dream';
+import { getAdminApp } from '@/lib/firebase-admin';
+import { getAuth as getAdminAuth } from 'firebase-admin/auth';
+import { FieldValue } from 'firebase-admin/firestore';
 
 const expertRoles = [
     'El Validador Empático', 'El Experto en Terapia Cognitivo-Conductual (TCC)', 
@@ -26,10 +29,28 @@ const expertRoles = [
     'El Analista de Patrones (Perspectiva a Largo Plazo)', 'El Contador de Historias (Narrador Terapéutico)', 
     'El Especialista en Crisis (Contención Inmediata)', 'El Experto en Psicoeducación (El Profesor)', 
     'El Experto Organizacional (Dinámicas Laborales)', 'El Sexólogo Clínico (Intimidad y Sexualidad)', 
-    'El Neuropsicólogo (El Arquitecto del Cerebro)', 'El Terapeuta de Esquemas (El Arqueólogo de la Infancia)', 'El Especialista en Trauma (El Guía Resiliente)', 
+    'El Neuropsicólogo (El Arquitecto del Cerebro)', 'El Terapeuta de Esquemas (El Arqueólogo de la Infancia)', 'El Especialista en Trauma (El Guía Resiliente)',
     'El Experto en Matemáticas Avanzadas', 'El Escritor de Código', 'El Creador de Contenido', 
     'El Asistente General', 'El Experto en Idiomas'
 ];
+
+async function getCurrentUserId(authToken?: string): Promise<string> {
+    const adminApp = getAdminApp();
+    if (!adminApp) {
+        throw new Error('La configuración del servidor es incorrecta.');
+    }
+    if (!authToken) {
+        throw new Error('Token de autenticación no proporcionado.');
+    }
+    try {
+        const decodedToken = await getAdminAuth(adminApp).verifyIdToken(authToken);
+        return decodedToken.uid;
+    } catch (error) {
+        console.error('Error al verificar el token de autenticación:', error);
+        throw new Error('Autenticación inválida.');
+    }
+}
+
 
 export async function determineAnchorRole(firstMessage: string): Promise<string> {
     const prompt = `Eres un sistema de enrutamiento de IA. Tu única tarea es leer el siguiente mensaje de un usuario y decidir cuál de los siguientes roles de experto es el más adecuado para iniciar y liderar esta conversación. Responde únicamente con el nombre del rol.
@@ -212,5 +233,119 @@ export async function classifyIntentAction(input: ClassifyIntentInput): Promise<
     } catch (error) {
         console.error('Error classifying intent:', error);
         return "Análisis no disponible";
+    }
+}
+
+// --- Acciones para el Portal de Sueños ---
+
+export async function interpretDreamAction(input: InterpretDreamInput, authToken: string): Promise<DreamInterpretationDoc> {
+  const adminApp = getAdminApp();
+  if (!adminApp) {
+    throw new Error('La configuración del servidor es incorrecta.');
+  }
+
+  try {
+    const userId = await getCurrentUserId(authToken);
+    const interpretation = await interpretDreamFlow(input);
+
+    const { firestore } = await import('firebase-admin/firestore');
+    const db = firestore(adminApp);
+    
+    const dreamDoc: Omit<DreamInterpretationDoc, 'id'> = {
+      userId,
+      interpretation,
+      dreamDescription: input.dreamDescription,
+      createdAt: FieldValue.serverTimestamp(),
+    };
+
+    const docRef = await db.collection('users').doc(userId).collection('dreams').add(dreamDoc);
+    
+    // Devolvemos el documento completo con su ID
+    return { id: docRef.id, ...dreamDoc } as DreamInterpretationDoc;
+
+  } catch (e: any) {
+    console.error("Error in interpretDreamAction:", e);
+    throw new Error('No se pudo interpretar y guardar el sueño.');
+  }
+}
+
+
+export async function getDreamHistoryAction(authToken: string | undefined): Promise<DreamInterpretationDoc[]> {
+  const adminApp = getAdminApp();
+  if (!adminApp) {
+    throw new Error('La configuración del servidor es incorrecta.');
+  }
+  try {
+    const userId = await getCurrentUserId(authToken);
+    const { firestore } = await import('firebase-admin/firestore');
+    const db = firestore(adminApp);
+
+    const snapshot = await db.collection('users').doc(userId).collection('dreams').orderBy('createdAt', 'desc').get();
+    
+    if (snapshot.empty) {
+      return [];
+    }
+
+    const dreams = snapshot.docs.map(doc => {
+      const data = doc.data();
+      // Asegurarse de que el timestamp se maneja correctamente al cliente
+      return { 
+        id: doc.id,
+        ...data,
+        createdAt: (data.createdAt as FirebaseFirestore.Timestamp)?.toDate().toISOString() || new Date().toISOString(),
+      } as DreamInterpretationDoc;
+    });
+    
+    return dreams;
+
+  } catch (e: any) {
+    console.error("Error in getDreamHistoryAction:", e);
+    throw new Error('No se pudo obtener el historial de sueños.');
+  }
+}
+
+export async function getDreamAction(dreamId: string, authToken: string): Promise<DreamInterpretationDoc | null> {
+    const adminApp = getAdminApp();
+    if (!adminApp) {
+        throw new Error('La configuración del servidor es incorrecta.');
+    }
+    try {
+        const userId = await getCurrentUserId(authToken);
+        const { firestore } = await import('firebase-admin/firestore');
+        const db = firestore(adminApp);
+        
+        const docRef = db.collection('users').doc(userId).collection('dreams').doc(dreamId);
+        const docSnap = await docRef.get();
+
+        if (!docSnap.exists) {
+            return null;
+        }
+
+        const data = docSnap.data()!;
+        return {
+            id: docSnap.id,
+            ...data,
+            createdAt: (data.createdAt as FirebaseFirestore.Timestamp)?.toDate().toISOString() || new Date().toISOString(),
+        } as DreamInterpretationDoc;
+    } catch(e:any) {
+        console.error("Error in getDreamAction:", e);
+        throw new Error('No se pudo obtener el sueño.');
+    }
+}
+
+export async function deleteDreamAction(dreamId: string, authToken: string): Promise<void> {
+    const adminApp = getAdminApp();
+    if (!adminApp) {
+        throw new Error('La configuración del servidor es incorrecta.');
+    }
+    try {
+        const userId = await getCurrentUserId(authToken);
+        const { firestore } = await import('firebase-admin/firestore');
+        const db = firestore(adminApp);
+
+        await db.collection('users').doc(userId).collection('dreams').doc(dreamId).delete();
+    } catch(e:any) {
+        console.error("Error in deleteDreamAction:", e);
+        throw new Error('No se pudo eliminar el sueño.');
     }
 }
