@@ -234,6 +234,27 @@
         "path": { "type": "string" }
       },
       "required": ["userId", "scenarioId", "scenarioTitle", "createdAt", "path"]
+    },
+    "dreamInterpretation": {
+      "title": "Dream Interpretation",
+      "description": "An AI-generated interpretation of a user's dream, linked to their psychological profile.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "dreamDescription": { "type": "string" },
+        "interpretation": {
+          "type": "object",
+          "properties": {
+             "dreamTitle": { "type": "string" },
+             "dominantFeeling": { "type": "string" },
+             "coreArchetype": { "type": "string" },
+             "narrativeInterpretation": { "type": "string" },
+             "reflectiveQuestion": { "type": "string" }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "dreamDescription", "interpretation", "createdAt"]
     }
   },
   "auth": {
@@ -299,6 +320,12 @@
         "$ref": "#/entities/message"
       },
       "description": "Individual messages within a simulation session."
+    },
+    "/users/{userId}/dreams/{dreamId}": {
+      "schema": {
+        "$ref": "#/entities/dreamInterpretation"
+      },
+      "description": "Stores a user's saved dream interpretations."
     }
   }
 }

@@ -128,33 +128,38 @@ export type SimulationSession = {
 };
 
 // --- Dream Portal Types ---
-export type InterpretDreamInput = {
-    dreamDescription: string;
-    userProfile: string; // JSON string of ProfileData
-};
+export const DreamInterpretationInputSchema = z.object({
+    dreamDescription: z.string().describe('La descripción detallada del sueño contada por el usuario.'),
+    userProfile: z.string().describe('El perfil psicológico completo del usuario en formato JSON. Proporciona el contexto para una interpretación personalizada.'),
+});
+export type InterpretDreamInput = z.infer<typeof DreamInterpretationInputSchema>;
 
-export type SymbolAnalysis = {
-    symbol: string;
-    universalMeaning: string;
-    personalMeaning: string;
-    icon: string;
-};
 
-export type DreamInterpretation = {
-    dreamTitle: string;
-    dominantFeeling: string;
-    coreArchetype: string;
-    symbolAnalysis: SymbolAnalysis[];
-    narrativeInterpretation: string;
-    reflectiveQuestion: string;
-};
+export const SymbolAnalysisSchema = z.object({
+    symbol: z.string().describe('El elemento simbólico clave identificado en el sueño (ej. "un bosque oscuro", "una llave dorada").'),
+    universalMeaning: z.string().describe('El significado arquetípico o junguiano universal de este símbolo.'),
+    personalMeaning: z.string().describe('La interpretación personalizada del símbolo, conectándolo directamente con los conflictos, arquetipos o patrones del perfil psicológico del usuario.'),
+    icon: z.string().describe('Un solo emoji que represente visualmente el símbolo.')
+});
+
+export const DreamInterpretationSchema = z.object({
+    dreamTitle: z.string().describe('Un título poético y evocador para el sueño, de 4 a 6 palabras.'),
+    dominantFeeling: z.string().describe('La emoción principal o atmósfera que prevalece en el sueño (ej. "Ansiedad y confusión", "Liberación y alegría").'),
+    coreArchetype: z.string().describe('El arquetipo junguiano principal que parece estar activo en este sueño (ej. "La Sombra", "El Héroe", "El Trickster").'),
+    symbolAnalysis: z.array(SymbolAnalysisSchema).describe('Un análisis de 3 a 5 de los símbolos más importantes del sueño.'),
+    narrativeInterpretation: z.string().describe('Una interpretación de la "trama" del sueño, explicándola como una metáfora de un conflicto, deseo o proceso psicológico que el usuario está viviendo, basándose en su perfil.'),
+    reflectiveQuestion: z.string().describe('Una pregunta final, poderosa y abierta, diseñada para que el usuario reflexione sobre la conexión entre el sueño y su vida.'),
+});
+
+export type DreamInterpretation = z.infer<typeof DreamInterpretationSchema>;
+export type SymbolAnalysis = z.infer<typeof SymbolAnalysisSchema>;
 
 export type DreamInterpretationDoc = {
     id: string;
     userId: string;
     dreamDescription: string;
     interpretation: DreamInterpretation;
-    createdAt: Timestamp | string; // Firestore returns Timestamp, but we may serialize to string
+    createdAt: Timestamp;
 };
 
 

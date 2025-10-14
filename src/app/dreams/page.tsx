@@ -1,11 +1,11 @@
-
 'use client';
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/firebase';
+import { useAuth, useCollection, useFirestore } from '@/firebase';
 import type { CachedProfile, ProfileData, DreamInterpretationDoc } from '@/lib/types';
-import { interpretDreamAction, getDreamHistoryAction, deleteDreamAction } from '@/app/actions';
+import { interpretDreamAction } from '@/app/actions';
+import { collection, addDoc, serverTimestamp, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -14,11 +14,9 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Sidebar, SidebarProvider, SidebarInset, SidebarContent, SidebarHeader } from '@/components/ui/sidebar';
 import ChatSidebar from '@/components/chat/chat-sidebar';
-import { useCollection, useFirestore } from '@/firebase';
 import type { Chat } from '@/lib/types';
-import { collection, query, orderBy } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -33,14 +31,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
-
-function DreamHistorySidebar({ dreams, isLoading, onSelectDream, onDeleteDream, onRefresh }: { dreams: DreamInterpretationDoc[], isLoading: boolean, onSelectDream: (id: string) => void, onDeleteDream: (id: string) => void, onRefresh: () => void }) {
+function DreamHistorySidebar({ dreams, isLoading, onSelectDream, onDeleteDream }: { dreams: DreamInterpretationDoc[], isLoading: boolean, onSelectDream: (id: string) => void, onDeleteDream: (id: string) => Promise<void> }) {
   
   const getFormattedDate = (timestamp: any) => {
     if (!timestamp) return 'Fecha desconocida';
     try {
-      const date = new Date(timestamp);
+      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
       return formatDistanceToNow(date, { addSuffix: true, locale: es });
     } catch {
       return 'Fecha inválida';
@@ -48,27 +47,24 @@ function DreamHistorySidebar({ dreams, isLoading, onSelectDream, onDeleteDream, 
   };
 
   return (
-    <div className="h-full flex flex-col bg-card">
-      <div className="p-4 border-b">
+    <div className="h-full flex flex-col bg-slate-900 border-r border-slate-800 text-slate-200">
+      <div className="p-4 border-b border-slate-800">
         <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold flex items-center gap-2">
-                <BookOpen className="w-5 h-5" />
+                <BookOpen className="w-5 h-5 text-sky-400" />
                 Diario de Sueños
             </h2>
-            <Button variant="ghost" size="icon" onClick={onRefresh} disabled={isLoading}>
-                <RefreshCcw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`}/>
-            </Button>
         </div>
       </div>
       <ScrollArea className="flex-1">
          {isLoading ? (
             <div className="p-4 space-y-3">
-              <Skeleton className="h-20 w-full" />
-              <Skeleton className="h-20 w-full" />
-              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-20 w-full bg-slate-800" />
+              <Skeleton className="h-20 w-full bg-slate-800" />
+              <Skeleton className="h-20 w-full bg-slate-800" />
             </div>
           ) : dreams.length === 0 ? (
-            <div className="p-4 text-center text-sm text-muted-foreground mt-8">
+            <div className="p-4 text-center text-sm text-slate-400 mt-8">
               <p>Tu diario está vacío. ¡Interpreta tu primer sueño para empezar!</p>
             </div>
           ) : (
@@ -76,17 +72,17 @@ function DreamHistorySidebar({ dreams, isLoading, onSelectDream, onDeleteDream, 
               {dreams.map(dream => (
                 <div key={dream.id} className="relative group/item">
                     <button onClick={() => onSelectDream(dream.id)} className="w-full text-left">
-                        <Card className="hover:bg-muted/50 transition-colors">
+                        <Card className="bg-slate-800/50 border-slate-700 hover:bg-slate-800 hover:border-sky-500/50 transition-colors">
                             <CardHeader className="p-3">
-                                <CardTitle className="text-sm font-semibold truncate">{dream.interpretation.dreamTitle}</CardTitle>
-                                <CardDescription className="text-xs">{getFormattedDate(dream.createdAt)}</CardDescription>
+                                <CardTitle className="text-sm font-semibold truncate text-slate-100">{dream.interpretation.dreamTitle}</CardTitle>
+                                <CardDescription className="text-xs text-slate-400">{getFormattedDate(dream.createdAt)}</CardDescription>
                             </CardHeader>
                         </Card>
                     </button>
                      <AlertDialog>
                         <AlertDialogTrigger asChild>
-                           <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 opacity-0 group-hover/item:opacity-100">
-                            <Trash2 className="w-4 h-4 text-destructive"/>
+                           <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 opacity-0 group-hover/item:opacity-100 text-red-400 hover:bg-red-500/10 hover:text-red-400">
+                            <Trash2 className="w-4 h-4"/>
                            </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
@@ -122,31 +118,22 @@ export default function DreamWeaverPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
-  
-  const [dreamHistory, setDreamHistory] = useState<DreamInterpretationDoc[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(true);
 
-  // --- Start Data Fetching for Sidebar ---
+  // --- Start Data Fetching for Sidebar (Chat History) ---
   const chatsQuery = useMemo(
     () => (user?.uid && firestore ? query(collection(firestore, `users/${user.uid}/chats`), orderBy('createdAt', 'desc')) : undefined),
     [user?.uid, firestore]
   );
   const { data: chats, loading: chatsLoading } = useCollection<Chat>(chatsQuery);
-  // --- End Data Fetching for Sidebar ---
+  // --- End Data Fetching for Sidebar (Chat History) ---
 
-  const fetchDreamHistory = useCallback(async () => {
-    if (!user) return;
-    setHistoryLoading(true);
-    try {
-        const token = await user.getIdToken();
-        const history = await getDreamHistoryAction(token);
-        setDreamHistory(history);
-    } catch (e: any) {
-        toast({ variant: 'destructive', title: 'Error', description: e.message || 'No se pudo cargar tu historial de sueños.' });
-    } finally {
-        setHistoryLoading(false);
-    }
-  }, [user, toast]);
+  // --- Start Data Fetching for Dream History ---
+  const dreamsQuery = useMemo(
+    () => (user?.uid && firestore ? query(collection(firestore, `users/${user.uid}/dreams`), orderBy('createdAt', 'desc')) : undefined),
+    [user?.uid, firestore]
+  );
+  const { data: dreamHistory, loading: historyLoading } = useCollection<DreamInterpretationDoc>(dreamsQuery);
+  // --- End Data Fetching for Dream History ---
 
   useEffect(() => {
     if (user) {
@@ -163,14 +150,9 @@ export default function DreamWeaverPage() {
       } else {
         setProfileError("No se ha generado un perfil psicológico. Ve a la sección 'Perfil Psicológico' para crear uno y obtener interpretaciones más profundas.");
       }
-      
-      fetchDreamHistory();
-    } else if (!authLoading) {
-      setHistoryLoading(false);
     }
-  }, [user, authLoading, fetchDreamHistory]);
+  }, [user]);
   
-
   const handleAnalyzeDream = async () => {
     if (!dream.trim()) {
       toast({ variant: 'destructive', title: 'Error', description: 'Por favor, describe tu sueño.' });
@@ -180,28 +162,51 @@ export default function DreamWeaverPage() {
        toast({ variant: 'destructive', title: 'Perfil no encontrado', description: 'Es necesario un perfil psicológico para interpretar el sueño.' });
        return;
     }
-    if (!user) {
+    if (!user || !firestore) {
        toast({ variant: 'destructive', title: 'Error de autenticación', description: 'Debes iniciar sesión para analizar un sueño.' });
        return;
     }
 
     setIsAnalyzing(true);
     try {
-      const token = await user.getIdToken();
-      const result = await interpretDreamAction({
+      // 1. Get AI Interpretation
+      const interpretation = await interpretDreamAction({
         dreamDescription: dream,
         userProfile: JSON.stringify(profile),
-      }, token);
+      });
 
-      await fetchDreamHistory();
-      router.push(`/dreams/analysis?id=${result.id}`);
+      // 2. Save to Firestore
+      const dreamsCollectionRef = collection(firestore, `users/${user.uid}/dreams`);
+      const dreamDoc = {
+        userId: user.uid,
+        dreamDescription: dream,
+        interpretation,
+        createdAt: serverTimestamp(),
+      };
+      
+      const docRef = await addDoc(dreamsCollectionRef, dreamDoc);
+      
+      // 3. Redirect to analysis page
+      router.push(`/dreams/analysis?id=${docRef.id}`);
 
     } catch (error: any) {
       console.error(error);
+      const isPermissionError = error.code === 'permission-denied';
+
+      if(isPermissionError) {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: `users/${user.uid}/dreams`,
+          operation: 'create',
+          requestResourceData: { dreamDescription: dream },
+        }));
+      }
+
       toast({
         variant: 'destructive',
         title: 'Error en el análisis',
-        description: error.message || 'No se pudo interpretar el sueño. Por favor, inténtalo de nuevo.',
+        description: isPermissionError 
+          ? "No tienes permiso para guardar sueños. Revisa las reglas de seguridad."
+          : error.message || 'No se pudo interpretar el sueño. Por favor, inténtalo de nuevo.',
       });
     } finally {
       setIsAnalyzing(false);
@@ -209,58 +214,60 @@ export default function DreamWeaverPage() {
   };
 
   const handleDeleteDream = async (id: string) => {
-    if (!user) return;
+    if (!user || !firestore) return;
     
-    const originalHistory = [...dreamHistory];
-    setDreamHistory(prev => prev.filter(d => d.id !== id));
-
+    const dreamDocRef = doc(firestore, `users/${user.uid}/dreams`, id);
     try {
-        const token = await user.getIdToken();
-        await deleteDreamAction(id, token);
+        await deleteDoc(dreamDocRef);
         toast({ title: 'Éxito', description: 'El sueño ha sido eliminado.' });
     } catch(e: any) {
+        if(e.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: dreamDocRef.path,
+                operation: 'delete',
+            }));
+        }
         toast({ variant: 'destructive', title: 'Error', description: e.message || 'No se pudo eliminar el sueño.' });
-        setDreamHistory(originalHistory); // Revert on error
     }
   };
 
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen bg-background">
+      <div className="flex h-screen bg-slate-950 text-slate-100">
         <Sidebar>
           <ChatSidebar chats={chats || []} activeChatId={''} isLoading={chatsLoading} removeChat={() => {}} clearChats={() => {}} />
         </Sidebar>
         <SidebarInset className="flex overflow-hidden">
-            <aside className="w-80 border-r flex-shrink-0 hidden md:block overflow-y-auto">
-                <DreamHistorySidebar dreams={dreamHistory} isLoading={historyLoading} onSelectDream={(id) => router.push(`/dreams/analysis?id=${id}`)} onDeleteDream={handleDeleteDream} onRefresh={fetchDreamHistory} />
+            <aside className="w-80 border-r border-slate-800 flex-shrink-0 hidden md:block overflow-y-auto">
+                <DreamHistorySidebar dreams={dreamHistory || []} isLoading={historyLoading} onSelectDream={(id) => router.push(`/dreams/analysis?id=${id}`)} onDeleteDream={handleDeleteDream} />
             </aside>
-            <main className="flex-1 flex flex-col overflow-y-auto bg-gradient-to-b from-background via-slate-900 to-black text-foreground">
-                <div className="sticky top-0 bg-transparent backdrop-blur-sm border-b border-white/10 p-4 sm:p-6 z-10">
-                    <div className="flex items-center gap-2 max-w-5xl mx-auto">
-                        <Button asChild variant="ghost" size="icon" className="-ml-2 hover:bg-white/10">
+            <main className="flex-1 flex flex-col overflow-y-auto">
+                <div className="sticky top-0 bg-slate-950/80 backdrop-blur-sm border-b border-slate-800 p-4 z-10">
+                    <div className="flex items-center gap-2 max-w-3xl mx-auto">
+                        <Button asChild variant="ghost" size="icon" className="-ml-2 text-slate-300 hover:bg-slate-800 hover:text-white">
                             <Link href="/">
                                 <ChevronLeft className="h-5 w-5" />
                             </Link>
                         </Button>
-                         <h1 className="text-2xl font-bold tracking-tight text-white">Portal de Sueños</h1>
+                         <h1 className="text-xl font-bold tracking-tight text-white">Portal de Sueños</h1>
                     </div>
                 </div>
 
                 <div className="flex-1 flex items-center justify-center p-4">
                     <div className="w-full max-w-2xl mx-auto text-center space-y-8 animate-in fade-in-50 duration-700">
                          <div className="space-y-2">
-                             <h2 className="text-4xl md:text-5xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-primary via-fuchsia-400 to-amber-300">
-                                ¿Qué te ha mostrado el subconsciente?
+                             <h2 className="text-4xl md:text-5xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-slate-100 via-slate-300 to-sky-400">
+                                ¿Qué te ha mostrado tu subconsciente?
                              </h2>
                              <p className="text-lg text-slate-400">Describe tu sueño con todos los detalles que recuerdes. La IA conectará sus símbolos con tu viaje interior.</p>
                          </div>
                         
                          {profileError && (
-                            <Alert variant="destructive" className="text-left bg-yellow-900/20 border-yellow-500/30">
+                            <Alert variant="default" className="text-left bg-yellow-900/20 border-yellow-500/30 text-yellow-200">
                                 <Info className="h-4 w-4 text-yellow-400" />
                                 <AlertTitle className="text-yellow-300">Contexto Limitado</AlertTitle>
-                                <AlertDescription className="text-yellow-200/80">
+                                <AlertDescription>
                                     {profileError}
                                 </AlertDescription>
                             </Alert>
@@ -271,16 +278,15 @@ export default function DreamWeaverPage() {
                                 value={dream}
                                 onChange={(e) => setDream(e.target.value)}
                                 placeholder="Anoche soñé que estaba en una casa que no conocía, y todas las puertas desaparecían..."
-                                className="min-h-[200px] bg-slate-900/50 border-slate-700 rounded-xl p-4 text-base ring-offset-background focus-visible:ring-2 focus-visible:ring-primary/80 focus-visible:ring-offset-0 transition-all duration-300"
+                                className="min-h-[200px] bg-slate-900 border-slate-700 rounded-xl p-4 text-base ring-offset-slate-950 focus-visible:ring-2 focus-visible:ring-sky-500/80 focus-visible:ring-offset-2 transition-all duration-300"
                             />
-                            <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-slate-900 to-transparent pointer-events-none rounded-b-xl" />
                         </div>
 
                          <Button
                             onClick={handleAnalyzeDream}
                             disabled={isAnalyzing || !profile || authLoading}
                             size="lg"
-                            className="w-full sm:w-auto text-lg px-8 py-6 rounded-full bg-primary/90 hover:bg-primary shadow-lg shadow-primary/20 transition-all transform hover:scale-105"
+                            className="w-full sm:w-auto text-base px-8 py-6 rounded-full bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/20 transition-all transform hover:scale-105"
                          >
                             {isAnalyzing ? (
                                 <>
@@ -302,5 +308,3 @@ export default function DreamWeaverPage() {
     </SidebarProvider>
   );
 }
-
-    

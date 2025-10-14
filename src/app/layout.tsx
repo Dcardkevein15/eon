@@ -32,10 +32,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" suppressHydrationWarning>
-      <body className={cn(inter.variable, 'font-body antialiased')}>
+      <body className={cn(inter.variable, 'font-body antialiased bg-background')}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="light"
+          defaultTheme="dark"
           enableSystem
           disableTransitionOnChange
         >

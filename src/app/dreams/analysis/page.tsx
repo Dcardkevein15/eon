@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import type { DreamInterpretationDoc, DreamInterpretation } from '@/lib/types';
+import { useSearchParams, useRouter } from 'next/navigation';
+import type { DreamInterpretationDoc } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -12,8 +12,10 @@ import { motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
-import { useAuth } from '@/firebase';
-import { getDreamAction } from '@/app/actions';
+import { useAuth, useFirestore } from '@/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 const SymbolCard = ({ symbol, personalMeaning, universalMeaning, icon, delay }: { symbol: string; personalMeaning: string; universalMeaning: string; icon: string, delay: number }) => {
   const [isFlipped, setIsFlipped] = useState(false);
@@ -23,24 +25,23 @@ const SymbolCard = ({ symbol, personalMeaning, universalMeaning, icon, delay }: 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.5 + delay * 0.15 }}
-      style={{ perspective: 1000 }}
+      className="[perspective:1000px]"
     >
       <motion.div
-        className="relative w-full h-48 cursor-pointer"
+        className="relative w-full h-48 cursor-pointer [transform-style:preserve-3d]"
         onClick={() => setIsFlipped(!isFlipped)}
         animate={{ rotateY: isFlipped ? 180 : 0 }}
         transition={{ duration: 0.6 }}
-        style={{ transformStyle: "preserve-3d" }}
       >
         {/* Front of Card */}
-        <div className="absolute w-full h-full p-4 rounded-xl bg-slate-800/50 border border-slate-700 flex flex-col items-center justify-center text-center" style={{ backfaceVisibility: 'hidden' }}>
+        <div className="absolute w-full h-full p-4 rounded-xl bg-slate-800/50 border border-slate-700 flex flex-col items-center justify-center text-center [backface-visibility:hidden]">
           <div className="text-4xl mb-2">{icon}</div>
           <p className="font-semibold text-slate-200">{symbol}</p>
           <p className="text-xs text-slate-400 mt-2">(Toca para revelar)</p>
         </div>
         
         {/* Back of Card */}
-        <div className="absolute w-full h-full p-4 rounded-xl bg-slate-800 border border-primary/50 flex flex-col justify-center" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
+        <div className="absolute w-full h-full p-4 rounded-xl bg-slate-800 border border-sky-500/50 flex flex-col justify-center [backface-visibility:hidden] [transform:rotateY(180deg)]">
             <ScrollArea className="h-full">
               <p className="text-xs text-slate-400 font-semibold uppercase">Significado Personal:</p>
               <p className="text-sm text-slate-200 mb-2">{personalMeaning}</p>
@@ -58,6 +59,7 @@ export default function DreamAnalysisPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
+  const firestore = useFirestore();
   const { toast } = useToast();
 
   const [dreamDoc, setDreamDoc] = useState<DreamInterpretationDoc | null>(null);
@@ -67,7 +69,7 @@ export default function DreamAnalysisPage() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) {
+    if (!user || !firestore) {
         router.push('/dreams');
         return;
     }
@@ -78,16 +80,22 @@ export default function DreamAnalysisPage() {
     }
 
     const fetchDream = async () => {
+        const dreamDocRef = doc(firestore, `users/${user.uid}/dreams`, dreamId);
         try {
-            const token = await user.getIdToken();
-            const result = await getDreamAction(dreamId, token);
-            if (result) {
-                setDreamDoc(result);
+            const docSnap = await getDoc(dreamDocRef);
+            if (docSnap.exists()) {
+                setDreamDoc({ id: docSnap.id, ...docSnap.data() } as DreamInterpretationDoc);
             } else {
                 toast({ variant: "destructive", title: "Análisis no encontrado", description: "No pudimos encontrar este sueño en tu historial." });
                 router.push('/dreams');
             }
         } catch (e: any) {
+            if (e.code === 'permission-denied') {
+              errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: dreamDocRef.path,
+                operation: 'get'
+              }));
+            }
             toast({ variant: "destructive", title: "Error", description: e.message || "No se pudo cargar el análisis del sueño." });
             router.push('/dreams');
         } finally {
@@ -97,27 +105,43 @@ export default function DreamAnalysisPage() {
     
     fetchDream();
 
-  }, [dreamId, user, authLoading, router, toast]);
+  }, [dreamId, user, authLoading, firestore, router, toast]);
 
   const analysis = dreamDoc?.interpretation;
 
-  if (loading || !analysis) {
+  if (loading || authLoading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-black">
+      <div className="flex h-screen w-full items-center justify-center bg-slate-950">
         <div className="text-center text-white">
-            <Loader2 className="h-10 w-10 animate-spin mx-auto text-primary" />
+            <Loader2 className="h-10 w-10 animate-spin mx-auto text-sky-400" />
             <p className="mt-4 text-lg">Cargando tu universo interior...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!analysis) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-slate-950">
+        <div className="text-center text-white">
+            <p className="mt-4 text-lg">No se encontró el análisis del sueño.</p>
+             <Button asChild variant="ghost" className="mt-4 text-sky-400">
+                <Link href="/dreams">
+                    <ChevronLeft className="h-4 w-4 mr-2" />
+                    Volver al Portal
+                </Link>
+            </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black via-slate-900 to-black text-white">
+    <div className="min-h-screen bg-slate-950 text-white">
       <ScrollArea className="h-screen">
         <div className="container mx-auto max-w-5xl p-4 sm:p-6 lg:p-8">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
-                 <Button asChild variant="ghost" className="-ml-4 hover:bg-white/10">
+                 <Button asChild variant="ghost" className="-ml-4 text-slate-300 hover:bg-slate-800 hover:text-white">
                     <Link href="/dreams">
                         <ChevronLeft className="h-4 w-4 mr-2" />
                         Volver al Portal
@@ -131,7 +155,7 @@ export default function DreamAnalysisPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2, duration: 0.5 }}
            >
-             <h1 className="text-4xl md:text-5xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-slate-200 to-slate-400">
+             <h1 className="text-4xl md:text-5xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-slate-100 to-slate-400">
                 {analysis.dreamTitle}
             </h1>
             <p className="mt-3 text-lg text-slate-400">
@@ -141,9 +165,9 @@ export default function DreamAnalysisPage() {
 
           <div className="space-y-8">
              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-                <Card className="bg-slate-900/50 border border-slate-700/80 shadow-2xl shadow-primary/10">
+                <Card className="bg-slate-900/70 border border-slate-800 shadow-2xl shadow-sky-900/20">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-3 text-xl text-primary">
+                        <CardTitle className="flex items-center gap-3 text-xl text-sky-400">
                             <Sparkles className="w-6 h-6" />
                             Interpretación Narrativa
                         </CardTitle>
@@ -174,9 +198,9 @@ export default function DreamAnalysisPage() {
             </div>
 
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1 }}>
-                <Card className="bg-slate-900/50 border border-slate-700/80">
+                <Card className="bg-slate-900/70 border border-slate-800">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-3 text-xl text-amber-300">
+                        <CardTitle className="flex items-center gap-3 text-xl text-amber-400">
                             <BrainCircuit className="w-6 h-6" />
                             Arquetipo Dominante: {analysis.coreArchetype}
                         </CardTitle>
@@ -194,13 +218,13 @@ export default function DreamAnalysisPage() {
                 transition={{ delay: 1.2 }}
              >
                 <h3 className="text-2xl font-semibold tracking-tight text-slate-300">Para tu Reflexión</h3>
-                <p className="mt-4 text-xl text-primary/90 italic max-w-3xl mx-auto">
+                <p className="mt-4 text-xl text-sky-400/90 italic max-w-3xl mx-auto">
                     "{analysis.reflectiveQuestion}"
                 </p>
                 <div className="max-w-2xl mx-auto mt-6">
                     <Textarea 
                         placeholder="Usa este espacio para continuar la conversación con tu subconsciente..."
-                        className="min-h-[120px] bg-slate-900/50 border-slate-700 rounded-xl p-4 text-base ring-offset-background focus-visible:ring-2 focus-visible:ring-primary/80 focus-visible:ring-offset-0"
+                        className="min-h-[120px] bg-slate-900 border-slate-700 rounded-xl p-4 text-base ring-offset-background focus-visible:ring-2 focus-visible:ring-sky-500/80 focus-visible:ring-offset-0"
                     />
                 </div>
             </motion.div>
