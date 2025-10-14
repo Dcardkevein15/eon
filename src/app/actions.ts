@@ -361,3 +361,5 @@ export async function deleteDreamAction(id: string, authToken?: string): Promise
         throw new Error('No se pudo eliminar el sueño.');
     }
 }
+
+    
