@@ -1,17 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import type { DreamInterpretation } from '@/lib/types';
+import { useEffect, useState, useMemo } from 'react';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import type { DreamInterpretationDoc, DreamInterpretation } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronLeft, Loader2, Sparkles, BrainCircuit } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
+import { useAuth } from '@/firebase';
+import { getDreamAction } from '@/app/actions';
 
 const SymbolCard = ({ symbol, personalMeaning, universalMeaning, icon, delay }: { symbol: string; personalMeaning: string; universalMeaning: string; icon: string, delay: number }) => {
   const [isFlipped, setIsFlipped] = useState(false);
@@ -28,16 +30,17 @@ const SymbolCard = ({ symbol, personalMeaning, universalMeaning, icon, delay }: 
         onClick={() => setIsFlipped(!isFlipped)}
         animate={{ rotateY: isFlipped ? 180 : 0 }}
         transition={{ duration: 0.6 }}
+        style={{ transformStyle: "preserve-3d" }}
       >
         {/* Front of Card */}
-        <div className="absolute w-full h-full p-4 rounded-xl bg-slate-800/50 border border-slate-700 flex flex-col items-center justify-center text-center backface-hidden">
+        <div className="absolute w-full h-full p-4 rounded-xl bg-slate-800/50 border border-slate-700 flex flex-col items-center justify-center text-center" style={{ backfaceVisibility: 'hidden' }}>
           <div className="text-4xl mb-2">{icon}</div>
           <p className="font-semibold text-slate-200">{symbol}</p>
           <p className="text-xs text-slate-400 mt-2">(Toca para revelar)</p>
         </div>
         
         {/* Back of Card */}
-        <div className="absolute w-full h-full p-4 rounded-xl bg-slate-800 border border-primary/50 flex flex-col justify-center backface-hidden" style={{ transform: 'rotateY(180deg)' }}>
+        <div className="absolute w-full h-full p-4 rounded-xl bg-slate-800 border border-primary/50 flex flex-col justify-center" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
             <ScrollArea className="h-full">
               <p className="text-xs text-slate-400 font-semibold uppercase">Significado Personal:</p>
               <p className="text-sm text-slate-200 mb-2">{personalMeaning}</p>
@@ -53,28 +56,52 @@ const SymbolCard = ({ symbol, personalMeaning, universalMeaning, icon, delay }: 
 
 export default function DreamAnalysisPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  const [analysis, setAnalysis] = useState<DreamInterpretation | null>(null);
+
+  const [dreamDoc, setDreamDoc] = useState<DreamInterpretationDoc | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const result = sessionStorage.getItem('dream-analysis-result');
-    if (result) {
-      try {
-        setAnalysis(JSON.parse(result));
-      } catch (e) {
-        toast({ variant: "destructive", title: "Error", description: "No se pudo cargar el análisis del sueño." });
-        router.push('/dreams');
-      } finally {
-        setLoading(false);
-      }
-    } else {
-      toast({ variant: "destructive", title: "Análisis no encontrado", description: "Vuelve a la página anterior para analizar tu sueño." });
-      router.push('/dreams');
-    }
-  }, [router, toast]);
+  const dreamId = useMemo(() => searchParams.get('id'), [searchParams]);
 
-  if (loading) {
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+        router.push('/dreams');
+        return;
+    }
+    if (!dreamId) {
+      toast({ variant: "destructive", title: "ID de sueño no encontrado", description: "Vuelve al portal para seleccionar un sueño." });
+      router.push('/dreams');
+      return;
+    }
+
+    const fetchDream = async () => {
+        try {
+            const token = await user.getIdToken();
+            const result = await getDreamAction(dreamId, token);
+            if (result) {
+                setDreamDoc(result);
+            } else {
+                toast({ variant: "destructive", title: "Análisis no encontrado", description: "No pudimos encontrar este sueño en tu historial." });
+                router.push('/dreams');
+            }
+        } catch (e: any) {
+            toast({ variant: "destructive", title: "Error", description: e.message || "No se pudo cargar el análisis del sueño." });
+            router.push('/dreams');
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    fetchDream();
+
+  }, [dreamId, user, authLoading, router, toast]);
+
+  const analysis = dreamDoc?.interpretation;
+
+  if (loading || !analysis) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-black">
         <div className="text-center text-white">
@@ -83,10 +110,6 @@ export default function DreamAnalysisPage() {
         </div>
       </div>
     );
-  }
-  
-  if (!analysis) {
-    return null; // Redirects are handled in useEffect
   }
 
   return (
@@ -187,10 +210,3 @@ export default function DreamAnalysisPage() {
     </div>
   );
 }
-
-// Simple utility for CSS backface-visibility
-const BackfaceHidden: React.FC<React.PropsWithChildren<{ className?: string }>> = ({ children, className }) => (
-    <div className={className} style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
-        {children}
-    </div>
-);

@@ -1,6 +1,7 @@
 import type { User as FirebaseUser } from 'firebase/auth';
 import type { Timestamp } from 'firebase/firestore';
 import { z } from 'zod';
+import type * as admin from 'firebase-admin';
 
 
 export type User = FirebaseUser;
@@ -187,3 +188,12 @@ export const DreamInterpretationSchema = z.object({
     reflectiveQuestion: z.string(),
 });
 export type DreamInterpretation = z.infer<typeof DreamInterpretationSchema>;
+
+// Type for the full document stored in Firestore
+export type DreamInterpretationDoc = {
+  id: string;
+  userId: string;
+  dreamDescription: string;
+  interpretation: DreamInterpretation;
+  createdAt: admin.firestore.FieldValue | string; // serverTimestamp on write, string on read
+};

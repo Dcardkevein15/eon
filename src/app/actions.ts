@@ -6,17 +6,21 @@ import { z } from 'zod';
 import { smartComposeMessage } from '@/ai/flows/smart-compose-message';
 import { getInitialPrompts } from '@/ai/flows/initial-prompt-suggestion';
 import { generateChatTitle as genTitle } from '@/ai/flows/generate-chat-title';
-import { collection, getDocs, doc, getDoc, query, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, query, orderBy, limit, Timestamp, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { SUGGESTIONS_FALLBACK } from '@/lib/suggestions-fallback';
 import { generateBreakdownExercise as genExercise } from '@/ai/flows/generate-breakdown-exercise';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
-import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, ProfileData, PromptSuggestion, GetTacticalAdviceInput, AnalyzeSentimentInput, ClassifyIntentInput, InterpretDreamInput, DreamInterpretation } from '@/lib/types';
+import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, ProfileData, PromptSuggestion, GetTacticalAdviceInput, AnalyzeSentimentInput, ClassifyIntentInput, InterpretDreamInput, DreamInterpretation, DreamInterpretationDoc } from '@/lib/types';
 import { getTacticalAdvice } from '@/ai/flows/get-tactical-advice';
 import { analyzeSentiment } from '@/ai/flows/analyze-sentiment';
 import { classifyIntent } from '@/ai/flows/classify-intent';
 import { interpretDream } from '@/ai/flows/interpret-dream';
+import { getAdminApp } from '@/lib/firebase-admin';
+import { getAuth as getAdminAuth } from 'firebase-admin/auth';
+import * as admin from 'firebase-admin';
+
 
 const expertRoles = [
     'El Validador Empático', 'El Experto en Terapia Cognitivo-Conductual (TCC)', 
@@ -218,12 +222,142 @@ export async function classifyIntentAction(input: ClassifyIntentInput): Promise<
 
 
 // --- Acciones para el Portal de Sueños ---
-export async function interpretDreamAction(input: InterpretDreamInput): Promise<DreamInterpretation> {
-  try {
-    const result = await interpretDream(input);
-    return result;
-  } catch (error) {
-    console.error('Error interpreting dream:', error);
-    throw new Error('No se pudo interpretar el sueño. Inténtalo de nuevo.');
+
+/**
+ * Helper function to verify the user's auth token and get their UID.
+ */
+async function getCurrentUserId(authToken?: string): Promise<string> {
+  if (!authToken) {
+    throw new Error('No se proporcionó token de autenticación.');
   }
+  const adminApp = getAdminApp();
+  if (!adminApp) {
+    throw new Error('La configuración del servidor es incorrecta.');
+  }
+  
+  try {
+    const decodedToken = await getAdminAuth(adminApp).verifyIdToken(authToken);
+    return decodedToken.uid;
+  } catch (error) {
+    console.error('Error verifying auth token:', error);
+    throw new Error('El token de autenticación no es válido.');
+  }
+}
+
+export async function interpretDreamAction(input: InterpretDreamInput, authToken?: string): Promise<DreamInterpretationDoc> {
+  const adminApp = getAdminApp();
+  if (!adminApp) {
+    throw new Error('La configuración del servidor es incorrecta.');
+  }
+
+  try {
+    const userId = await getCurrentUserId(authToken);
+    const interpretation = await interpretDream(input);
+    
+    const dreamDoc: Omit<DreamInterpretationDoc, 'id'> = {
+      userId,
+      dreamDescription: input.dreamDescription,
+      interpretation,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+    
+    const docRef = await admin.firestore(adminApp).collection('dreams').add(dreamDoc);
+    
+    return { ...dreamDoc, id: docRef.id };
+  } catch (error) {
+    console.error('Error interpreting and saving dream:', error);
+    throw new Error('No se pudo interpretar y guardar el sueño. Inténtalo de nuevo.');
+  }
+}
+
+export async function getDreamHistoryAction(authToken?: string): Promise<DreamInterpretationDoc[]> {
+  const adminApp = getAdminApp();
+  if (!adminApp) {
+    throw new Error('La configuración del servidor es incorrecta.');
+  }
+  try {
+    const userId = await getCurrentUserId(authToken);
+    const snapshot = await admin.firestore(adminApp)
+      .collection('dreams')
+      .where('userId', '==', userId)
+      .orderBy('createdAt', 'desc')
+      .limit(50)
+      .get();
+      
+    if (snapshot.empty) {
+      return [];
+    }
+    
+    return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            ...data,
+            // Convert Firestore Timestamp to a serializable format (ISO string)
+            createdAt: (data.createdAt as admin.firestore.Timestamp).toDate().toISOString(),
+        } as DreamInterpretationDoc;
+    });
+
+  } catch (error) {
+    console.error('Error fetching dream history:', error);
+    throw new Error('No se pudo cargar el historial de sueños.');
+  }
+}
+
+export async function getDreamAction(id: string, authToken?: string): Promise<DreamInterpretationDoc | null> {
+    const adminApp = getAdminApp();
+    if (!adminApp) {
+        throw new Error('La configuración del servidor es incorrecta.');
+    }
+    try {
+        const userId = await getCurrentUserId(authToken);
+        const docRef = admin.firestore(adminApp).collection('dreams').doc(id);
+        const docSnap = await docRef.get();
+
+        if (!docSnap.exists) {
+            return null;
+        }
+
+        const dreamData = docSnap.data() as DreamInterpretationDoc;
+
+        // Security check: ensure the dream belongs to the user making the request
+        if (dreamData.userId !== userId) {
+            throw new Error('Permiso denegado.');
+        }
+        
+        return {
+            ...dreamData,
+            id: docSnap.id,
+            createdAt: (dreamData.createdAt as admin.firestore.Timestamp).toDate().toISOString(),
+        };
+    } catch (error) {
+        console.error(`Error fetching dream ${id}:`, error);
+        throw new Error('No se pudo cargar el sueño.');
+    }
+}
+
+export async function deleteDreamAction(id: string, authToken?: string): Promise<{ success: boolean }> {
+    const adminApp = getAdminApp();
+    if (!adminApp) {
+        throw new Error('La configuración del servidor es incorrecta.');
+    }
+    try {
+        const userId = await getCurrentUserId(authToken);
+        const docRef = admin.firestore(adminApp).collection('dreams').doc(id);
+        const docSnap = await docRef.get();
+
+        if (docSnap.exists) {
+            const dreamData = docSnap.data();
+            if (dreamData?.userId === userId) {
+                await docRef.delete();
+                return { success: true };
+            } else {
+                throw new Error('Permiso denegado.');
+            }
+        }
+        return { success: true }; // It's already gone, so success.
+    } catch (error) {
+        console.error(`Error deleting dream ${id}:`, error);
+        throw new Error('No se pudo eliminar el sueño.');
+    }
 }
