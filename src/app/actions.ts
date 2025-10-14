@@ -270,10 +270,6 @@ export async function classifyIntentAction(input: ClassifyIntentInput): Promise<
 
 export async function interpretDreamAction(input: InterpretDreamInput, authToken?: string): Promise<DreamInterpretationDoc> {
   const adminApp = getAdminApp();
-  if (!adminApp) {
-    throw new Error('La configuración del servidor es incorrecta.');
-  }
-
   const { getFirestore, FieldValue } = await import('firebase-admin/firestore');
 
   try {
@@ -300,9 +296,6 @@ export async function interpretDreamAction(input: InterpretDreamInput, authToken
 
 export async function getDreamHistoryAction(authToken?: string): Promise<DreamInterpretationDoc[]> {
   const adminApp = getAdminApp();
-  if (!adminApp) {
-    throw new Error('La configuración del servidor es incorrecta.');
-  }
   const { getFirestore } = await import('firebase-admin/firestore');
   try {
     const userId = await getCurrentUserId(authToken);
@@ -335,9 +328,6 @@ export async function getDreamHistoryAction(authToken?: string): Promise<DreamIn
 
 export async function getDreamAction(id: string, authToken?: string): Promise<DreamInterpretationDoc | null> {
     const adminApp = getAdminApp();
-    if (!adminApp) {
-        throw new Error('La configuración del servidor es incorrecta.');
-    }
     const { getFirestore } = await import('firebase-admin/firestore');
     try {
         const userId = await getCurrentUserId(authToken);
@@ -368,9 +358,6 @@ export async function getDreamAction(id: string, authToken?: string): Promise<Dr
 
 export async function deleteDreamAction(id: string, authToken?: string): Promise<{ success: boolean }> {
     const adminApp = getAdminApp();
-    if (!adminApp) {
-        throw new Error('La configuración del servidor es incorrecta.');
-    }
     const { getFirestore } = await import('firebase-admin/firestore');
     try {
         const userId = await getCurrentUserId(authToken);
