@@ -143,7 +143,7 @@ export const SymbolAnalysisSchema = z.object({
     icon: z.string().describe('Un solo emoji que represente visualmente el símbolo.')
 });
 
-export const DreamInterpretationSchema = z.object({
+export const DreamInterpretationContentSchema = z.object({
     dreamTitle: z.string().describe('Un título poético y evocador para el sueño, de 4 a 6 palabras.'),
     dominantFeeling: z.string().describe('La emoción principal o atmósfera que prevalece en el sueño (ej. "Ansiedad y confusión", "Liberación y alegría").'),
     coreArchetype: z.string().describe('El arquetipo junguiano principal que parece estar activo en este sueño (ej. "La Sombra", "El Héroe", "El Trickster").'),
@@ -152,7 +152,15 @@ export const DreamInterpretationSchema = z.object({
     reflectiveQuestion: z.string().describe('Una pregunta final, poderosa y abierta, diseñada para que el usuario reflexione sobre la conexión entre el sueño y su vida.'),
 });
 
-export type DreamInterpretation = z.infer<typeof DreamInterpretationSchema>;
+export const DreamInterpretationSchema = z.object({
+  userId: z.string(),
+  dreamDescription: z.string(),
+  interpretation: DreamInterpretationContentSchema,
+  createdAt: z.instanceof(Timestamp),
+});
+
+
+export type DreamInterpretation = z.infer<typeof DreamInterpretationContentSchema>;
 export type SymbolAnalysis = z.infer<typeof SymbolAnalysisSchema>;
 
 export type DreamInterpretationDoc = {

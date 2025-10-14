@@ -5,7 +5,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { DreamInterpretationInputSchema, DreamInterpretationSchema, type InterpretDreamInput, type DreamInterpretation } from '@/lib/types';
+import { DreamInterpretationInputSchema, DreamInterpretationContentSchema, type InterpretDreamInput, type DreamInterpretation } from '@/lib/types';
 
 export async function interpretDream(input: InterpretDreamInput): Promise<DreamInterpretation> {
   return interpretDreamFlow(input);
@@ -14,7 +14,7 @@ export async function interpretDream(input: InterpretDreamInput): Promise<DreamI
 const prompt = ai.definePrompt({
     name: 'interpretDreamPrompt',
     input: { schema: DreamInterpretationInputSchema },
-    output: { schema: DreamInterpretationSchema },
+    output: { schema: DreamInterpretationContentSchema },
     prompt: `Eres un experto analista de sueños junguiano con un profundo conocimiento de la psicología arquetípica. Tu tarea es analizar la descripción de un sueño proporcionada por un usuario y ofrecer una interpretación rica y perspicaz, conectándola de manera explícita con su perfil psicológico.
 
 **Contexto del Usuario (Perfil Psicológico):**
@@ -44,7 +44,7 @@ const interpretDreamFlow = ai.defineFlow(
   {
     name: 'interpretDreamFlow',
     inputSchema: DreamInterpretationInputSchema,
-    outputSchema: DreamInterpretationSchema,
+    outputSchema: DreamInterpretationContentSchema,
   },
   async (input) => {
     const { output } = await prompt(input);

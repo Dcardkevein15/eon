@@ -251,24 +251,28 @@
         "userId": { "type": "string" },
         "dreamDescription": { "type": "string" },
         "interpretation": {
-          "type": "object",
-          "properties": {
-             "dreamTitle": { "type": "string" },
-             "dominantFeeling": { "type": "string" },
-             "coreArchetype": { "type": "string" },
-             "symbolAnalysis": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/entities/symbolAnalysis"
-                }
-             },
-             "narrativeInterpretation": { "type": "string" },
-             "reflectiveQuestion": { "type": "string" }
-          }
+          "$ref": "#/entities/dreamInterpretationContent"
         },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "dreamDescription", "interpretation", "createdAt"]
+    },
+    "dreamInterpretationContent": {
+        "title": "Dream Interpretation Content",
+        "type": "object",
+        "properties": {
+            "dreamTitle": { "type": "string" },
+            "dominantFeeling": { "type": "string" },
+            "coreArchetype": { "type": "string" },
+            "symbolAnalysis": {
+                "type": "array",
+                "items": {
+                    "$ref": "#/entities/symbolAnalysis"
+                }
+            },
+            "narrativeInterpretation": { "type": "string" },
+            "reflectiveQuestion": { "type": "string" }
+        }
     },
     "symbolAnalysis": {
         "title": "Symbol Analysis",

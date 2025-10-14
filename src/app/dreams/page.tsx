@@ -9,7 +9,7 @@ import { collection, addDoc, serverTimestamp, query, orderBy, deleteDoc, doc } f
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ChevronLeft, Loader2, Wand2, Info, BookOpen, Trash2, RefreshCcw } from 'lucide-react';
+import { ChevronLeft, Loader2, Wand2, Info, BookOpen, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Sidebar, SidebarProvider, SidebarInset, SidebarContent, SidebarHeader } from '@/components/ui/sidebar';
