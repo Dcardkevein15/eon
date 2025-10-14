@@ -11,6 +11,7 @@ import { ChevronLeft, Loader2, Sparkles, BrainCircuit } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
+import Link from 'next/link';
 
 const SymbolCard = ({ symbol, personalMeaning, universalMeaning, icon, delay }: { symbol: string; personalMeaning: string; universalMeaning: string; icon: string, delay: number }) => {
   const [isFlipped, setIsFlipped] = useState(false);
