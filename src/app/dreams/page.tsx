@@ -5,14 +5,13 @@ import { useRouter } from 'next/navigation';
 import { useAuth, useCollection, useFirestore } from '@/firebase';
 import type { CachedProfile, ProfileData, DreamInterpretationDoc } from '@/lib/types';
 import { interpretDreamAction } from '@/app/actions';
-import { collection, addDoc, serverTimestamp, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ChevronLeft, Loader2, Wand2, Info, BookOpen, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import { Sidebar, SidebarProvider, SidebarInset, SidebarContent, SidebarHeader } from '@/components/ui/sidebar';
+import { Sidebar, SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import ChatSidebar from '@/components/chat/chat-sidebar';
 import type { Chat } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -31,15 +30,47 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { v4 as uuidv4 } from 'uuid';
+import { collection, query, orderBy } from 'firebase/firestore';
 
-function DreamHistorySidebar({ dreams, isLoading, onSelectDream, onDeleteDream }: { dreams: DreamInterpretationDoc[], isLoading: boolean, onSelectDream: (id: string) => void, onDeleteDream: (id: string) => Promise<void> }) {
-  
-  const getFormattedDate = (timestamp: any) => {
-    if (!timestamp) return 'Fecha desconocida';
+
+// Custom hook for managing state in localStorage
+function useLocalStorage<T>(key: string, initialValue: T) {
+  const [storedValue, setStoredValue] = useState<T>(() => {
+    if (typeof window === 'undefined') {
+      return initialValue;
+    }
     try {
-      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      const item = window.localStorage.getItem(key);
+      return item ? JSON.parse(item) : initialValue;
+    } catch (error) {
+      console.log(error);
+      return initialValue;
+    }
+  });
+
+  const setValue = (value: T | ((val: T) => T)) => {
+    try {
+      const valueToStore = value instanceof Function ? value(storedValue) : value;
+      setStoredValue(valueToStore);
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(key, JSON.stringify(valueToStore));
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  return [storedValue, setValue] as const;
+}
+
+
+function DreamHistorySidebar({ dreams, isLoading, onSelectDream, onDeleteDream }: { dreams: DreamInterpretationDoc[], isLoading: boolean, onSelectDream: (id: string) => void, onDeleteDream: (id: string) => void }) {
+  
+  const getFormattedDate = (dateString: string | Date) => {
+    if (!dateString) return 'Fecha desconocida';
+    try {
+      const date = new Date(dateString);
       return formatDistanceToNow(date, { addSuffix: true, locale: es });
     } catch {
       return 'Fecha inválida';
@@ -69,7 +100,7 @@ function DreamHistorySidebar({ dreams, isLoading, onSelectDream, onDeleteDream }
             </div>
           ) : (
             <div className="p-2 space-y-2">
-              {dreams.map(dream => (
+              {[...dreams].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(dream => (
                 <div key={dream.id} className="relative group/item">
                     <button onClick={() => onSelectDream(dream.id)} className="w-full text-left">
                         <Card className="bg-slate-800/50 border-slate-700 hover:bg-slate-800 hover:border-sky-500/50 transition-colors">
@@ -111,13 +142,16 @@ function DreamHistorySidebar({ dreams, isLoading, onSelectDream, onDeleteDream }
 export default function DreamWeaverPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const firestore = useFirestore(); // Still needed for chat history
   const { toast } = useToast();
-  const firestore = useFirestore();
 
   const [dream, setDream] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
+
+  // Use localStorage for dream history
+  const [dreamHistory, setDreamHistory] = useLocalStorage<DreamInterpretationDoc[]>('dream-journal', []);
 
   // --- Start Data Fetching for Sidebar (Chat History) ---
   const chatsQuery = useMemo(
@@ -126,14 +160,6 @@ export default function DreamWeaverPage() {
   );
   const { data: chats, loading: chatsLoading } = useCollection<Chat>(chatsQuery);
   // --- End Data Fetching for Sidebar (Chat History) ---
-
-  // --- Start Data Fetching for Dream History ---
-  const dreamsQuery = useMemo(
-    () => (user?.uid && firestore ? query(collection(firestore, `users/${user.uid}/dreams`), orderBy('createdAt', 'desc')) : undefined),
-    [user?.uid, firestore]
-  );
-  const { data: dreamHistory, loading: historyLoading } = useCollection<DreamInterpretationDoc>(dreamsQuery);
-  // --- End Data Fetching for Dream History ---
 
   useEffect(() => {
     if (user) {
@@ -162,10 +188,6 @@ export default function DreamWeaverPage() {
        toast({ variant: 'destructive', title: 'Perfil no encontrado', description: 'Es necesario un perfil psicológico para interpretar el sueño.' });
        return;
     }
-    if (!user || !firestore) {
-       toast({ variant: 'destructive', title: 'Error de autenticación', description: 'Debes iniciar sesión para analizar un sueño.' });
-       return;
-    }
 
     setIsAnalyzing(true);
     try {
@@ -175,60 +197,35 @@ export default function DreamWeaverPage() {
         userProfile: JSON.stringify(profile),
       });
 
-      // 2. Save to Firestore
-      const dreamsCollectionRef = collection(firestore, `users/${user.uid}/dreams`);
-      const dreamDoc = {
-        userId: user.uid,
+      // 2. Save to localStorage
+      const newDreamDoc: DreamInterpretationDoc = {
+        id: uuidv4(),
+        userId: user?.uid || 'local-user',
         dreamDescription: dream,
         interpretation,
-        createdAt: serverTimestamp(),
+        createdAt: new Date().toISOString(),
       };
       
-      const docRef = await addDoc(dreamsCollectionRef, dreamDoc);
+      setDreamHistory(prevDreams => [...prevDreams, newDreamDoc]);
       
       // 3. Redirect to analysis page
-      router.push(`/dreams/analysis?id=${docRef.id}`);
+      router.push(`/dreams/analysis?id=${newDreamDoc.id}`);
 
     } catch (error: any) {
       console.error(error);
-      const isPermissionError = error.code === 'permission-denied';
-
-      if(isPermissionError) {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: `users/${user.uid}/dreams`,
-          operation: 'create',
-          requestResourceData: { dreamDescription: dream },
-        }));
-      }
-
       toast({
         variant: 'destructive',
         title: 'Error en el análisis',
-        description: isPermissionError 
-          ? "No tienes permiso para guardar sueños. Revisa las reglas de seguridad."
-          : error.message || 'No se pudo interpretar el sueño. Por favor, inténtalo de nuevo.',
+        description: error.message || 'No se pudo interpretar el sueño. Por favor, inténtalo de nuevo.',
       });
     } finally {
       setIsAnalyzing(false);
     }
   };
 
-  const handleDeleteDream = async (id: string) => {
-    if (!user || !firestore) return;
-    
-    const dreamDocRef = doc(firestore, `users/${user.uid}/dreams`, id);
-    try {
-        await deleteDoc(dreamDocRef);
-        toast({ title: 'Éxito', description: 'El sueño ha sido eliminado.' });
-    } catch(e: any) {
-        if(e.code === 'permission-denied') {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-                path: dreamDocRef.path,
-                operation: 'delete',
-            }));
-        }
-        toast({ variant: 'destructive', title: 'Error', description: e.message || 'No se pudo eliminar el sueño.' });
-    }
+  const handleDeleteDream = (id: string) => {
+    setDreamHistory(prev => prev.filter(d => d.id !== id));
+    toast({ title: 'Éxito', description: 'El sueño ha sido eliminado de tu diario local.' });
   };
 
 
@@ -240,7 +237,7 @@ export default function DreamWeaverPage() {
         </Sidebar>
         <SidebarInset className="flex overflow-hidden">
             <aside className="w-80 border-r border-slate-800 flex-shrink-0 hidden md:block overflow-y-auto">
-                <DreamHistorySidebar dreams={dreamHistory || []} isLoading={historyLoading} onSelectDream={(id) => router.push(`/dreams/analysis?id=${id}`)} onDeleteDream={handleDeleteDream} />
+                <DreamHistorySidebar dreams={dreamHistory} isLoading={false} onSelectDream={(id) => router.push(`/dreams/analysis?id=${id}`)} onDeleteDream={handleDeleteDream} />
             </aside>
             <main className="flex-1 flex flex-col overflow-y-auto">
                 <div className="sticky top-0 bg-slate-950/80 backdrop-blur-sm border-b border-slate-800 p-4 z-10">

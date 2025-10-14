@@ -1,10 +1,9 @@
 
-import type { User as FirebaseUser } from 'firebase/auth';
 import { Timestamp } from 'firebase/firestore';
 import { z } from 'zod';
 
 
-export type User = FirebaseUser;
+export type User = import('firebase/auth').User;
 
 export type Message = {
   id: string;
@@ -152,23 +151,17 @@ export const DreamInterpretationContentSchema = z.object({
     reflectiveQuestion: z.string().describe('Una pregunta final, poderosa y abierta, diseñada para que el usuario reflexione sobre la conexión entre el sueño y su vida.'),
 });
 
-export const DreamInterpretationSchema = z.object({
-  userId: z.string(),
-  dreamDescription: z.string(),
-  interpretation: DreamInterpretationContentSchema,
-  createdAt: z.instanceof(Timestamp),
-});
-
 
 export type DreamInterpretation = z.infer<typeof DreamInterpretationContentSchema>;
 export type SymbolAnalysis = z.infer<typeof SymbolAnalysisSchema>;
 
+// This type is now for local storage, not Firestore.
 export type DreamInterpretationDoc = {
     id: string;
-    userId: string;
+    userId: string; // Keep for potential future sync, or for multi-user local session
     dreamDescription: string;
     interpretation: DreamInterpretation;
-    createdAt: Timestamp;
+    createdAt: string; // ISO string for easy JSON serialization
 };
 
 

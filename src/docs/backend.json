@@ -242,48 +242,6 @@
         "path": { "type": "string" }
       },
       "required": ["userId", "scenarioId", "scenarioTitle", "createdAt", "path"]
-    },
-    "dreamInterpretation": {
-      "title": "Dream Interpretation",
-      "description": "An AI-generated interpretation of a user's dream, linked to their psychological profile.",
-      "type": "object",
-      "properties": {
-        "userId": { "type": "string" },
-        "dreamDescription": { "type": "string" },
-        "interpretation": {
-          "$ref": "#/entities/dreamInterpretationContent"
-        },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["userId", "dreamDescription", "interpretation", "createdAt"]
-    },
-    "dreamInterpretationContent": {
-        "title": "Dream Interpretation Content",
-        "type": "object",
-        "properties": {
-            "dreamTitle": { "type": "string" },
-            "dominantFeeling": { "type": "string" },
-            "coreArchetype": { "type": "string" },
-            "symbolAnalysis": {
-                "type": "array",
-                "items": {
-                    "$ref": "#/entities/symbolAnalysis"
-                }
-            },
-            "narrativeInterpretation": { "type": "string" },
-            "reflectiveQuestion": { "type": "string" }
-        }
-    },
-    "symbolAnalysis": {
-        "title": "Symbol Analysis",
-        "description": "Analysis of a single symbol within a dream.",
-        "type": "object",
-        "properties": {
-            "symbol": { "type": "string" },
-            "universalMeaning": { "type": "string" },
-            "personalMeaning": { "type": "string" },
-            "icon": { "type": "string" }
-        }
     }
   },
   "auth": {
@@ -355,13 +313,6 @@
         "$ref": "#/entities/message"
       },
       "description": "Individual messages within a simulation session.",
-      "rules": "auth.uid == userId"
-    },
-    "/users/{userId}/dreams/{dreamId}": {
-      "schema": {
-        "$ref": "#/entities/dreamInterpretation"
-      },
-      "description": "Stores a user's saved dream interpretations.",
       "rules": "auth.uid == userId"
     }
   }

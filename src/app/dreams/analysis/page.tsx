@@ -12,10 +12,7 @@ import { motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
-import { useAuth, useFirestore } from '@/firebase';
-import { doc, getDoc } from 'firebase/firestore';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { v4 as uuidv4 } from 'uuid';
 
 const SymbolCard = ({ symbol, personalMeaning, universalMeaning, icon, delay }: { symbol: string; personalMeaning: string; universalMeaning: string; icon: string, delay: number }) => {
   const [isFlipped, setIsFlipped] = useState(false);
@@ -58,8 +55,6 @@ const SymbolCard = ({ symbol, personalMeaning, universalMeaning, icon, delay }: 
 export default function DreamAnalysisPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, loading: authLoading } = useAuth();
-  const firestore = useFirestore();
   const { toast } = useToast();
 
   const [dreamDoc, setDreamDoc] = useState<DreamInterpretationDoc | null>(null);
@@ -68,48 +63,39 @@ export default function DreamAnalysisPage() {
   const dreamId = useMemo(() => searchParams.get('id'), [searchParams]);
 
   useEffect(() => {
-    if (authLoading) return;
-    if (!user || !firestore) {
-        router.push('/dreams');
-        return;
-    }
     if (!dreamId) {
       toast({ variant: "destructive", title: "ID de sueño no encontrado", description: "Vuelve al portal para seleccionar un sueño." });
       router.push('/dreams');
       return;
     }
 
-    const fetchDream = async () => {
-        const dreamDocRef = doc(firestore, `users/${user.uid}/dreams`, dreamId);
-        try {
-            const docSnap = await getDoc(dreamDocRef);
-            if (docSnap.exists()) {
-                setDreamDoc({ id: docSnap.id, ...docSnap.data() } as DreamInterpretationDoc);
-            } else {
-                toast({ variant: "destructive", title: "Análisis no encontrado", description: "No pudimos encontrar este sueño en tu historial." });
-                router.push('/dreams');
-            }
-        } catch (e: any) {
-            if (e.code === 'permission-denied') {
-              errorEmitter.emit('permission-error', new FirestorePermissionError({
-                path: dreamDocRef.path,
-                operation: 'get'
-              }));
-            }
-            toast({ variant: "destructive", title: "Error", description: e.message || "No se pudo cargar el análisis del sueño." });
-            router.push('/dreams');
-        } finally {
-            setLoading(false);
+    try {
+      const storedDreams = localStorage.getItem('dream-journal');
+      if (storedDreams) {
+        const dreams: DreamInterpretationDoc[] = JSON.parse(storedDreams);
+        const foundDream = dreams.find(d => d.id === dreamId);
+        if (foundDream) {
+          setDreamDoc(foundDream);
+        } else {
+          toast({ variant: "destructive", title: "Análisis no encontrado", description: "No pudimos encontrar este sueño en tu diario local." });
+          router.push('/dreams');
         }
-    };
-    
-    fetchDream();
-
-  }, [dreamId, user, authLoading, firestore, router, toast]);
+      } else {
+        toast({ variant: "destructive", title: "Diario de sueños no encontrado", description: "No se encontraron sueños guardados." });
+        router.push('/dreams');
+      }
+    } catch (e) {
+      console.error("Error loading dream from localStorage", e);
+      toast({ variant: "destructive", title: "Error", description: "No se pudo cargar el análisis del sueño desde tu dispositivo." });
+      router.push('/dreams');
+    } finally {
+      setLoading(false);
+    }
+  }, [dreamId, router, toast]);
 
   const analysis = dreamDoc?.interpretation;
 
-  if (loading || authLoading) {
+  if (loading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-slate-950">
         <div className="text-center text-white">
@@ -192,7 +178,7 @@ export default function DreamAnalysisPage() {
                 </motion.h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                     {analysis.symbolAnalysis.map((s, i) => (
-                        <SymbolCard key={i} {...s} delay={i} />
+                        <SymbolCard key={uuidv4()} {...s} delay={i} />
                     ))}
                 </div>
             </div>
