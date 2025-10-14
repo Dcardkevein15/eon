@@ -35,18 +35,21 @@ import { query, collection, orderBy } from 'firebase/firestore';
 
 // Custom hook for managing state in localStorage
 function useLocalStorage<T>(key: string, initialValue: T) {
-  const [storedValue, setStoredValue] = useState<T>(() => {
-    if (typeof window === 'undefined') {
-      return initialValue;
-    }
+  const [storedValue, setStoredValue] = useState<T>(initialValue);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
     try {
       const item = window.localStorage.getItem(key);
-      return item ? JSON.parse(item) : initialValue;
+      if (item) {
+        setStoredValue(JSON.parse(item));
+      }
     } catch (error) {
       console.log(error);
-      return initialValue;
+    } finally {
+        setLoading(false);
     }
-  });
+  }, [key]);
 
   const setValue = (value: T | ((val: T) => T)) => {
     try {
@@ -60,7 +63,7 @@ function useLocalStorage<T>(key: string, initialValue: T) {
     }
   };
 
-  return [storedValue, setValue] as const;
+  return [storedValue, setValue, loading] as const;
 }
 
 
@@ -149,7 +152,7 @@ export default function DreamWeaverPage() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
 
-  const [dreamHistory, setDreamHistory] = useLocalStorage<DreamInterpretationDoc[]>('dream-journal', []);
+  const [dreamHistory, setDreamHistory, isLoadingHistory] = useLocalStorage<DreamInterpretationDoc[]>('dream-journal', []);
 
   const chatsQuery = useMemo(
     () => (user?.uid && firestore ? query(collection(firestore, `users/${user.uid}/chats`), orderBy('createdAt', 'desc')) : undefined),
@@ -229,7 +232,7 @@ export default function DreamWeaverPage() {
         </Sidebar>
         <SidebarInset className="flex overflow-hidden">
             <aside className="w-80 border-r border-slate-800 flex-shrink-0 hidden md:block overflow-y-auto">
-                <DreamHistorySidebar dreams={dreamHistory} isLoading={false} onSelectDream={(id) => router.push(`/dreams/analysis?id=${id}`)} onDeleteDream={handleDeleteDream} />
+                <DreamHistorySidebar dreams={dreamHistory} isLoading={isLoadingHistory} onSelectDream={(id) => router.push(`/dreams/analysis?id=${id}`)} onDeleteDream={handleDeleteDream} />
             </aside>
             <main className="flex-1 flex flex-col overflow-y-auto">
                 <div className="sticky top-0 bg-slate-950/80 backdrop-blur-sm border-b border-slate-800 p-4 z-10">
