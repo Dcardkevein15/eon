@@ -17,9 +17,48 @@ import { getTacticalAdvice } from '@/ai/flows/get-tactical-advice';
 import { analyzeSentiment } from '@/ai/flows/analyze-sentiment';
 import { classifyIntent } from '@/ai/flows/classify-intent';
 import { interpretDream } from '@/ai/flows/interpret-dream';
-import { getAdminApp } from '@/lib/firebase-admin';
-import { getAuth as getAdminAuth } from 'firebase-admin/auth';
 import * as admin from 'firebase-admin';
+import { getAuth as getAdminAuth } from 'firebase-admin/auth';
+
+// --- Firebase Admin Initialization (Server-Side Only) ---
+
+let adminApp: admin.app.App | undefined;
+
+function getAdminApp(): admin.app.App | undefined {
+  if (adminApp) {
+    return adminApp;
+  }
+
+  // This placeholder will be replaced by the actual environment variable value during the build process.
+  // This is the most reliable way to ensure credentials are available in the server-side environment.
+  const serviceAccountBase64 = "{{ env.FIREBASE_SERVICE_ACCOUNT_BASE64 }}";
+
+  if (!serviceAccountBase64) {
+    console.warn(
+      'Firebase service account credentials are not configured. Admin features will be unavailable.'
+    );
+    return undefined;
+  }
+
+  try {
+    const decodedServiceAccount = Buffer.from(serviceAccountBase64, 'base64').toString('utf-8');
+    const serviceAccount = JSON.parse(decodedServiceAccount);
+
+    if (admin.apps.length > 0) {
+      adminApp = admin.app();
+    } else {
+      adminApp = admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+      });
+    }
+    return adminApp;
+  } catch (error: any) {
+    console.error('Error initializing Firebase Admin SDK:', error.message);
+    return undefined;
+  }
+}
+
+// --- End Firebase Admin Initialization ---
 
 
 const expertRoles = [
@@ -263,7 +302,7 @@ export async function interpretDreamAction(input: InterpretDreamInput, authToken
     
     const docRef = await admin.firestore(adminApp).collection('dreams').add(dreamDoc);
     
-    return { ...dreamDoc, id: docRef.id };
+    return { ...dreamDoc, id: docRef.id, createdAt: new Date().toISOString() };
   } catch (error) {
     console.error('Error interpreting and saving dream:', error);
     throw new Error('No se pudo interpretar y guardar el sueño. Inténtalo de nuevo.');
@@ -361,5 +400,3 @@ export async function deleteDreamAction(id: string, authToken?: string): Promise
         throw new Error('No se pudo eliminar el sueño.');
     }
 }
-
-    
