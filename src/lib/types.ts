@@ -195,5 +195,5 @@ export type DreamInterpretationDoc = {
   userId: string;
   dreamDescription: string;
   interpretation: DreamInterpretation;
-  createdAt: admin.firestore.FieldValue | string; // serverTimestamp on write, string on read
+  createdAt: any; // Can be server timestamp or string after serialization
 };
