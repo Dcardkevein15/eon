@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "user": {
@@ -325,7 +326,8 @@
       "schema": {
         "$ref": "#/entities/dreamInterpretation"
       },
-      "description": "Stores a user's saved dream interpretations."
+      "description": "Stores a user's saved dream interpretations.",
+      "rules": "auth.uid == userId"
     }
   }
 }
