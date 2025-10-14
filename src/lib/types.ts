@@ -1,7 +1,6 @@
 import type { User as FirebaseUser } from 'firebase/auth';
 import type { Timestamp } from 'firebase/firestore';
 import { z } from 'zod';
-import type * as admin from 'firebase-admin';
 
 
 export type User = FirebaseUser;
@@ -163,37 +162,3 @@ export const ClassifyIntentOutputSchema = z.object({
   intent: z.string(),
 });
 export type ClassifyIntentOutput = z.infer<typeof ClassifyIntentOutputSchema>;
-
-
-// Schemas for Dream Weaver
-export const InterpretDreamInputSchema = z.object({
-  dreamDescription: z.string(),
-  userProfile: z.string(),
-});
-export type InterpretDreamInput = z.infer<typeof InterpretDreamInputSchema>;
-
-export const SymbolAnalysisSchema = z.object({
-    symbol: z.string(),
-    universalMeaning: z.string(),
-    personalMeaning: z.string(),
-    icon: z.string(),
-});
-
-export const DreamInterpretationSchema = z.object({
-    dreamTitle: z.string(),
-    dominantFeeling: z.string(),
-    coreArchetype: z.string(),
-    symbolAnalysis: z.array(SymbolAnalysisSchema),
-    narrativeInterpretation: z.string(),
-    reflectiveQuestion: z.string(),
-});
-export type DreamInterpretation = z.infer<typeof DreamInterpretationSchema>;
-
-// Type for the full document stored in Firestore
-export type DreamInterpretationDoc = {
-  id: string;
-  userId: string;
-  dreamDescription: string;
-  interpretation: DreamInterpretation;
-  createdAt: string | admin.firestore.Timestamp; // Can be server timestamp or string after serialization
-};

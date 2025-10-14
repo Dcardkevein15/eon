@@ -12,59 +12,10 @@ import { SUGGESTIONS_FALLBACK } from '@/lib/suggestions-fallback';
 import { generateBreakdownExercise as genExercise } from '@/ai/flows/generate-breakdown-exercise';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
-import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, ProfileData, PromptSuggestion, GetTacticalAdviceInput, AnalyzeSentimentInput, ClassifyIntentInput, InterpretDreamInput, DreamInterpretation, DreamInterpretationDoc } from '@/lib/types';
+import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, ProfileData, PromptSuggestion, GetTacticalAdviceInput, AnalyzeSentimentInput, ClassifyIntentInput } from '@/lib/types';
 import { getTacticalAdvice } from '@/ai/flows/get-tactical-advice';
 import { analyzeSentiment } from '@/ai/flows/analyze-sentiment';
 import { classifyIntent } from '@/ai/flows/classify-intent';
-import { interpretDream } from '@/ai/flows/interpret-dream';
-import * as admin from 'firebase-admin';
-import { getAuth as getAdminAuth } from 'firebase-admin/auth';
-
-
-// --- START: Firebase Admin SDK Initialization (Self-contained) ---
-
-// This ensures the SDK is initialized only once.
-function getAdminApp(): admin.app.App {
-  if (admin.apps.length > 0) {
-    return admin.apps[0]!;
-  }
-
-  // This environment variable is securely injected by Firebase App Hosting.
-  const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
-  if (!serviceAccount) {
-    throw new Error('La variable de entorno FIREBASE_SERVICE_ACCOUNT_BASE64 no está configurada.');
-  }
-
-  try {
-    const decodedServiceAccount = Buffer.from(serviceAccount, 'base64').toString('utf-8');
-    const credential = admin.credential.cert(JSON.parse(decodedServiceAccount));
-    
-    return admin.initializeApp({ credential });
-  } catch (error: any) {
-    console.error('Error al inicializar Firebase Admin SDK:', error.message);
-    throw new Error('La configuración del servidor es incorrecta debido a un error de inicialización del SDK de administrador.');
-  }
-}
-
-/**
- * Helper function to verify the user's auth token and get their UID.
- */
-async function getCurrentUserId(authToken?: string): Promise<string> {
-  if (!authToken) {
-    throw new Error('No se proporcionó token de autenticación.');
-  }
-  const adminApp = getAdminApp();
-  
-  try {
-    const decodedToken = await getAdminAuth(adminApp).verifyIdToken(authToken);
-    return decodedToken.uid;
-  } catch (error) {
-    console.error('Error verifying auth token:', error);
-    throw new Error('El token de autenticación no es válido.');
-  }
-}
-
-// --- END: Firebase Admin SDK Initialization ---
 
 
 const expertRoles = [
@@ -75,10 +26,9 @@ const expertRoles = [
     'El Analista de Patrones (Perspectiva a Largo Plazo)', 'El Contador de Historias (Narrador Terapéutico)', 
     'El Especialista en Crisis (Contención Inmediata)', 'El Experto en Psicoeducación (El Profesor)', 
     'El Experto Organizacional (Dinámicas Laborales)', 'El Sexólogo Clínico (Intimidad y Sexualidad)', 
-    'El Neuropsicólogo (El Arquitecto del Cerebro)', 'El Terapeuta de Esquemas (El Arqueólogo de la Infancia)', 
-    'El Especialista en Trauma (El Guía Resiliente)', 'El Experto en Matemáticas Avanzadas', 
-    'El Escritor de Código', 'El Creador de Contenido', 'El Asistente General', 
-    'El Experto en Idiomas'
+    'El Neuropsicólogo (El Arquitecto del Cerebro)', 'El Terapeuta de Esquemas (El Arqueólogo de la Infancia)', ostico, `d'El Especialista en Trauma (El Guía Resiliente)`, 
+    'El Experto en Matemáticas Avanzadas', 'El Escritor de Código', 'El Creador de Contenido', 
+    'El Asistente General', 'El Experto en Idiomas'
 ];
 
 export async function determineAnchorRole(firstMessage: string): Promise<string> {
@@ -262,120 +212,5 @@ export async function classifyIntentAction(input: ClassifyIntentInput): Promise<
     } catch (error) {
         console.error('Error classifying intent:', error);
         return "Análisis no disponible";
-    }
-}
-
-
-// --- Acciones para el Portal de Sueños ---
-
-export async function interpretDreamAction(input: InterpretDreamInput, authToken?: string): Promise<DreamInterpretationDoc> {
-  const adminApp = getAdminApp();
-  const { getFirestore, FieldValue } = await import('firebase-admin/firestore');
-
-  try {
-    const userId = await getCurrentUserId(authToken);
-    const interpretation = await interpretDream(input);
-    
-    const dreamDoc: Omit<DreamInterpretationDoc, 'id' | 'createdAt'> = {
-      userId,
-      dreamDescription: input.dreamDescription,
-      interpretation,
-    };
-    
-    const docRef = await getFirestore(adminApp).collection('dreams').add({
-      ...dreamDoc,
-      createdAt: FieldValue.serverTimestamp(),
-    });
-    
-    return { ...dreamDoc, id: docRef.id, createdAt: new Date().toISOString() };
-  } catch (error) {
-    console.error('Error interpreting and saving dream:', error);
-    throw new Error('No se pudo interpretar y guardar el sueño. Inténtalo de nuevo.');
-  }
-}
-
-export async function getDreamHistoryAction(authToken?: string): Promise<DreamInterpretationDoc[]> {
-  const adminApp = getAdminApp();
-  const { getFirestore } = await import('firebase-admin/firestore');
-  try {
-    const userId = await getCurrentUserId(authToken);
-    const snapshot = await getFirestore(adminApp)
-      .collection('dreams')
-      .where('userId', '==', userId)
-      .orderBy('createdAt', 'desc')
-      .limit(50)
-      .get();
-      
-    if (snapshot.empty) {
-      return [];
-    }
-    
-    return snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-            id: doc.id,
-            ...data,
-            // Convert Firestore Timestamp to a serializable format (ISO string)
-            createdAt: (data.createdAt as admin.firestore.Timestamp).toDate().toISOString(),
-        } as DreamInterpretationDoc;
-    });
-
-  } catch (error) {
-    console.error('Error fetching dream history:', error);
-    throw new Error('No se pudo cargar el historial de sueños.');
-  }
-}
-
-export async function getDreamAction(id: string, authToken?: string): Promise<DreamInterpretationDoc | null> {
-    const adminApp = getAdminApp();
-    const { getFirestore } = await import('firebase-admin/firestore');
-    try {
-        const userId = await getCurrentUserId(authToken);
-        const docRef = getFirestore(adminApp).collection('dreams').doc(id);
-        const docSnap = await docRef.get();
-
-        if (!docSnap.exists) {
-            return null;
-        }
-
-        const dreamData = docSnap.data() as DreamInterpretationDoc;
-
-        // Security check: ensure the dream belongs to the user making the request
-        if (dreamData.userId !== userId) {
-            throw new Error('Permiso denegado.');
-        }
-        
-        return {
-            ...dreamData,
-            id: docSnap.id,
-            createdAt: (dreamData.createdAt as any).toDate().toISOString(),
-        };
-    } catch (error) {
-        console.error(`Error fetching dream ${id}:`, error);
-        throw new Error('No se pudo cargar el sueño.');
-    }
-}
-
-export async function deleteDreamAction(id: string, authToken?: string): Promise<{ success: boolean }> {
-    const adminApp = getAdminApp();
-    const { getFirestore } = await import('firebase-admin/firestore');
-    try {
-        const userId = await getCurrentUserId(authToken);
-        const docRef = getFirestore(adminApp).collection('dreams').doc(id);
-        const docSnap = await docRef.get();
-
-        if (docSnap.exists) {
-            const dreamData = docSnap.data();
-            if (dreamData?.userId === userId) {
-                await docRef.delete();
-                return { success: true };
-            } else {
-                throw new Error('Permiso denegado.');
-            }
-        }
-        return { success: true }; // It's already gone, so success.
-    } catch (error) {
-        console.error(`Error deleting dream ${id}:`, error);
-        throw new Error('No se pudo eliminar el sueño.');
     }
 }
