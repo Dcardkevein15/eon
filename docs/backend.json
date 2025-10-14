@@ -48,6 +48,13 @@
         "path": {
           "type": "string",
           "description": "The path to the chat."
+        },
+        "latestMessageAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "anchorRole": {
+            "type": "string"
         }
       },
       "required": ["title", "createdAt", "userId", "path"]
@@ -249,6 +256,12 @@
              "dreamTitle": { "type": "string" },
              "dominantFeeling": { "type": "string" },
              "coreArchetype": { "type": "string" },
+             "symbolAnalysis": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/entities/symbolAnalysis"
+                }
+             },
              "narrativeInterpretation": { "type": "string" },
              "reflectiveQuestion": { "type": "string" }
           }
@@ -256,6 +269,17 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "dreamDescription", "interpretation", "createdAt"]
+    },
+    "symbolAnalysis": {
+        "title": "Symbol Analysis",
+        "description": "Analysis of a single symbol within a dream.",
+        "type": "object",
+        "properties": {
+            "symbol": { "type": "string" },
+            "universalMeaning": { "type": "string" },
+            "personalMeaning": { "type": "string" },
+            "icon": { "type": "string" }
+        }
     }
   },
   "auth": {
@@ -266,19 +290,22 @@
       "schema": {
         "$ref": "#/entities/user"
       },
-      "description": "User profile information."
+      "description": "User profile information.",
+      "rules": "auth.uid == userId"
     },
     "/users/{userId}/chats/{chatId}": {
       "schema": {
         "$ref": "#/entities/chat"
       },
-      "description": "Chat session metadata for a user."
+      "description": "Chat session metadata for a user.",
+      "rules": "auth.uid == userId"
     },
     "/users/{userId}/chats/{chatId}/messages/{messageId}": {
       "schema": {
         "$ref": "#/entities/message"
       },
-      "description": "Individual messages within a chat session."
+      "description": "Individual messages within a chat session.",
+      "rules": "auth.uid == userId"
     },
     "/promptSuggestions": {
       "schema": {
@@ -296,13 +323,15 @@
         "schema": {
             "$ref": "#/entities/chatbotState"
         },
-        "description": "Stores the evolving internal state and 'consciousness' of the chatbot for a specific user."
+        "description": "Stores the evolving internal state and 'consciousness' of the chatbot for a specific user.",
+        "rules": "auth.uid == userId"
     },
     "/users/{userId}/profile/main": {
         "schema": {
             "$ref": "#/entities/userProfile"
         },
-        "description": "Stores the main, comprehensive AI-generated psychological profile for a user."
+        "description": "Stores the main, comprehensive AI-generated psychological profile for a user.",
+        "rules": "auth.uid == userId"
     },
     "/simulationScenarios": {
       "schema": {
@@ -314,13 +343,15 @@
       "schema": {
         "$ref": "#/entities/simulationSession"
       },
-      "description": "Metadata for a user's simulation session."
+      "description": "Metadata for a user's simulation session.",
+      "rules": "auth.uid == userId"
     },
     "/users/{userId}/gymSessions/{sessionId}/messages/{messageId}": {
       "schema": {
         "$ref": "#/entities/message"
       },
-      "description": "Individual messages within a simulation session."
+      "description": "Individual messages within a simulation session.",
+      "rules": "auth.uid == userId"
     },
     "/users/{userId}/dreams/{dreamId}": {
       "schema": {
@@ -331,3 +362,5 @@
     }
   }
 }
+
+    
