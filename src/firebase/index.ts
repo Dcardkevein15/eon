@@ -21,9 +21,6 @@ export function useCollection<T>(query: Query | undefined) {
   const [error, setError] = useState<Error | null>(null);
   
   const queryMemo = useMemoCompare(query, (prev, next) => {
-    // Firestore queries are complex objects. `isEqual` is the official way but is causing issues.
-    // A pragmatic approach for many cases is to compare the query's internal path and constraints.
-    // This is not foolproof for all possible queries, but robust for common cases like the one in this app.
     return (
       prev &&
       next &&
