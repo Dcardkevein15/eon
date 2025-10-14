@@ -2,8 +2,7 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth, useCollection, useFirestore } from '@/firebase';
-import type { CachedProfile, ProfileData, DreamInterpretationDoc } from '@/lib/types';
+import type { CachedProfile, ProfileData, DreamInterpretationDoc, Chat } from '@/lib/types';
 import { interpretDreamAction } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,7 +12,6 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Sidebar, SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import ChatSidebar from '@/components/chat/chat-sidebar';
-import type { Chat } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
@@ -31,7 +29,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { v4 as uuidv4 } from 'uuid';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { useAuth, useFirestore, useCollection } from '@/firebase';
+import { query, collection, orderBy } from 'firebase/firestore';
 
 
 // Custom hook for managing state in localStorage
@@ -142,7 +141,7 @@ function DreamHistorySidebar({ dreams, isLoading, onSelectDream, onDeleteDream }
 export default function DreamWeaverPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const firestore = useFirestore(); // Still needed for chat history
+  const firestore = useFirestore();
   const { toast } = useToast();
 
   const [dream, setDream] = useState('');
@@ -150,16 +149,13 @@ export default function DreamWeaverPage() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
 
-  // Use localStorage for dream history
   const [dreamHistory, setDreamHistory] = useLocalStorage<DreamInterpretationDoc[]>('dream-journal', []);
 
-  // --- Start Data Fetching for Sidebar (Chat History) ---
   const chatsQuery = useMemo(
     () => (user?.uid && firestore ? query(collection(firestore, `users/${user.uid}/chats`), orderBy('createdAt', 'desc')) : undefined),
     [user?.uid, firestore]
   );
   const { data: chats, loading: chatsLoading } = useCollection<Chat>(chatsQuery);
-  // --- End Data Fetching for Sidebar (Chat History) ---
 
   useEffect(() => {
     if (user) {
@@ -191,13 +187,11 @@ export default function DreamWeaverPage() {
 
     setIsAnalyzing(true);
     try {
-      // 1. Get AI Interpretation
       const interpretation = await interpretDreamAction({
         dreamDescription: dream,
         userProfile: JSON.stringify(profile),
       });
 
-      // 2. Save to localStorage
       const newDreamDoc: DreamInterpretationDoc = {
         id: uuidv4(),
         userId: user?.uid || 'local-user',
@@ -208,7 +202,6 @@ export default function DreamWeaverPage() {
       
       setDreamHistory(prevDreams => [...prevDreams, newDreamDoc]);
       
-      // 3. Redirect to analysis page
       router.push(`/dreams/analysis?id=${newDreamDoc.id}`);
 
     } catch (error: any) {
@@ -218,7 +211,6 @@ export default function DreamWeaverPage() {
         title: 'Error en el análisis',
         description: error.message || 'No se pudo interpretar el sueño. Por favor, inténtalo de nuevo.',
       });
-    } finally {
       setIsAnalyzing(false);
     }
   };
