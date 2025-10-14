@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Plus, Trash2, History, Briefcase, UserCircle, Dumbbell } from 'lucide-react';
+import { Plus, Trash2, History, Briefcase, UserCircle, Dumbbell, Moon } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -92,6 +92,12 @@ function ChatSidebar({
           </Button>
           {user && (
             <>
+              <Button asChild variant="secondary" className="w-full justify-center">
+                <Link href="/dreams">
+                  <Moon className="mr-2 h-4 w-4" />
+                  Portal de Sueños
+                </Link>
+              </Button>
               <Button asChild variant="secondary" className="w-full justify-center">
                 <Link href="/gym">
                   <Dumbbell className="mr-2 h-4 w-4" />

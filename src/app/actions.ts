@@ -12,10 +12,11 @@ import { SUGGESTIONS_FALLBACK } from '@/lib/suggestions-fallback';
 import { generateBreakdownExercise as genExercise } from '@/ai/flows/generate-breakdown-exercise';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
-import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, ProfileData, PromptSuggestion, GetTacticalAdviceInput, AnalyzeSentimentInput, ClassifyIntentInput } from '@/lib/types';
+import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, ProfileData, PromptSuggestion, GetTacticalAdviceInput, AnalyzeSentimentInput, ClassifyIntentInput, InterpretDreamInput, DreamInterpretation } from '@/lib/types';
 import { getTacticalAdvice } from '@/ai/flows/get-tactical-advice';
 import { analyzeSentiment } from '@/ai/flows/analyze-sentiment';
 import { classifyIntent } from '@/ai/flows/classify-intent';
+import { interpretDream } from '@/ai/flows/interpret-dream';
 
 const expertRoles = [
     'El Validador Empático', 'El Experto en Terapia Cognitivo-Conductual (TCC)', 
@@ -213,4 +214,16 @@ export async function classifyIntentAction(input: ClassifyIntentInput): Promise<
         console.error('Error classifying intent:', error);
         return "Análisis no disponible";
     }
+}
+
+
+// --- Acciones para el Portal de Sueños ---
+export async function interpretDreamAction(input: InterpretDreamInput): Promise<DreamInterpretation> {
+  try {
+    const result = await interpretDream(input);
+    return result;
+  } catch (error) {
+    console.error('Error interpreting dream:', error);
+    throw new Error('No se pudo interpretar el sueño. Inténtalo de nuevo.');
+  }
 }
