@@ -1,14 +1,8 @@
 # Settings to manage and configure a Firebase App Hosting backend.
 # https://firebase.google.com/docs/app-hosting/configure
-
+runConfig:
+  timeoutSeconds: 120
+  maxInstances: 1
 build:
   - name: fetch
     repo: ''
-
-runConfig:
-  # Increase this value if you'd like to automatically spin up
-  # more instances in response to increased traffic.
-  maxInstances: 1
-  # Set the timeout for server-side functions to 120 seconds (2 minutes)
-  # to allow for long-running AI operations.
-  timeoutSeconds: 120
