@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import Cardiometer from './cardiometer';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { AnimatePresence, motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 const formSchema = z.object({
   message: z.string().min(1, "El mensaje no puede estar vacío."),
@@ -32,6 +33,7 @@ const SimulationControls = ({
   sentimentHistory,
 }: SimulationControlsProps) => {
   const [showSuggestions, setShowSuggestions] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -51,6 +53,12 @@ const SimulationControls = ({
     onSendMessage(suggestion);
     form.reset();
   };
+
+  const handleRefreshClick = async () => {
+    setIsRefreshing(true);
+    await onRefreshSuggestions();
+    setIsRefreshing(false);
+  }
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {
@@ -81,8 +89,8 @@ const SimulationControls = ({
                 <div className="flex items-center gap-1">
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full" onClick={onRefreshSuggestions}>
-                          <RefreshCw className="h-3 w-3" />
+                        <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full" onClick={handleRefreshClick} disabled={isRefreshing}>
+                          <RefreshCw className={cn("h-3 w-3", isRefreshing && "animate-spin")} />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent><p>Generar nuevas sugerencias</p></TooltipContent>
