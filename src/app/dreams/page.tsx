@@ -231,7 +231,7 @@ export default function DreamWeaverPage() {
           <ChatSidebar chats={chats || []} activeChatId={''} isLoading={chatsLoading} removeChat={() => {}} clearChats={() => {}} />
         </Sidebar>
         <SidebarInset className="flex overflow-hidden">
-            <aside className="w-80 border-r border-sidebar-border flex-shrink-0 hidden md:block overflow-y-auto">
+            <aside className="w-80 border-r border-sidebar-border flex-shrink-0 overflow-y-auto">
                 <DreamHistorySidebar dreams={dreamHistory} isLoading={isLoadingHistory} onSelectDream={(id) => router.push(`/dreams/analysis?id=${id}`)} onDeleteDream={handleDeleteDream} />
             </aside>
             <main className="flex-1 flex flex-col overflow-y-auto">
