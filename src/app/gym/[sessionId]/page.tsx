@@ -125,6 +125,16 @@ function SimulationPage() {
       if (lastMessage.role === 'assistant') {
         fetchTacticalAdvice(messages);
       }
+
+      // Re-calculate sentiment history on initial load
+      const calculateInitialSentiment = async () => {
+        const userMessages = messages.filter(m => m.role === 'user');
+        const sentimentPromises = userMessages.map(m => analyzeSentimentAction({ text: m.content }));
+        const sentiments = await Promise.all(sentimentPromises);
+        setSentimentHistory(sentiments.map(s => s.sentiment));
+      };
+
+      calculateInitialSentiment();
     }
   }, [messages, fetchTacticalAdvice]);
 
