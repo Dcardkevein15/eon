@@ -88,5 +88,3 @@ function ChatMessage({ message, intent, isLastUserMessage, isAnalyzing, isStream
 }
 
 export default memo(ChatMessage);
-
-    
