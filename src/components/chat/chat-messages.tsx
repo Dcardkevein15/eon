@@ -45,6 +45,7 @@ const ThinkingIndicator = () => {
                 text: shuffledConcepts[i % shuffledConcepts.length]
             }));
             setNodes(newNodes);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [numNodes, width, height]);
 
         return nodes;
@@ -85,7 +86,7 @@ const ThinkingIndicator = () => {
                     <Sparkles className="h-5 w-5" />
                 </AvatarFallback>
             </Avatar>
-            <div className="px-4 py-3 rounded-2xl max-w-xs sm:max-w-md md:max-w-lg bg-card border rounded-bl-none flex items-center justify-center" style={{ height: `${height}px`, width: `${width}px`}}>
+            <div className="px-4 py-3 rounded-2xl max-w-xs sm:max-w-md md:max-w-lg bg-card border rounded-bl-none flex items-center justify-center h-48">
                 <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`}>
                     {/* Acto 2: Exploración de rutas */}
                      <g>
@@ -114,8 +115,8 @@ const ThinkingIndicator = () => {
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ duration: 0.5, delay: i * 0.1 }}
                             >
-                                <circle cx={node.x} cy={node.y} r="5" fill="hsl(var(--primary))" />
-                                <text x={node.x} y={node.y} dy="-10" textAnchor="middle" fontSize="8" fill="hsl(var(--muted-foreground))">
+                                <circle cx={node.x} cy={node.y} r="6" fill="hsl(var(--primary))" />
+                                <text x={node.x} y={node.y} dy="-12" textAnchor="middle" fontSize="10" fill="hsl(var(--muted-foreground))">
                                     {node.text}
                                 </text>
                             </motion.g>
@@ -132,7 +133,7 @@ const ThinkingIndicator = () => {
                                 x2={link.target.x}
                                 y2={link.target.y}
                                 stroke="hsl(var(--accent))"
-                                strokeWidth="1.5"
+                                strokeWidth="2"
                                 initial={{ pathLength: 0, opacity: 0 }}
                                 animate={{ pathLength: 1, opacity: 1 }}
                                 transition={{ duration: 0.4, delay: 2.5 + i * 0.2, ease: "easeInOut" }}
