@@ -251,18 +251,17 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
                         <motion.div
                             key={card.id}
                             className="absolute"
+                            style={{ zIndex: card.id === selectedId ? 20 : (selectedId === null && index === 1 ? 10 : 0) }}
                             initial={{
                                 x: (index - 1) * (xOffset * 0.8),
                                 scale: index === 1 ? 1 : 0.9,
                                 rotateY: index === 0 ? 15 : index === 2 ? -15 : 0,
-                                zIndex: index === 1 ? 10 : 0
                             }}
                             animate={{
                                 x: selectedId === null ? (index - 1) * xOffset : (index - 1) * xAnimate,
                                 scale: selectedId === null ? (index === 1 ? 1 : 0.9) : (card.id === selectedId ? 1 : 0.8),
                                 opacity: selectedId === null ? 1 : (card.id === selectedId ? 0 : 0.5),
                                 rotateY: selectedId === null ? (index === 0 ? 15 : index === 2 ? -15 : 0) : 0,
-                                zIndex: card.id === selectedId ? 20 : (selectedId === null && index === 1 ? 10 : 0)
                             }}
                             transition={{ type: 'spring', stiffness: 200, damping: 25 }}
                         >
