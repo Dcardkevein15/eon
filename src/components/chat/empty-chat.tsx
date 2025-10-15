@@ -6,6 +6,8 @@ import { AppLogo } from '@/components/logo';
 import ChatInput from './chat-input';
 import { getSuggestions } from '@/app/actions';
 import type { Message, PromptSuggestion } from '@/lib/types';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useTypingEffect } from '@/hooks/use-typing-effect';
 import {
   HeartHandshake,
   MessageCircleHeart,
@@ -21,7 +23,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { SidebarTrigger } from '../ui/sidebar';
 import { Timestamp } from 'firebase/firestore';
-import { v4 as uuidv4 } from 'uuid';
+import { cn } from '@/lib/utils';
 
 
 interface EmptyChatProps {
@@ -43,6 +45,103 @@ const getIconForCategory = (category: string) => {
   return categoryIcons[category.toLowerCase()] || categoryIcons.default;
 };
 
+const featureCards = [
+    {
+        id: 1,
+        title: 'Espacio de Desahogo',
+        Icon: HeartHandshake,
+        description: 'Un lugar seguro y confidencial para expresar tus emociones y pensamientos sin juicios, disponible 24/7.',
+        detailedDescription: 'Encuentra un refugio digital donde cada palabra es bienvenida. Nuestro sistema está diseñado para escuchar sin prejuicios, permitiéndote explorar tus sentimientos más profundos con total libertad y confidencialidad. Es tu espacio para ser vulnerable.'
+    },
+    {
+        id: 2,
+        title: 'Orientación Profesional',
+        Icon: Stethoscope,
+        description: 'Recibe análisis preliminares y recomendaciones basadas en principios psicológicos sólidos.',
+        detailedDescription: 'Nuestra IA, entrenada con extensos conocimientos de psicología, identifica patrones y te ofrece perspectivas basadas en evidencia. No es un diagnóstico, sino una poderosa herramienta de autoconocimiento para entender mejor el "porqué" de tus sentimientos.'
+    },
+    {
+        id: 3,
+        title: 'Respuestas Empáticas',
+        Icon: MessageCircleHeart,
+        description: 'Conversa con una IA entrenada para un trato comprensivo, cálido y profesional.',
+        detailedDescription: 'Más allá de los datos, hemos enseñado a Nimbus a comprender el matiz emocional. Espera respuestas que validen tu experiencia, te hagan sentir comprendido y te guíen con la calidez y el respeto que mereces en tu viaje interior.'
+    },
+];
+
+const TriptychCard = ({ card, isSelected, onSelect }: { card: typeof featureCards[0], isSelected: boolean, onSelect: (id: number) => void }) => {
+  return (
+     <motion.div
+      layoutId={`card-container-${card.id}`}
+      onClick={() => onSelect(card.id)}
+      className={cn(
+        "absolute w-64 h-48 md:w-80 md:h-56 rounded-2xl cursor-pointer shadow-2xl shadow-primary/10 border border-border/30",
+         isSelected && "pointer-events-none"
+      )}
+       style={{
+          transformOrigin: 'bottom center',
+       }}
+       initial={false}
+       animate={isSelected ? {
+           opacity: 0,
+           transition: { duration: 0.3, delay: 0.1 }
+       } : {}}
+    >
+        <Card className="w-full h-full bg-card/70 backdrop-blur-sm hover:border-primary/50 transition-colors duration-300">
+            <CardHeader className="items-center text-center p-4">
+                <motion.div layoutId={`card-icon-${card.id}`}>
+                    <card.Icon className="w-8 h-8 text-accent" />
+                </motion.div>
+                <CardTitle>
+                    <motion.span layoutId={`card-title-${card.id}`} className="text-lg">
+                        {card.title}
+                    </motion.span>
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="text-center text-sm text-muted-foreground p-4 pt-0">
+                {card.description}
+            </CardContent>
+        </Card>
+    </motion.div>
+  )
+}
+
+const ExpandedCard = ({ card, onDeselect }: { card: typeof featureCards[0], onDeselect: () => void }) => {
+    const displayText = useTypingEffect(card.detailedDescription, 50);
+
+    return (
+        <motion.div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-lg"
+          onClick={onDeselect}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
+            <motion.div 
+                className="w-[90vw] max-w-lg h-auto rounded-2xl shadow-2xl shadow-primary/20 border border-primary/30 overflow-hidden" 
+                layoutId={`card-container-${card.id}`}
+                onClick={(e) => e.stopPropagation()} // Prevent closing when clicking on the card
+            >
+                <Card className="w-full h-full bg-card/80">
+                     <CardHeader className="items-center text-center p-6">
+                        <motion.div layoutId={`card-icon-${card.id}`}>
+                            <card.Icon className="w-10 h-10 text-accent" />
+                        </motion.div>
+                        <CardTitle>
+                            <motion.span layoutId={`card-title-${card.id}`} className="text-2xl">
+                                {card.title}
+                            </motion.span>
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-center text-base text-muted-foreground p-6 pt-0 min-h-[150px]">
+                        <p>{displayText}</p>
+                    </CardContent>
+                </Card>
+            </motion.div>
+        </motion.div>
+    )
+}
+
 
 export default function EmptyChat({ createChat }: EmptyChatProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -52,6 +151,7 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
   const chatInputRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
   const [isCreatingChat, setIsCreatingChat] = useState(false);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchSuggestions = async () => {
@@ -111,6 +211,9 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
     chatInputRef.current?.scrollIntoView({ behavior: 'smooth' });
     setTimeout(() => inputRef.current?.focus(), 400);
   };
+  
+  const selectedFeature = useMemo(() => featureCards.find(c => c.id === selectedId), [selectedId]);
+
 
   return (
     <div className="flex flex-col h-full">
@@ -138,50 +241,39 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
               Empezar a Escribir
             </Button>
           </div>
-          <div className="w-full max-w-5xl mx-auto py-12" id="features">
-             <div className="grid md:grid-cols-3 gap-4 text-left">
-              <Card className="bg-card/50 border-border/50 hover:border-primary/50 transition-colors">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3">
-                    <HeartHandshake className="w-6 h-6 text-accent" />
-                    <span className="text-lg">Espacio de Desahogo</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground text-sm">
-                    Un lugar seguro y confidencial para expresar tus emociones y
-                    pensamientos sin juicios.
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="bg-card/50 border-border/50 hover:border-primary/50 transition-colors">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3">
-                    <Stethoscope className="w-6 h-6 text-accent" />
-                    <span className="text-lg">Orientación Profesional</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground text-sm">
-                    Recibe análisis preliminares y recomendaciones de psicólogos.
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="bg-card/50 border-border/50 hover:border-primary/50 transition-colors">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3">
-                    <MessageCircleHeart className="w-6 h-6 text-accent" />
-                    <span className="text-lg">Respuestas Empáticas</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground text-sm">
-                    Conversa con una IA entrenada para un trato comprensivo y profesional.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
+          
+          <div className="w-full max-w-5xl mx-auto py-20" id="features">
+             <div className="relative h-64 flex items-center justify-center">
+                 {featureCards.map((card, index) => (
+                    <motion.div
+                        key={card.id}
+                        className="absolute"
+                        initial={{
+                             x: (index - 1) * 150,
+                             scale: index === 1 ? 1 : 0.9,
+                             rotateY: index === 0 ? 15 : index === 2 ? -15 : 0,
+                             zIndex: index === 1 ? 10 : 0
+                        }}
+                        animate={{
+                             x: selectedId === null ? (index - 1) * (isMobile ? 80 : 150) : (index - 1) * 300,
+                             scale: selectedId === null ? (index === 1 ? 1 : 0.9) : (card.id === selectedId ? 1 : 0.8),
+                             opacity: selectedId === null ? 1 : (card.id === selectedId ? 0 : 0.5),
+                             rotateY: selectedId === null ? (index === 0 ? 15 : index === 2 ? -15 : 0) : 0,
+                             zIndex: card.id === selectedId ? 20 : (selectedId === null && index === 1 ? 10 : 0)
+                        }}
+                        transition={{ type: 'spring', stiffness: 200, damping: 25 }}
+                    >
+                      <TriptychCard card={card} isSelected={selectedId === card.id} onSelect={() => setSelectedId(card.id)}/>
+                    </motion.div>
+                ))}
+             </div>
+             <AnimatePresence>
+                {selectedFeature && (
+                    <ExpandedCard card={selectedFeature} onDeselect={() => setSelectedId(null)}/>
+                )}
+             </AnimatePresence>
           </div>
+
         </div>
       </div>
       <div
