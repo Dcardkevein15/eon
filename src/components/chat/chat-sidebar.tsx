@@ -83,51 +83,54 @@ function ChatSidebar({
             <span className="text-lg font-semibold tracking-wider">NIMBUS</span>
           </div>
         </div>
-        <div className="p-2 space-y-2">
-          <Button asChild className="w-full justify-center">
-            <Link href="/">
-              <Plus className="mr-2 h-4 w-4" />
-              NUEVA CONVERSACIÓN
-            </Link>
-          </Button>
-          {user && (
-            <>
-              <Button asChild variant="secondary" className="w-full justify-center">
-                <Link href="/gym">
-                  <Dumbbell className="mr-2 h-4 w-4" />
-                  Gimnasio Emocional
-                </Link>
-              </Button>
-               <Button asChild variant="secondary" className="w-full justify-center">
-                <Link href="/profile">
-                  <UserCircle className="mr-2 h-4 w-4" />
-                  Perfil Psicológico
-                </Link>
-              </Button>
-               <Button asChild variant="secondary" className="w-full justify-center">
-                <Link href="/marketplace">
-                  <Briefcase className="mr-2 h-4 w-4" />
-                  Marketplace
-                </Link>
-              </Button>
-              <Button asChild variant="secondary" className="w-full justify-center">
-                <Link href="/dreams">
-                  <Star className="mr-2 h-4 w-4" />
-                  Portal de Sueños
-                </Link>
-              </Button>
-            </>
-          )}
-        </div>
       </SidebarHeader>
-      <div className='px-4 pt-4 pb-2'>
-          <h2 className='text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2'>
-            <History className="h-4 w-4" />
-            Historial
-          </h2>
-      </div>
+
       <SidebarContent className="flex-1">
         <ScrollArea className="h-full px-2">
+           <div className="p-2 space-y-2">
+             <Button asChild className="w-full justify-center">
+                <Link href="/">
+                  <Plus className="mr-2 h-4 w-4" />
+                  NUEVA CONVERSACIÓN
+                </Link>
+              </Button>
+              {user && (
+                <>
+                  <Button asChild variant="secondary" className="w-full justify-center">
+                    <Link href="/gym">
+                      <Dumbbell className="mr-2 h-4 w-4" />
+                      Gimnasio Emocional
+                    </Link>
+                  </Button>
+                  <Button asChild variant="secondary" className="w-full justify-center">
+                    <Link href="/profile">
+                      <UserCircle className="mr-2 h-4 w-4" />
+                      Perfil Psicológico
+                    </Link>
+                  </Button>
+                  <Button asChild variant="secondary" className="w-full justify-center">
+                    <Link href="/marketplace">
+                      <Briefcase className="mr-2 h-4 w-4" />
+                      Marketplace
+                    </Link>
+                  </Button>
+                  <Button asChild variant="secondary" className="w-full justify-center">
+                    <Link href="/dreams">
+                      <Star className="mr-2 h-4 w-4" />
+                      Portal de Sueños
+                    </Link>
+                  </Button>
+                </>
+              )}
+           </div>
+
+           <div className='px-4 pt-4 pb-2'>
+              <h2 className='text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2'>
+                <History className="h-4 w-4" />
+                Historial
+              </h2>
+          </div>
+        
           {isLoading ? (
             <div className="space-y-2 p-2">
               <Skeleton className="h-12 w-full" />
