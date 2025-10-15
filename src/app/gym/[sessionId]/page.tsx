@@ -119,22 +119,28 @@ function SimulationPage() {
   
   const { data: messages, loading: messagesLoading } = useCollection<Message>(messagesQuery);
   
+  // This effect is responsible for calculating the historical sentiment and ONLY that.
+  useEffect(() => {
+    const calculateInitialSentiment = async () => {
+      if (messages && messages.length > 0) {
+        const userMessages = messages.filter(m => m.role === 'user');
+        if (userMessages.length > 0) {
+            const sentimentPromises = userMessages.map(m => analyzeSentimentAction({ text: m.content }));
+            const sentiments = await Promise.all(sentimentPromises);
+            setSentimentHistory(sentiments.map(s => s.sentiment));
+        }
+      }
+    };
+    calculateInitialSentiment();
+  }, [messages]); // It only depends on `messages`
+
+  // This effect fetches tactical advice when the assistant responds.
   useEffect(() => {
     if (messages && messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
       if (lastMessage.role === 'assistant') {
         fetchTacticalAdvice(messages);
       }
-
-      // Re-calculate sentiment history on initial load
-      const calculateInitialSentiment = async () => {
-        const userMessages = messages.filter(m => m.role === 'user');
-        const sentimentPromises = userMessages.map(m => analyzeSentimentAction({ text: m.content }));
-        const sentiments = await Promise.all(sentimentPromises);
-        setSentimentHistory(sentiments.map(s => s.sentiment));
-      };
-
-      calculateInitialSentiment();
     }
   }, [messages, fetchTacticalAdvice]);
 
@@ -339,3 +345,5 @@ function SimulationPage() {
 }
 
 export default memo(SimulationPage);
+
+    
