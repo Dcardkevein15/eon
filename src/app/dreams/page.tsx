@@ -7,7 +7,7 @@ import { interpretDreamAction } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ChevronLeft, Loader2, Wand2, Info, BookOpen, Trash2 } from 'lucide-react';
+import { ChevronLeft, Loader2, Wand2, Info, BookOpen, Trash2, History } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Sidebar, SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -28,9 +28,17 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth, useFirestore, useCollection } from '@/firebase';
 import { query, collection, orderBy } from 'firebase/firestore';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 
 // Custom hook for managing state in localStorage
@@ -146,11 +154,13 @@ export default function DreamWeaverPage() {
   const { user, loading: authLoading } = useAuth();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const [dream, setDream] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   const [dreamHistory, setDreamHistory, isLoadingHistory] = useLocalStorage<DreamInterpretationDoc[]>('dream-journal', []);
 
@@ -222,6 +232,11 @@ export default function DreamWeaverPage() {
     setDreamHistory(prev => prev.filter(d => d.id !== id));
     toast({ title: 'Éxito', description: 'El sueño ha sido eliminado de tu diario local.' });
   };
+  
+  const handleSelectDream = (id: string) => {
+    router.push(`/dreams/analysis?id=${id}`);
+    setIsHistoryOpen(false); // Close sheet on selection
+  }
 
 
   return (
@@ -231,18 +246,33 @@ export default function DreamWeaverPage() {
           <ChatSidebar chats={chats || []} activeChatId={''} isLoading={chatsLoading} removeChat={() => {}} clearChats={() => {}} />
         </Sidebar>
         <SidebarInset className="flex overflow-hidden">
-            <aside className="w-80 border-r border-sidebar-border flex-shrink-0 overflow-y-auto">
-                <DreamHistorySidebar dreams={dreamHistory} isLoading={isLoadingHistory} onSelectDream={(id) => router.push(`/dreams/analysis?id=${id}`)} onDeleteDream={handleDeleteDream} />
+            <aside className="w-80 border-r border-sidebar-border flex-shrink-0 hidden md:flex overflow-y-auto">
+                <DreamHistorySidebar dreams={dreamHistory} isLoading={isLoadingHistory} onSelectDream={handleSelectDream} onDeleteDream={handleDeleteDream} />
             </aside>
             <main className="flex-1 flex flex-col overflow-y-auto">
                 <div className="sticky top-0 bg-background/80 backdrop-blur-sm border-b border-border/80 p-4 z-10">
-                    <div className="flex items-center gap-2 max-w-3xl mx-auto">
-                        <Button asChild variant="ghost" size="icon" className="-ml-2 text-muted-foreground hover:bg-accent/10 hover:text-foreground">
-                            <Link href="/">
-                                <ChevronLeft className="h-5 w-5" />
-                            </Link>
-                        </Button>
-                         <h1 className="text-xl font-bold tracking-tight">Portal de Sueños</h1>
+                    <div className="flex items-center justify-between gap-2 max-w-3xl mx-auto">
+                        <div className='flex items-center gap-2'>
+                            <Button asChild variant="ghost" size="icon" className="-ml-2 text-muted-foreground hover:bg-accent/10 hover:text-foreground">
+                                <Link href="/">
+                                    <ChevronLeft className="h-5 w-5" />
+                                </Link>
+                            </Button>
+                            <h1 className="text-xl font-bold tracking-tight">Portal de Sueños</h1>
+                        </div>
+                        <div className="md:hidden">
+                            <Sheet open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
+                                <SheetTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                        <BookOpen className="h-5 w-5" />
+                                        <span className="sr-only">Abrir diario de sueños</span>
+                                    </Button>
+                                </SheetTrigger>
+                                <SheetContent className="p-0 w-[85vw] sm:w-96">
+                                     <DreamHistorySidebar dreams={dreamHistory} isLoading={isLoadingHistory} onSelectDream={handleSelectDream} onDeleteDream={handleDeleteDream} />
+                                </SheetContent>
+                            </Sheet>
+                        </div>
                     </div>
                 </div>
 
