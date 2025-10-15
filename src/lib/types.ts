@@ -11,7 +11,6 @@ export type Message = {
   content: string;
   timestamp: Timestamp | Date;
   imageUrl?: string;
-  intent?: string;
 };
 
 export type Chat = {
@@ -165,17 +164,6 @@ export type DreamInterpretationDoc = {
     createdAt: string; // ISO string for easy JSON serialization
 };
 
-// Tactical Feedback types
-export const GetTacticalAdviceInputSchema = z.object({
-  scenarioTitle: z.string(),
-  conversationHistory: z.string(),
-});
-export type GetTacticalAdviceInput = z.infer<typeof GetTacticalAdviceInputSchema>;
-
-export const GetTacticalAdviceOutputSchema = z.object({
-  suggestions: z.array(z.string()).length(3),
-});
-export type GetTacticalAdviceOutput = z.infer<typeof GetTacticalAdviceOutputSchema>;
 
 // Sentiment Analysis types
 export const AnalyzeSentimentInputSchema = z.object({
@@ -187,15 +175,3 @@ export const AnalyzeSentimentOutputSchema = z.object({
   sentiment: z.number().min(-1).max(1),
 });
 export type AnalyzeSentimentOutput = z.infer<typeof AnalyzeSentimentOutputSchema>;
-
-
-// Intent Classification types
-export const ClassifyIntentInputSchema = z.object({
-    text: z.string(),
-});
-export type ClassifyIntentInput = z.infer<typeof ClassifyIntentInputSchema>;
-
-export const ClassifyIntentOutputSchema = z.object({
-    intent: z.string(),
-});
-export type ClassifyIntentOutput = z.infer<typeof ClassifyIntentOutputSchema>;

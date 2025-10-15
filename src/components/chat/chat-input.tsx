@@ -134,7 +134,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
                 variant="outline"
                 size="sm"
                 onClick={() => handleSuggestion(s)}
-                className="rounded-full text-xs md:text-sm whitespace-normal h-auto"
+                className="rounded-full text-xs md:text-sm whitespace-normal h-auto py-1.5 px-3"
               >
                 {s}
               </Button>
