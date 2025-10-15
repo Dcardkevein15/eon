@@ -50,21 +50,30 @@ function SimulationPage() {
   const [sessionLoading, setSessionLoading] = useState(true);
   const [sentimentHistory, setSentimentHistory] = useState<number[]>([]);
   const [tacticalSuggestions, setTacticalSuggestions] = useState<string[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
 
   const fetchTacticalAdvice = useCallback(async (currentMessages: Message[]) => {
     if (!scenario) return;
 
-    const historyString = currentMessages
-      .map((m) => `${m.role === 'user' ? 'Usuario' : 'Personaje'}: ${m.content}`)
-      .join('\n');
+    setIsRefreshing(true);
+    try {
+      const historyString = currentMessages
+        .map((m) => `${m.role === 'user' ? 'Usuario' : 'Personaje'}: ${m.content}`)
+        .join('\n');
 
-    const { suggestions } = await getTacticalAdviceAction({
-      scenarioTitle: scenario.title,
-      personaPrompt: scenario.personaPrompt,
-      conversationHistory: historyString,
-    });
-    setTacticalSuggestions(suggestions);
+      const { suggestions } = await getTacticalAdviceAction({
+        scenarioTitle: scenario.title,
+        personaPrompt: scenario.personaPrompt,
+        conversationHistory: historyString,
+      });
+      setTacticalSuggestions(suggestions);
+    } catch (error) {
+       console.error("Error fetching tactical advice:", error);
+       setTacticalSuggestions([]);
+    } finally {
+        setIsRefreshing(false);
+    }
   }, [scenario]);
 
 
@@ -119,14 +128,20 @@ function SimulationPage() {
   
   const { data: messages, loading: messagesLoading } = useCollection<Message>(messagesQuery);
   
+  // Effect to calculate initial sentiment history
   useEffect(() => {
     if (messages && messages.length > 0) {
-      const lastMessage = messages[messages.length - 1];
-      if (lastMessage.role === 'assistant') {
-        fetchTacticalAdvice(messages);
+      const initialUserMessages = messages.filter(m => m.role === 'user');
+      if (initialUserMessages.length > 0) {
+        Promise.all(
+          initialUserMessages.map(m => analyzeSentimentAction({ text: m.content }))
+        ).then(results => {
+          const sentiments = results.map(r => r.sentiment);
+          setSentimentHistory(sentiments);
+        });
       }
     }
-  }, [messages, fetchTacticalAdvice]);
+  }, [messages]);
 
 
   const appendMessage = useCallback(async (message: Omit<Message, 'id'>) => {
@@ -154,6 +169,7 @@ function SimulationPage() {
     if (!input.trim() || !user || !scenario) return;
 
     setTacticalSuggestions([]);
+    setIsResponding(true);
 
     const userMessage: Message = {
       id: uuidv4(),
@@ -164,12 +180,11 @@ function SimulationPage() {
     
     await appendMessage(userMessage);
 
-    // Analyze sentiment and update history
-    const sentimentResult = await analyzeSentimentAction({ text: input });
-    setSentimentHistory(prev => [...prev, sentimentResult.sentiment]);
+    // Analyze sentiment in the background, don't await it
+    analyzeSentimentAction({ text: input }).then(sentimentResult => {
+        setSentimentHistory(prev => [...prev, sentimentResult.sentiment]);
+    });
 
-
-    setIsResponding(true);
     try {
       // Use the latest messages from Firestore for context. Handle null case.
       const currentMessages = [...(messages || []), userMessage];
@@ -187,6 +202,9 @@ function SimulationPage() {
         timestamp: Timestamp.now(),
       };
       await appendMessage(aiMessage);
+      
+      const newMessages = [...currentMessages, aiMessage];
+      fetchTacticalAdvice(newMessages);
 
     } catch (error) {
       console.error("Error in simulation response:", error);
@@ -194,7 +212,7 @@ function SimulationPage() {
     } finally {
       setIsResponding(false);
     }
-  }, [user, scenario, messages, appendMessage, toast]);
+  }, [user, scenario, messages, appendMessage, toast, fetchTacticalAdvice]);
   
   const handleFinishSimulation = async () => {
     if (!user || !firestore || !sessionId || !scenario) return;
@@ -296,6 +314,7 @@ function SimulationPage() {
             isLoading={isResponding || messagesLoading}
             suggestions={tacticalSuggestions}
             onRefreshSuggestions={() => fetchTacticalAdvice(messages || [])}
+            isRefreshing={isRefreshing}
             sentimentHistory={sentimentHistory}
           />
         )}
