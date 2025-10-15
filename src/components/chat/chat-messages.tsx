@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -25,30 +24,39 @@ const ThinkingIndicator = () => {
 
     return (
         <motion.div
-            className="flex items-center justify-center gap-2"
+            className="flex items-start space-x-2 md:space-x-4 animate-in fade-in duration-300"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
         >
-            <motion.span 
-                className="w-2 h-2 bg-primary/70 rounded-full"
-                variants={dotVariants}
-                animate="animate"
-                style={{ transitionDelay: '0s' }}
-            />
-            <motion.span 
-                className="w-2 h-2 bg-primary/70 rounded-full"
-                variants={dotVariants}
-                animate="animate"
-                 style={{ transitionDelay: '0.2s' }}
-            />
-            <motion.span 
-                className="w-2 h-2 bg-primary/70 rounded-full"
-                variants={dotVariants}
-                animate="animate"
-                 style={{ transitionDelay: '0.4s' }}
-            />
+            <Avatar className="h-8 w-8 bg-primary/20 text-primary">
+              <AvatarFallback>
+                  <Sparkles className="h-5 w-5" />
+              </AvatarFallback>
+            </Avatar>
+            <div className="px-4 py-3 rounded-2xl max-w-xs sm:max-w-md md:max-w-lg lg:max-w-2xl bg-card border rounded-bl-none flex items-center h-10">
+                <div className="flex items-center justify-center gap-2">
+                    <motion.span 
+                        className="w-2 h-2 bg-primary/70 rounded-full"
+                        variants={dotVariants}
+                        animate="animate"
+                        style={{ transitionDelay: '0s' }}
+                    />
+                    <motion.span 
+                        className="w-2 h-2 bg-primary/70 rounded-full"
+                        variants={dotVariants}
+                        animate="animate"
+                         style={{ transitionDelay: '0.2s' }}
+                    />
+                    <motion.span 
+                        className="w-2 h-2 bg-primary/70 rounded-full"
+                        variants={dotVariants}
+                        animate="animate"
+                         style={{ transitionDelay: '0.4s' }}
+                    />
+                </div>
+            </div>
         </motion.div>
     );
 };
@@ -70,19 +78,17 @@ export default function ChatMessages({ messages, isResponding }: ChatMessagesPro
         {messages.map((message, index) => (
           <ChatMessage key={message.id || index} message={message} />
         ))}
+        <AnimatePresence>
         {isResponding && (
-          <div className="flex items-start space-x-2 md:space-x-4 animate-in fade-in duration-300">
-            <Avatar className="h-8 w-8 bg-primary/20 text-primary">
-              <AvatarFallback>
-                  <Sparkles className="h-5 w-5" />
-              </AvatarFallback>
-            </Avatar>
-            <div className="px-4 py-3 rounded-2xl max-w-xs sm:max-w-md md:max-w-lg lg:max-w-2xl bg-card border rounded-bl-none flex items-center h-10">
-              <ThinkingIndicator />
-            </div>
-          </div>
+          <ThinkingIndicator />
         )}
+        </AnimatePresence>
       </div>
     </ScrollArea>
   );
+}
+
+interface ChatMessagesProps {
+    messages: Message[];
+    isResponding: boolean;
 }
