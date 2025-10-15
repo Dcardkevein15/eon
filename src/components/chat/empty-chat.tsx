@@ -75,7 +75,7 @@ const TriptychCard = ({ card, isSelected, onSelect }: { card: typeof featureCard
       layoutId={`card-container-${card.id}`}
       onClick={() => onSelect(card.id)}
       className={cn(
-        "absolute w-64 h-48 md:w-80 md:h-56 rounded-2xl cursor-pointer shadow-2xl shadow-primary/10 border border-border/30",
+        "absolute w-56 h-44 md:w-72 md:h-48 rounded-2xl cursor-pointer shadow-2xl shadow-primary/10 border border-border/30",
          isSelected && "pointer-events-none"
       )}
        style={{
@@ -93,12 +93,12 @@ const TriptychCard = ({ card, isSelected, onSelect }: { card: typeof featureCard
                     <card.Icon className="w-8 h-8 text-accent" />
                 </motion.div>
                 <CardTitle>
-                    <motion.span layoutId={`card-title-${card.id}`} className="text-lg">
+                    <motion.span layoutId={`card-title-${card.id}`} className="text-base md:text-lg">
                         {card.title}
                     </motion.span>
                 </CardTitle>
             </CardHeader>
-            <CardContent className="text-center text-sm text-muted-foreground p-4 pt-0">
+            <CardContent className="text-center text-xs md:text-sm text-muted-foreground p-4 pt-0">
                 {card.description}
             </CardContent>
         </Card>
@@ -242,30 +242,34 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
             </Button>
           </div>
           
-          <div className="w-full max-w-5xl mx-auto py-20" id="features">
-             <div className="relative h-64 flex items-center justify-center">
-                 {featureCards.map((card, index) => (
-                    <motion.div
-                        key={card.id}
-                        className="absolute"
-                        initial={{
-                             x: (index - 1) * 150,
-                             scale: index === 1 ? 1 : 0.9,
-                             rotateY: index === 0 ? 15 : index === 2 ? -15 : 0,
-                             zIndex: index === 1 ? 10 : 0
-                        }}
-                        animate={{
-                             x: selectedId === null ? (index - 1) * (isMobile ? 80 : 150) : (index - 1) * 300,
-                             scale: selectedId === null ? (index === 1 ? 1 : 0.9) : (card.id === selectedId ? 1 : 0.8),
-                             opacity: selectedId === null ? 1 : (card.id === selectedId ? 0 : 0.5),
-                             rotateY: selectedId === null ? (index === 0 ? 15 : index === 2 ? -15 : 0) : 0,
-                             zIndex: card.id === selectedId ? 20 : (selectedId === null && index === 1 ? 10 : 0)
-                        }}
-                        transition={{ type: 'spring', stiffness: 200, damping: 25 }}
-                    >
-                      <TriptychCard card={card} isSelected={selectedId === card.id} onSelect={() => setSelectedId(card.id)}/>
-                    </motion.div>
-                ))}
+          <div className="w-full max-w-5xl mx-auto pt-16 pb-12" id="features">
+             <div className="relative h-56 flex items-center justify-center">
+                 {featureCards.map((card, index) => {
+                    const xOffset = isMobile ? 100 : 150;
+                    const xAnimate = isMobile ? 200 : 300;
+                    return (
+                        <motion.div
+                            key={card.id}
+                            className="absolute"
+                            initial={{
+                                x: (index - 1) * (xOffset * 0.8),
+                                scale: index === 1 ? 1 : 0.9,
+                                rotateY: index === 0 ? 15 : index === 2 ? -15 : 0,
+                                zIndex: index === 1 ? 10 : 0
+                            }}
+                            animate={{
+                                x: selectedId === null ? (index - 1) * xOffset : (index - 1) * xAnimate,
+                                scale: selectedId === null ? (index === 1 ? 1 : 0.9) : (card.id === selectedId ? 1 : 0.8),
+                                opacity: selectedId === null ? 1 : (card.id === selectedId ? 0 : 0.5),
+                                rotateY: selectedId === null ? (index === 0 ? 15 : index === 2 ? -15 : 0) : 0,
+                                zIndex: card.id === selectedId ? 20 : (selectedId === null && index === 1 ? 10 : 0)
+                            }}
+                            transition={{ type: 'spring', stiffness: 200, damping: 25 }}
+                        >
+                          <TriptychCard card={card} isSelected={selectedId === card.id} onSelect={() => setSelectedId(card.id)}/>
+                        </motion.div>
+                    )
+                 })}
              </div>
              <AnimatePresence>
                 {selectedFeature && (
