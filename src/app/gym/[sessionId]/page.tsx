@@ -10,10 +10,9 @@ import { runSimulation } from '@/ai/flows/run-simulation';
 import { generateSimulationFeedback } from '@/ai/flows/generate-simulation-feedback';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
-import ChatInput from '@/components/chat/chat-input';
 import ChatMessages from '@/components/chat/chat-messages';
 import { Button } from '@/components/ui/button';
-import { Loader2, ArrowLeft, Bot, LifeBuoy } from 'lucide-react';
+import { Loader2, ArrowLeft, Bot } from 'lucide-react';
 import { SIMULATION_SCENARIOS } from '@/lib/placeholder-data';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
@@ -29,6 +28,8 @@ import {
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import type { SecurityRuleContext } from '@/firebase/errors';
+import SimulationControls from '@/components/gym/simulation-controls';
+import { analyzeSentimentAction } from '@/app/actions';
 
 
 function SimulationPage() {
@@ -47,6 +48,8 @@ function SimulationPage() {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [sessionLoading, setSessionLoading] = useState(true);
+  const [sentimentHistory, setSentimentHistory] = useState<number[]>([]);
+
 
   // Fetch session and scenario data
   useEffect(() => {
@@ -60,7 +63,6 @@ function SimulationPage() {
         if (sessionSnap.exists()) {
           const sessionData = sessionSnap.data() as SimulationSession;
           setSession(sessionData);
-          // In a real app, scenarios might be in Firestore. Here we get from placeholder.
           const scenarioData = SIMULATION_SCENARIOS.find(s => s.id === sessionData.scenarioId);
           setScenario(scenarioData || null);
           if (sessionData.feedback) {
@@ -132,6 +134,11 @@ function SimulationPage() {
     };
     
     await appendMessage(userMessage);
+
+    // Analyze sentiment and update history
+    const sentimentResult = await analyzeSentimentAction({ text: input });
+    setSentimentHistory(prev => [...prev, sentimentResult.sentiment]);
+
 
     setIsResponding(true);
     try {
@@ -247,18 +254,20 @@ function SimulationPage() {
         <ChatMessages messages={messages || []} isResponding={isResponding || messagesLoading} />
       </div>
 
-      <div className="mt-auto px-2 py-4 md:px-4 md:py-4 border-t bg-background/95 backdrop-blur-sm">
+      <div className="mt-auto border-t bg-background/95 backdrop-blur-sm">
         {feedback ? (
-          <div className="text-center">
+          <div className="text-center p-4">
              <Button onClick={() => setShowFeedbackModal(true)}>
                 Ver Feedback de Nuevo
             </Button>
           </div>
         ) : (
-          <ChatInput
+          <SimulationControls
             onSendMessage={handleSendMessage}
             isLoading={isResponding || messagesLoading}
-            chatHistory={messages || []}
+            scenario={scenario}
+            conversationHistory={messages || []}
+            sentimentHistory={sentimentHistory}
           />
         )}
       </div>
