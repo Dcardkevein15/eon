@@ -3,3 +3,6 @@
 runConfig:
   timeoutSeconds: 120
   maxInstances: 1
+build:
+  - name: fetch
+    repo: ''
