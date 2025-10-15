@@ -134,7 +134,7 @@ export default function MarketplacePage() {
         </Sidebar>
         <SidebarInset className="flex-1 flex overflow-hidden">
              {/* Filters Sidebar */}
-            <aside className="w-72 border-r bg-card flex-shrink-0 hidden md:block overflow-y-auto">
+            <aside className="w-72 border-r bg-card/30 flex-shrink-0 hidden md:block overflow-y-auto">
                 <TherapistFilters
                 specialties={allSpecialties}
                 languages={allLanguages}
@@ -146,28 +146,28 @@ export default function MarketplacePage() {
             {/* Main content */}
             <main className="flex-1 flex flex-col overflow-y-auto">
                 {/* Sticky Header */}
-                <div className="sticky top-0 bg-background/80 backdrop-blur-sm border-b p-4 sm:p-6 lg:p-8 z-10">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="sticky top-0 bg-background/80 backdrop-blur-sm border-b p-4 sm:p-6 z-10">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 max-w-7xl mx-auto">
                     <div className='flex items-center gap-2'>
-                       <Button asChild variant="ghost" size="icon" className='-ml-2'>
+                       <Button asChild variant="ghost" size="icon" className='-ml-2 text-muted-foreground hover:bg-accent/10 hover:text-foreground'>
                             <Link href="/">
                                 <ChevronLeft className="h-5 w-5" />
                             </Link>
                         </Button>
                         <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-                            Encuentra tu terapeuta ideal
+                            Encuentra tu Terapeuta
                         </h1>
                     </div>
                     {isAdmin && (
                         <Button onClick={() => openEditModal('new')} className="flex-shrink-0">
                             <PlusCircle className="mr-2 h-4 w-4" />
-                            Agregar profesional
+                            Agregar Profesional
                         </Button>
                     )}
                   </div>
                 </div>
                 {/* Therapist List */}
-                <div className="p-4 sm:p-6 lg:p-8">
+                <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
                   <TherapistList therapists={filteredTherapists} onEdit={openEditModal} isAdmin={isAdmin} />
                 </div>
             </main>

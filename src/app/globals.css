@@ -10,67 +10,36 @@
     --card-foreground: 210 40% 98%;
     --popover: 224 71% 4%;
     --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
+    --primary: 197 92% 51%; /* Azul Cielo Eléctrico */
     --primary-foreground: 224 71% 4%;
     --secondary: 217 33% 17%;
     --secondary-foreground: 210 40% 98%;
     --muted: 217 33% 17%;
     --muted-foreground: 215 20% 65%;
-    --accent: 217 33% 17%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 166 71% 55%; /* Verde Jade Luminoso */
+    --accent-foreground: 224 71% 4%;
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
     --border: 217 33% 17%;
     --input: 217 33% 17%;
-    --ring: 215 28% 92%;
+    --ring: 197 92% 51%;
     --radius: 0.5rem;
-    --chart-1: 210 40% 98%;
-    --chart-2: 162 70% 80%;
-    --chart-3: 190 80% 80%;
-    --chart-4: 280 80% 80%;
-    --chart-5: 340 80% 80%;
+    
+    /* Paleta "Psique Aurora" para gradientes y gráficos */
+    --chart-1: 190 80% 80%; /* Cian Celestial */
+    --chart-2: 162 70% 80%; /* Esmeralda */
+    --chart-3: 280 80% 80%; /* Amatista */
+    --chart-4: 340 80% 80%; /* Rosa Cósmico */
+    --chart-5: 210 40% 98%; /* Blanco Estelar */
 
-    /* Custom Dream Portal Theme */
-    --sky-500: 197 92% 51%;
-    --slate-950: 222 47% 6%;
-    --slate-900: 222 47% 11%;
-    --slate-800: 222 47% 15%;
-    --slate-700: 222 47% 22%;
-    --slate-400: 222 47% 60%;
-    --slate-300: 222 47% 75%;
-    --slate-200: 222 47% 85%;
-    --slate-100: 222 47% 95%;
-
-
-     /* Original Theme for reference - will be overridden by the above in dark mode */
-    --original-background: 222.2 84% 4.9%;
-    --original-foreground: 0 0% 100%;
-    --original-card: 222.2 84% 4.9%;
-    --original-card-foreground: 210 40% 98%;
-    --original-popover: 222.2 84% 4.9%;
-    --original-popover-foreground: 210 40% 98%;
-    --original-primary: 207 82% 67%;
-    --original-primary-foreground: 222.2 47.4% 11.2%;
-    --original-secondary: 217.2 32.6% 17.5%;
-    --original-secondary-foreground: 210 40% 98%;
-    --original-muted: 217.2 32.6% 17.5%;
-    --original-muted-foreground: 215 20.2% 65.1%;
-    --original-accent: 166 71% 55%;
-    --original-accent-foreground: 222.2 47.4% 11.2%;
-    --original-destructive: 0 62.8% 30.6%;
-    --original-destructive-foreground: 210 40% 98%;
-    --original-border: 217.2 32.6% 17.5%;
-    --original-input: 217.2 32.6% 17.5%;
-    --original-ring: 207 82% 67%;
-
-    --sidebar-background: 222 47% 9%;
+    --sidebar-background: 222 47% 7%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 207 82% 67%;
-    --sidebar-primary-foreground: 222 47% 11%;
-    --sidebar-accent: 222 47% 14%;
+    --sidebar-primary: 197 92% 51%;
+    --sidebar-primary-foreground: 224 71% 4%;
+    --sidebar-accent: 222 47% 12%;
     --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 222 47% 14%;
-    --sidebar-ring: 207 82% 67%;
+    --sidebar-border: 222 47% 12%;
+    --sidebar-ring: 197 92% 51%;
   }
 
   .light {
@@ -80,19 +49,19 @@
     --card-foreground: 224 71% 4%;
     --popover: 0 0% 100%;
     --popover-foreground: 224 71% 4%;
-    --primary: 224 71% 4%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 207 82% 67%; /* Azul claro para modo light */
+    --primary-foreground: 224 71% 4%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 224 71% 4%;
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 224 71% 4%;
+    --accent: 166 71% 45%; /* Verde más oscuro para modo light */
+    --accent-foreground: 210 40% 98%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 224 71% 4%;
+    --ring: 207 82% 67%;
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;

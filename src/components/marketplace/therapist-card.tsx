@@ -17,7 +17,7 @@ interface TherapistCardProps {
 
 export default function TherapistCard({ therapist, onEdit, isAdmin }: TherapistCardProps) {
   return (
-    <Card className="flex flex-col h-full overflow-hidden transition-shadow hover:shadow-lg">
+    <Card className="flex flex-col h-full overflow-hidden transition-all duration-300 bg-card/50 hover:bg-card/80 hover:shadow-primary/10 hover:shadow-lg hover:border-border">
       <CardHeader className="flex flex-row items-start gap-4 p-4">
         <div className="relative flex-shrink-0">
             <Image
@@ -37,7 +37,7 @@ export default function TherapistCard({ therapist, onEdit, isAdmin }: TherapistC
         <div className="flex-1 min-w-0">
           <CardTitle className="text-lg truncate">{therapist.name}</CardTitle>
           <p className="text-sm text-muted-foreground mt-1 truncate">{therapist.credentials}</p>
-          <div className="flex items-center gap-1 text-sm font-semibold text-amber-500 mt-2">
+          <div className="flex items-center gap-1 text-sm font-semibold text-amber-400 mt-2">
               <Star className="w-4 h-4 fill-amber-400 text-amber-500" />
               <span>{therapist.rating.toFixed(1)}</span>
               <span className="text-xs text-muted-foreground font-normal">({therapist.reviewsCount})</span>
@@ -48,8 +48,8 @@ export default function TherapistCard({ therapist, onEdit, isAdmin }: TherapistC
       <CardContent className="p-4 pt-0 flex-grow">
         <div className="space-y-3">
           <div>
-            <h4 className="text-xs font-semibold text-muted-foreground mb-1.5">ESPECIALIDADES</h4>
-            <div className="flex flex-wrap gap-1">
+            <h4 className="text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Especialidades</h4>
+            <div className="flex flex-wrap gap-1 h-12 overflow-hidden">
               {therapist.specialties.slice(0, 3).map((specialty) => (
                 <Badge key={specialty} variant="secondary" className="text-xs">
                   {specialty}

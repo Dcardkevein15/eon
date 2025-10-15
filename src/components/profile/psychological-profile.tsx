@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -136,18 +134,6 @@ export default function PsychologicalProfile() {
 
   useEffect(() => {
     setIsClient(true);
-    const originalTheme = theme;
-    // Set theme to dark for this page, but don't change if it's already dark
-    if (theme !== 'dark') {
-      setTheme('dark');
-    }
-    
-    return () => {
-      // Restore original theme only if it was changed
-      if (originalTheme && theme !== originalTheme) {
-        setTheme(originalTheme);
-      }
-    }
   }, []);
 
   const authLoading = authLoadingFromHook || !isClient;
@@ -204,18 +190,18 @@ export default function PsychologicalProfile() {
     return (
       <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full space-y-6">
         <div className="mb-6">
-           <Button asChild variant="ghost" className='-ml-4'>
+           <Button asChild variant="ghost" className='-ml-4 text-muted-foreground hover:bg-accent/10 hover:text-foreground'>
                 <Link href="/">
                     <ChevronLeft className="h-4 w-4 mr-2" />
                     Volver al Chat
                 </Link>
             </Button>
         </div>
-        <Skeleton className="h-10 w-1/3" />
-        <Skeleton className="h-8 w-1/2" />
+        <Skeleton className="h-10 w-1/3 bg-muted" />
+        <Skeleton className="h-8 w-1/2 bg-muted" />
         <div className="space-y-4">
-            <Skeleton className="h-32 w-full" />
-            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-32 w-full bg-muted" />
+            <Skeleton className="h-32 w-full bg-muted" />
         </div>
       </div>
     );
@@ -224,11 +210,11 @@ export default function PsychologicalProfile() {
   if (generating) {
     return (
       <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full flex flex-col items-center justify-center min-h-[60vh] text-center">
-          <h2 className="text-2xl font-semibold mb-4">Generando tu perfil...</h2>
+          <h2 className="text-2xl font-semibold mb-4 bg-clip-text text-transparent bg-gradient-to-br from-chart-5 via-chart-1 to-chart-2">Generando tu Cianotipo Psicológico...</h2>
           <p className="text-muted-foreground mb-8 max-w-md">La IA está analizando tu historial para crear un informe evolutivo. Este proceso puede tardar hasta un minuto.</p>
           <div className='w-full max-w-md space-y-4'>
             <Progress value={progress} className="w-full h-3" />
-            <p className='text-center text-sm font-medium'>{Math.round(progress)}%</p>
+            <p className='text-center text-sm font-medium text-primary'>{Math.round(progress)}%</p>
           </div>
       </div>
     );
@@ -237,7 +223,7 @@ export default function PsychologicalProfile() {
   if (error && !profile) {
     return (
       <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full">
-        <Button asChild variant="ghost" className="-ml-4 mb-4">
+        <Button asChild variant="ghost" className="-ml-4 mb-4 text-muted-foreground hover:bg-accent/10 hover:text-foreground">
           <Link href="/">
             <ChevronLeft className="h-4 w-4 mr-2" />
             Volver al Chat
@@ -261,7 +247,7 @@ export default function PsychologicalProfile() {
   if (!profile) {
      return (
         <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full">
-            <Button asChild variant="ghost" className="-ml-4 mb-4">
+            <Button asChild variant="ghost" className="-ml-4 mb-4 text-muted-foreground hover:bg-accent/10 hover:text-foreground">
               <Link href="/">
                 <ChevronLeft className="h-4 w-4 mr-2" />
                 Volver al Chat
@@ -285,7 +271,7 @@ export default function PsychologicalProfile() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full">
         <div className="mb-6">
-           <Button asChild variant="ghost" className='-ml-4'>
+           <Button asChild variant="ghost" className='-ml-4 text-muted-foreground hover:bg-accent/10 hover:text-foreground'>
                 <Link href="/">
                     <ChevronLeft className="h-4 w-4 mr-2" />
                     Volver al Chat
@@ -294,11 +280,11 @@ export default function PsychologicalProfile() {
         </div>
 
         {isOutdated && (
-          <Alert className="mb-6 bg-blue-900/20 border-blue-500/30">
-            <Info className="h-4 w-4 text-blue-400" />
-            <AlertTitle className="text-blue-300">Tu perfil ha evolucionado</AlertTitle>
+          <Alert className="mb-6 bg-primary/10 border-primary/20">
+            <Info className="h-4 w-4 text-primary" />
+            <AlertTitle className="text-primary/90">Tu perfil ha evolucionado</AlertTitle>
             <AlertDescription className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-2">
-                <p className="text-blue-200/80">Has tenido nuevas conversaciones desde el último análisis. ¡Actualiza tu perfil para ver qué ha cambiado!</p>
+                <p className="text-primary/70">Has tenido nuevas conversaciones desde el último análisis. ¡Actualiza tu perfil para ver qué ha cambiado!</p>
                 <div className="flex gap-2 flex-shrink-0">
                     <Button onClick={() => fetchAndGenerateProfile()} size="sm">
                        <RefreshCcw className='mr-2 h-4 w-4'/>
@@ -310,14 +296,14 @@ export default function PsychologicalProfile() {
         )}
 
         <header className="mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-primary">Dashboard de Autoconocimiento</h1>
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-chart-5 via-chart-1 to-chart-2">Dashboard de Autoconocimiento</h1>
             <p className="text-muted-foreground mt-2">
                 Un análisis integral generado por IA basado en tu historial. Esto no reemplaza un diagnóstico profesional.
             </p>
         </header>
         
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 md:inline-flex md:w-auto mb-6">
+          <TabsList className="grid w-full grid-cols-3 md:inline-flex md:w-auto mb-6 bg-card/50">
             <TabsTrigger value="overview" className="gap-2">
                 <LayoutDashboard className="h-4 w-4" />
                 <span className="hidden md:inline">Resumen</span>
@@ -336,7 +322,7 @@ export default function PsychologicalProfile() {
           </TabsList>
 
           <TabsContent value="overview" className="mt-6 space-y-6">
-              <Card>
+              <Card className="bg-card/50 border-border/50">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-3 text-xl">
                         <BrainCircuit className="w-6 h-6 text-accent"/>
@@ -351,7 +337,7 @@ export default function PsychologicalProfile() {
               { (profile.coreArchetype || profile.coreConflict) && (
                 <div className="grid md:grid-cols-2 gap-6">
                     {profile.coreArchetype && (
-                    <Card>
+                    <Card className="bg-card/50 border-border/50">
                       <CardHeader>
                         <CardTitle className='flex items-center gap-3'><UserCheck className="w-6 h-6 text-accent"/> Arquetipo: {profile.coreArchetype.title}</CardTitle>
                       </CardHeader>
@@ -371,7 +357,7 @@ export default function PsychologicalProfile() {
                     </Card>
                     )}
                     {profile.coreConflict && (
-                     <Card>
+                     <Card className="bg-card/50 border-border/50">
                       <CardHeader>
                         <CardTitle className='flex items-center gap-3'><Target className="w-6 h-6 text-accent"/> Conflicto Nuclear</CardTitle>
                       </CardHeader>
@@ -384,7 +370,7 @@ export default function PsychologicalProfile() {
               )}
 
               {profile.habitLoop && (
-                 <Card>
+                 <Card className="bg-card/50 border-border/50">
                   <CardHeader>
                     <CardTitle className='flex items-center gap-3'><Repeat className="w-6 h-6 text-accent"/> El Bucle del Hábito</CardTitle>
                     <CardDescription>Un patrón recurrente en tu comportamiento. Identificarlo es el primer paso para poder cambiarlo.</CardDescription>
@@ -428,7 +414,7 @@ export default function PsychologicalProfile() {
 
           <TabsContent value="metrics" className="mt-6 space-y-6">
               {profile.emotionalJourney?.length > 0 && (
-                  <Card>
+                  <Card className="bg-card/50 border-border/50">
                       <CardHeader>
                           <CardTitle className="flex items-center gap-3 text-xl">
                               <LineChart className="w-6 h-6 text-accent"/>
@@ -442,14 +428,27 @@ export default function PsychologicalProfile() {
                   </Card>
               )}
               {profile.emotionalConstellation?.nodes?.length > 0 && isClient && (
-                <EmotionalConstellation data={profile.emotionalConstellation} />
+                <Card className="bg-card/50 border-border/50">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-3 text-xl">
+                            <BrainCircuit className="w-6 h-6 text-accent" />
+                            Constelador Emocional
+                        </CardTitle>
+                        <CardDescription>
+                            Una red de tus temas y emociones más recurrentes. El tamaño del círculo representa la importancia del tema. El color del enlace muestra el sentimiento de la conexión (verde para positivo, rojo para negativo).
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0 h-[400px]">
+                        <EmotionalConstellation data={profile.emotionalConstellation} />
+                    </CardContent>
+                </Card>
               )}
           </TabsContent>
           
           <TabsContent value="deep-dive" className="mt-6">
              <Accordion type="multiple" className="w-full space-y-4">
                 <AccordionItem value="item-1">
-                    <Card>
+                    <Card className="bg-card/50 border-border/50">
                         <AccordionTrigger className="w-full text-left p-6 hover:no-underline [&>svg]:ml-auto">
                             <CardTitle className="flex items-center gap-3 text-xl">
                                 <UserCheck className="w-6 h-6 text-accent"/>
@@ -465,7 +464,7 @@ export default function PsychologicalProfile() {
                 </AccordionItem>
                 
                 <AccordionItem value="item-2">
-                    <Card>
+                    <Card className="bg-card/50 border-border/50">
                         <AccordionTrigger className="w-full text-left p-6 hover:no-underline [&>svg]:ml-auto">
                             <CardTitle className="flex items-center gap-3 text-xl">
                                 <Sparkles className="w-6 h-6 text-accent"/>
@@ -481,7 +480,7 @@ export default function PsychologicalProfile() {
                 </AccordionItem>
 
                 <AccordionItem value="item-3">
-                    <Card>
+                    <Card className="bg-card/50 border-border/50">
                         <AccordionTrigger className="w-full text-left p-6 hover:no-underline [&>svg]:ml-auto">
                             <CardTitle className="flex items-center gap-3 text-xl">
                                 <Filter className="w-6 h-6 text-accent"/>
@@ -508,7 +507,7 @@ export default function PsychologicalProfile() {
                 </AccordionItem>
                 
                 <AccordionItem value="item-4">
-                    <Card>
+                    <Card className="bg-card/50 border-border/50">
                         <AccordionTrigger className="w-full text-left p-6 hover:no-underline [&>svg]:ml-auto">
                             <CardTitle className="flex items-center gap-3 text-xl">
                                 <ShieldQuestion className="w-6 h-6 text-accent"/>
@@ -535,7 +534,7 @@ export default function PsychologicalProfile() {
                 </AccordionItem>
 
                 <AccordionItem value="item-5">
-                    <Card>
+                    <Card className="bg-card/50 border-border/50">
                         <AccordionTrigger className="w-full text-left p-6 hover:no-underline [&>svg]:ml-auto">
                             <CardTitle className="flex items-center gap-3 text-xl">
                                 <ListChecks className="w-6 h-6 text-accent"/>
@@ -566,5 +565,3 @@ export default function PsychologicalProfile() {
     </div>
   );
 }
-
-

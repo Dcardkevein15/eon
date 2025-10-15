@@ -80,11 +80,11 @@ function DreamHistorySidebar({ dreams, isLoading, onSelectDream, onDeleteDream }
   };
 
   return (
-    <div className="h-full flex flex-col bg-slate-900 border-r border-slate-800 text-slate-200">
-      <div className="p-4 border-b border-slate-800">
+    <div className="h-full flex flex-col bg-sidebar-background border-r border-sidebar-border text-sidebar-foreground">
+      <div className="p-4 border-b border-sidebar-border">
         <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-sky-400" />
+                <BookOpen className="w-5 h-5 text-primary" />
                 Diario de Sueños
             </h2>
         </div>
@@ -92,12 +92,12 @@ function DreamHistorySidebar({ dreams, isLoading, onSelectDream, onDeleteDream }
       <ScrollArea className="flex-1">
          {isLoading ? (
             <div className="p-4 space-y-3">
-              <Skeleton className="h-20 w-full bg-slate-800" />
-              <Skeleton className="h-20 w-full bg-slate-800" />
-              <Skeleton className="h-20 w-full bg-slate-800" />
+              <Skeleton className="h-20 w-full bg-sidebar-accent" />
+              <Skeleton className="h-20 w-full bg-sidebar-accent" />
+              <Skeleton className="h-20 w-full bg-sidebar-accent" />
             </div>
           ) : dreams.length === 0 ? (
-            <div className="p-4 text-center text-sm text-slate-400 mt-8">
+            <div className="p-4 text-center text-sm text-muted-foreground mt-8">
               <p>Tu diario está vacío. ¡Interpreta tu primer sueño para empezar!</p>
             </div>
           ) : (
@@ -105,10 +105,10 @@ function DreamHistorySidebar({ dreams, isLoading, onSelectDream, onDeleteDream }
               {[...dreams].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(dream => (
                 <div key={dream.id} className="relative group/item">
                     <button onClick={() => onSelectDream(dream.id)} className="w-full text-left">
-                        <Card className="bg-slate-800/50 border-slate-700 hover:bg-slate-800 hover:border-sky-500/50 transition-colors">
+                        <Card className="bg-sidebar-accent/50 border-sidebar-border hover:bg-sidebar-accent hover:border-primary/50 transition-colors">
                             <CardHeader className="p-3">
-                                <CardTitle className="text-sm font-semibold truncate text-slate-100">{dream.interpretation.dreamTitle}</CardTitle>
-                                <CardDescription className="text-xs text-slate-400">{getFormattedDate(dream.createdAt)}</CardDescription>
+                                <CardTitle className="text-sm font-semibold truncate text-sidebar-foreground">{dream.interpretation.dreamTitle}</CardTitle>
+                                <CardDescription className="text-xs text-muted-foreground">{getFormattedDate(dream.createdAt)}</CardDescription>
                             </CardHeader>
                         </Card>
                     </button>
@@ -226,33 +226,33 @@ export default function DreamWeaverPage() {
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen bg-slate-950 text-slate-100">
+      <div className="flex h-screen bg-background text-foreground">
         <Sidebar>
           <ChatSidebar chats={chats || []} activeChatId={''} isLoading={chatsLoading} removeChat={() => {}} clearChats={() => {}} />
         </Sidebar>
         <SidebarInset className="flex overflow-hidden">
-            <aside className="w-80 border-r border-slate-800 flex-shrink-0 hidden md:block overflow-y-auto">
+            <aside className="w-80 border-r border-sidebar-border flex-shrink-0 hidden md:block overflow-y-auto">
                 <DreamHistorySidebar dreams={dreamHistory} isLoading={isLoadingHistory} onSelectDream={(id) => router.push(`/dreams/analysis?id=${id}`)} onDeleteDream={handleDeleteDream} />
             </aside>
             <main className="flex-1 flex flex-col overflow-y-auto">
-                <div className="sticky top-0 bg-slate-950/80 backdrop-blur-sm border-b border-slate-800 p-4 z-10">
+                <div className="sticky top-0 bg-background/80 backdrop-blur-sm border-b border-border/80 p-4 z-10">
                     <div className="flex items-center gap-2 max-w-3xl mx-auto">
-                        <Button asChild variant="ghost" size="icon" className="-ml-2 text-slate-300 hover:bg-slate-800 hover:text-white">
+                        <Button asChild variant="ghost" size="icon" className="-ml-2 text-muted-foreground hover:bg-accent/10 hover:text-foreground">
                             <Link href="/">
                                 <ChevronLeft className="h-5 w-5" />
                             </Link>
                         </Button>
-                         <h1 className="text-xl font-bold tracking-tight text-white">Portal de Sueños</h1>
+                         <h1 className="text-xl font-bold tracking-tight">Portal de Sueños</h1>
                     </div>
                 </div>
 
                 <div className="flex-1 flex items-center justify-center p-4">
                     <div className="w-full max-w-2xl mx-auto text-center space-y-8 animate-in fade-in-50 duration-700">
                          <div className="space-y-2">
-                             <h2 className="text-4xl md:text-5xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-slate-100 via-slate-300 to-sky-400">
+                             <h2 className="text-4xl md:text-5xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-chart-5 via-chart-1 to-chart-2">
                                 ¿Qué te ha mostrado tu subconsciente?
                              </h2>
-                             <p className="text-lg text-slate-400">Describe tu sueño con todos los detalles que recuerdes. La IA conectará sus símbolos con tu viaje interior.</p>
+                             <p className="text-lg text-muted-foreground">Describe tu sueño con todos los detalles que recuerdes. La IA conectará sus símbolos con tu viaje interior.</p>
                          </div>
                         
                          {profileError && (
@@ -270,7 +270,7 @@ export default function DreamWeaverPage() {
                                 value={dream}
                                 onChange={(e) => setDream(e.target.value)}
                                 placeholder="Anoche soñé que estaba en una casa que no conocía, y todas las puertas desaparecían..."
-                                className="min-h-[200px] bg-slate-900 border-slate-700 rounded-xl p-4 text-base ring-offset-slate-950 focus-visible:ring-2 focus-visible:ring-sky-500/80 focus-visible:ring-offset-2 transition-all duration-300"
+                                className="min-h-[200px] bg-card/80 border-border rounded-xl p-4 text-base ring-offset-background focus-visible:ring-2 focus-visible:ring-primary/80 focus-visible:ring-offset-2 transition-all duration-300"
                             />
                         </div>
 
@@ -278,7 +278,7 @@ export default function DreamWeaverPage() {
                             onClick={handleAnalyzeDream}
                             disabled={isAnalyzing || !profile || authLoading}
                             size="lg"
-                            className="w-full sm:w-auto text-base px-8 py-6 rounded-full bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/20 transition-all transform hover:scale-105"
+                            className="w-full sm:w-auto text-base px-8 py-6 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all transform hover:scale-105"
                          >
                             {isAnalyzing ? (
                                 <>
