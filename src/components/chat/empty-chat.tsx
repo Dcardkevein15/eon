@@ -75,8 +75,8 @@ const TriptychCard = ({ card, isSelected, onSelect }: { card: typeof featureCard
       layoutId={`card-container-${card.id}`}
       onClick={() => onSelect(card.id)}
       className={cn(
-        "absolute w-56 h-44 md:w-72 md:h-48 rounded-2xl cursor-pointer shadow-2xl shadow-primary/10 border border-border/30",
-         isSelected && "pointer-events-none"
+        "w-56 h-44 md:w-72 md:h-48 rounded-2xl cursor-pointer shadow-2xl shadow-primary/10 border border-border/30",
+        isSelected && "pointer-events-none"
       )}
        style={{
           transformOrigin: 'bottom center',
