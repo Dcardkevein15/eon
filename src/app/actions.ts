@@ -8,10 +8,7 @@ import { collection, getDocs, query, orderBy, limit, Timestamp } from 'firebase/
 import { firestore } from '@/lib/firebase';
 import { SUGGESTIONS_FALLBACK } from '@/lib/suggestions-fallback';
 import { generateBreakdownExercise as genExercise } from '@/ai/flows/generate-breakdown-exercise';
-import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, ProfileData, PromptSuggestion, GetTacticalAdviceInput, AnalyzeSentimentInput, ClassifyIntentInput, InterpretDreamInput, DreamInterpretation } from '@/lib/types';
-import { getTacticalAdvice } from '@/ai/flows/get-tactical-advice';
-import { analyzeSentiment } from '@/ai/flows/analyze-sentiment';
-import { classifyIntent } from '@/ai/flows/classify-intent';
+import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, ProfileData, PromptSuggestion, InterpretDreamInput, DreamInterpretation } from '@/lib/types';
 import { interpretDream as interpretDreamFlow } from '@/ai/flows/interpret-dream';
 
 
@@ -186,39 +183,6 @@ export async function generateBreakdownExerciseAction(input: GenerateBreakdownEx
   }
 }
 
-// --- Acciones para el Gimnasio Emocional ---
-
-export async function getTacticalAdviceAction(input: GetTacticalAdviceInput): Promise<string[]> {
-    try {
-        const { suggestions } = await getTacticalAdvice(input);
-        return suggestions;
-    } catch (error) {
-        console.error('Error getting tactical advice:', error);
-        return ["Lo siento, no pude generar una sugerencia en este momento."];
-    }
-}
-
-export async function analyzeSentimentAction(input: AnalyzeSentimentInput): Promise<number> {
-    try {
-        const { sentimentScore } = await analyzeSentiment(input);
-        return sentimentScore;
-    } catch (error) {
-        console.error('Error analyzing sentiment:', error);
-        return 0; // Return neutral on error
-    }
-}
-
-export async function classifyIntentAction(input: ClassifyIntentInput): Promise<string> {
-    try {
-        const { intent } = await classifyIntent(input);
-        return intent;
-    } catch (error) {
-        console.error('Error classifying intent:', error);
-        return "Análisis no disponible";
-    }
-}
-
-// --- Acciones para el Portal de Sueños ---
 
 export async function interpretDreamAction(input: InterpretDreamInput): Promise<DreamInterpretation> {
   try {

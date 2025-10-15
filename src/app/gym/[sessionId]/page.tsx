@@ -10,9 +10,10 @@ import { runSimulation } from '@/ai/flows/run-simulation';
 import { generateSimulationFeedback } from '@/ai/flows/generate-simulation-feedback';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
+import ChatInput from '@/components/chat/chat-input';
 import ChatMessages from '@/components/chat/chat-messages';
 import { Button } from '@/components/ui/button';
-import { Loader2, ArrowLeft, Bot } from 'lucide-react';
+import { Loader2, ArrowLeft, Bot, LifeBuoy } from 'lucide-react';
 import { SIMULATION_SCENARIOS } from '@/lib/placeholder-data';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
@@ -28,8 +29,6 @@ import {
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import type { SecurityRuleContext } from '@/firebase/errors';
-import SimulationControls from '@/components/gym/simulation-controls';
-import { analyzeSentimentAction, classifyIntentAction } from '@/app/actions';
 
 
 function SimulationPage() {
@@ -48,12 +47,6 @@ function SimulationPage() {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [sessionLoading, setSessionLoading] = useState(true);
-
-  // State for new real-time trainer features
-  const [sentimentHistory, setSentimentHistory] = useState<number[]>([]);
-  const [lastIntent, setLastIntent] = useState<{ messageId: string; intent: string } | null>(null);
-  const [analyzingPostMessage, setAnalyzingPostMessage] = useState(false);
-
 
   // Fetch session and scenario data
   useEffect(() => {
@@ -112,8 +105,7 @@ function SimulationPage() {
     const messagesColRef = collection(firestore, `users/${user.uid}/gymSessions/${sessionId}/messages`);
     
     try {
-        const docRef = await addDoc(messagesColRef, message);
-        return docRef.id;
+        await addDoc(messagesColRef, message);
     } catch (serverError: any) {
         if (serverError.code === 'permission-denied') {
             const permissionError = new FirestorePermissionError({
@@ -126,7 +118,6 @@ function SimulationPage() {
             console.error("Error appending message:", serverError);
             toast({ variant: "destructive", title: "Error", description: "No se pudo guardar tu mensaje." });
         }
-        return undefined;
     }
   }, [user, firestore, sessionId, toast]);
 
@@ -134,40 +125,18 @@ function SimulationPage() {
     if (!input.trim() || !user || !scenario) return;
 
     const userMessage: Message = {
-      id: uuidv4(), // a temporary client-side ID
+      id: uuidv4(),
       role: 'user',
       content: input,
       timestamp: Timestamp.now(),
     };
     
-    setAnalyzingPostMessage(true);
+    await appendMessage(userMessage);
 
-    // Append user message and get its actual ID from Firestore
-    const firestoreId = await appendMessage(userMessage);
-    if (!firestoreId) {
-        setAnalyzingPostMessage(false);
-        return; // Stop if message failed to save
-    }
-    
-    // --- Real-time Analysis ---
-    try {
-      const [sentimentScore, intentClassification] = await Promise.all([
-        analyzeSentimentAction({ text: input }),
-        classifyIntentAction({ text: input }),
-      ]);
-      setSentimentHistory(prev => [...prev.slice(-29), sentimentScore]);
-      setLastIntent({ messageId: firestoreId, intent: intentClassification });
-    } catch(e) {
-      console.error("Error during real-time analysis:", e);
-    } finally {
-      setAnalyzingPostMessage(false);
-    }
-    // --- End Analysis ---
-    
     setIsResponding(true);
     try {
       // Use the latest messages from Firestore for context. Handle null case.
-      const currentMessages = [...(messages || []), { ...userMessage, id: firestoreId }];
+      const currentMessages = [...(messages || []), userMessage];
       const history = currentMessages.map(m => ({ role: m.role, content: m.content }));
 
       const aiResponseContent = await runSimulation({
@@ -275,28 +244,21 @@ function SimulationPage() {
       )}
 
       <div className="flex-1 overflow-y-auto">
-        <ChatMessages 
-            messages={messages || []} 
-            isResponding={isResponding || messagesLoading}
-            lastIntent={lastIntent}
-            isAnalyzing={analyzingPostMessage}
-         />
+        <ChatMessages messages={messages || []} isResponding={isResponding || messagesLoading} />
       </div>
 
-      <div className="mt-auto border-t bg-background/95 backdrop-blur-sm">
+      <div className="mt-auto px-2 py-4 md:px-4 md:py-4 border-t bg-background/95 backdrop-blur-sm">
         {feedback ? (
-          <div className="text-center p-4">
+          <div className="text-center">
              <Button onClick={() => setShowFeedbackModal(true)}>
                 Ver Feedback de Nuevo
             </Button>
           </div>
         ) : (
-          <SimulationControls
+          <ChatInput
             onSendMessage={handleSendMessage}
             isLoading={isResponding || messagesLoading}
-            scenario={scenario}
-            conversationHistory={messages || []}
-            sentimentHistory={sentimentHistory}
+            chatHistory={messages || []}
           />
         )}
       </div>
