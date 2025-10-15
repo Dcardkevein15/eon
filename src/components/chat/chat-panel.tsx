@@ -127,6 +127,9 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
         content: aiResponseContent,
         timestamp: Timestamp.now(),
       };
+      // Important: Stop "responding" animation BEFORE appending the message
+      // so the new message appears at the same time the animation disappears.
+      setIsResponding(false); 
       await appendMessage(chat.id, aiMessage);
       
       const updatedMessages = [...currentMessages, { ...aiMessage, id: uuidv4() }];
@@ -145,13 +148,12 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
 
     } catch (error) {
         console.error("Error getting AI response:", error);
+        setIsResponding(false); // Make sure to turn off responding on error
         toast({
           variant: "destructive",
           title: "Error",
           description: "No se pudo obtener una respuesta de la IA. Por favor, inténtalo de nuevo.",
         });
-    } finally {
-        setIsResponding(false);
     }
   }, [user, chat.id, chat.anchorRole, chat.title, appendMessage, updateChatTitle, toast, triggerBlueprintUpdate, cachedProfile]);
 
