@@ -8,12 +8,7 @@ import type { Message } from '@/lib/types';
 import ChatMessage from './chat-message';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Sparkles } from 'lucide-react';
-import { motion } from 'framer-motion';
-
-interface ChatMessagesProps {
-  messages: Message[];
-  isResponding: boolean;
-}
+import { motion, AnimatePresence } from 'framer-motion';
 
 const ThinkingIndicator = () => {
     const dotVariants = {
