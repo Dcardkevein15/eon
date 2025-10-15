@@ -242,10 +242,10 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
             </Button>
           </div>
           
-          <div className="w-full max-w-5xl mx-auto pt-16 pb-12" id="features">
+          <div className="w-full max-w-5xl mx-auto pt-8 pb-12" id="features">
              <div className="relative h-56 flex items-center justify-center">
                  {featureCards.map((card, index) => {
-                    const xOffset = isMobile ? 100 : 150;
+                    const xOffset = isMobile ? 80 : 150;
                     const xAnimate = isMobile ? 200 : 300;
                     return (
                         <motion.div
