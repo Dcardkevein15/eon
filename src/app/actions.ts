@@ -8,9 +8,10 @@ import { collection, getDocs, query, orderBy, limit, Timestamp } from 'firebase/
 import { firestore } from '@/lib/firebase';
 import { SUGGESTIONS_FALLBACK } from '@/lib/suggestions-fallback';
 import { generateBreakdownExercise as genExercise } from '@/ai/flows/generate-breakdown-exercise';
-import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, ProfileData, PromptSuggestion, InterpretDreamInput, DreamInterpretation, AnalyzeSentimentInput, AnalyzeSentimentOutput } from '@/lib/types';
+import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, ProfileData, PromptSuggestion, InterpretDreamInput, DreamInterpretation, AnalyzeSentimentInput, AnalyzeSentimentOutput, GetTacticalAdviceInput, GetTacticalAdviceOutput } from '@/lib/types';
 import { interpretDream as interpretDreamFlow } from '@/ai/flows/interpret-dream';
 import { analyzeSentiment as analyzeSentimentFlow } from '@/ai/flows/analyze-sentiment';
+import { getTacticalAdvice as getTacticalAdviceFlow } from '@/ai/flows/get-tactical-advice';
 
 
 const expertRoles = [
@@ -204,4 +205,14 @@ export async function analyzeSentimentAction(input: AnalyzeSentimentInput): Prom
         console.error('Error analyzing sentiment:', error);
         return { sentiment: 0 }; // Return neutral on error
     }
+}
+
+export async function getTacticalAdviceAction(input: GetTacticalAdviceInput): Promise<GetTacticalAdviceOutput> {
+  try {
+    const result = await getTacticalAdviceFlow(input);
+    return result;
+  } catch (error) {
+    console.error('Error getting tactical advice:', error);
+    return { suggestions: [] };
+  }
 }

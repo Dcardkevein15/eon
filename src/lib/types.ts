@@ -176,3 +176,28 @@ export const AnalyzeSentimentOutputSchema = z.object({
   sentiment: z.number().min(-1).max(1),
 });
 export type AnalyzeSentimentOutput = z.infer<typeof AnalyzeSentimentOutputSchema>;
+
+
+// Tactical Advice types
+export const GetTacticalAdviceInputSchema = z.object({
+  scenarioTitle: z.string(),
+  personaPrompt: z.string(),
+  conversationHistory: z.string(),
+});
+export type GetTacticalAdviceInput = z.infer<typeof GetTacticalAdviceInputSchema>;
+
+export const GetTacticalAdviceOutputSchema = z.object({
+  suggestions: z.array(z.string()),
+});
+export type GetTacticalAdviceOutput = z.infer<typeof GetTacticalAdviceOutputSchema>;
+
+// Classify Intent types
+export const ClassifyIntentInputSchema = z.object({
+  text: z.string(),
+});
+export type ClassifyIntentInput = z.infer<typeof ClassifyIntentInputSchema>;
+
+export const ClassifyIntentOutputSchema = z.object({
+  intent: z.string(),
+});
+export type ClassifyIntentOutput = z.infer<typeof ClassifyIntentOutputSchema>;

@@ -29,7 +29,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import type { SecurityRuleContext } from '@/firebase/errors';
 import SimulationControls from '@/components/gym/simulation-controls';
-import { analyzeSentimentAction } from '@/app/actions';
+import { analyzeSentimentAction, getTacticalAdviceAction } from '@/app/actions';
 
 
 function SimulationPage() {
@@ -49,6 +49,23 @@ function SimulationPage() {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [sessionLoading, setSessionLoading] = useState(true);
   const [sentimentHistory, setSentimentHistory] = useState<number[]>([]);
+  const [tacticalSuggestions, setTacticalSuggestions] = useState<string[]>([]);
+  
+
+  const fetchTacticalAdvice = useCallback(async (currentMessages: Message[]) => {
+    if (!scenario) return;
+
+    const historyString = currentMessages
+      .map((m) => `${m.role === 'user' ? 'Usuario' : 'Personaje'}: ${m.content}`)
+      .join('\n');
+
+    const { suggestions } = await getTacticalAdviceAction({
+      scenarioTitle: scenario.title,
+      personaPrompt: scenario.personaPrompt,
+      conversationHistory: historyString,
+    });
+    setTacticalSuggestions(suggestions);
+  }, [scenario]);
 
 
   // Fetch session and scenario data
@@ -101,6 +118,16 @@ function SimulationPage() {
   );
   
   const { data: messages, loading: messagesLoading } = useCollection<Message>(messagesQuery);
+  
+  useEffect(() => {
+    if (messages && messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.role === 'assistant') {
+        fetchTacticalAdvice(messages);
+      }
+    }
+  }, [messages, fetchTacticalAdvice]);
+
 
   const appendMessage = useCallback(async (message: Omit<Message, 'id'>) => {
     if (!user || !firestore || !sessionId) return;
@@ -125,6 +152,8 @@ function SimulationPage() {
 
   const handleSendMessage = useCallback(async (input: string) => {
     if (!input.trim() || !user || !scenario) return;
+
+    setTacticalSuggestions([]);
 
     const userMessage: Message = {
       id: uuidv4(),
@@ -265,8 +294,8 @@ function SimulationPage() {
           <SimulationControls
             onSendMessage={handleSendMessage}
             isLoading={isResponding || messagesLoading}
-            scenario={scenario}
-            conversationHistory={messages || []}
+            suggestions={tacticalSuggestions}
+            onRefreshSuggestions={() => fetchTacticalAdvice(messages || [])}
             sentimentHistory={sentimentHistory}
           />
         )}
