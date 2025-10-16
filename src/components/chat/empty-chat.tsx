@@ -1,193 +1,50 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { AppLogo } from '@/components/logo';
 import ChatInput from './chat-input';
-import { getSuggestions } from '@/app/actions';
-import type { Message, PromptSuggestion } from '@/lib/types';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useTypingEffect } from '@/hooks/use-typing-effect';
-import {
-  HeartHandshake,
-  MessageCircleHeart,
-  Stethoscope,
-  Brain,
-  Smile,
-  Bed,
-  Feather,
-  Zap,
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import type { Message } from '@/lib/types';
+import { Feather, Briefcase, Dumbbell, Star, ChevronRight } from 'lucide-react';
+import { Card, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { SidebarTrigger } from '../ui/sidebar';
 import { Timestamp } from 'firebase/firestore';
-import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 
 interface EmptyChatProps {
   createChat: (firstMessage: Omit<Message, 'id'>) => Promise<string | undefined>;
 }
 
-const categoryIcons: { [key: string]: React.ElementType } = {
-  estrés: Zap,
-  motivación: Smile,
-  hábitos: Bed,
-  desahogo: Feather,
-  ansiedad: Brain,
-  relaciones: HeartHandshake,
-  bienestar: MessageCircleHeart,
-  default: MessageCircleHeart,
-};
-
-const getIconForCategory = (category: string) => {
-  return categoryIcons[category.toLowerCase()] || categoryIcons.default;
-};
-
-const featureCards = [
+const corporateFeatures = [
     {
-        id: 1,
-        title: 'Espacio de Desahogo',
-        Icon: HeartHandshake,
-        description: 'Un lugar seguro y confidencial para expresar tus emociones y pensamientos sin juicios, disponible 24/7.',
-        detailedDescription: 'Encuentra un refugio digital donde cada palabra es bienvenida. Nuestro sistema está diseñado para escuchar sin prejuicios, permitiéndote explorar tus sentimientos más profundos con total libertad y confidencialidad. Es tu espacio para ser vulnerable.'
+        title: 'Gimnasio Emocional',
+        description: 'Practica conversaciones difíciles en un entorno seguro y controlado.',
+        Icon: Dumbbell,
+        href: '/gym'
     },
     {
-        id: 2,
-        title: 'Orientación Profesional',
-        Icon: Stethoscope,
-        description: 'Recibe análisis preliminares y recomendaciones basadas en principios psicológicos sólidos.',
-        detailedDescription: 'Nuestra IA, entrenada con extensos conocimientos de psicología, identifica patrones y te ofrece perspectivas basadas en evidencia. No es un diagnóstico, sino una poderosa herramienta de autoconocimiento para entender mejor el "porqué" de tus sentimientos.'
+        title: 'Marketplace de Terapeutas',
+        description: 'Encuentra y conecta con profesionales verificados para un apoyo más profundo.',
+        Icon: Briefcase,
+        href: '/marketplace'
     },
     {
-        id: 3,
-        title: 'Respuestas Empáticas',
-        Icon: MessageCircleHeart,
-        description: 'Conversa con una IA entrenada para un trato comprensivo, cálido y profesional.',
-        detailedDescription: 'Más allá de los datos, hemos enseñado a Nimbus a comprender el matiz emocional. Espera respuestas que validen tu experiencia, te hagan sentir comprendido y te guíen con la calidez y el respeto que mereces en tu viaje interior.'
-    },
+        title: 'Portal de Sueños',
+        description: 'Descubre los mensajes de tu subconsciente a través del análisis de sueños.',
+        Icon: Star,
+        href: '/dreams'
+    }
 ];
-
-const TriptychCard = ({ card, isSelected, onSelect }: { card: typeof featureCards[0], isSelected: boolean, onSelect: (id: number) => void }) => {
-  return (
-     <motion.div
-      layoutId={`card-container-${card.id}`}
-      onClick={() => onSelect(card.id)}
-      className={cn(
-        "w-56 h-44 md:w-72 md:h-48 rounded-2xl cursor-pointer shadow-2xl shadow-primary/10 border border-border/30",
-        isSelected && "pointer-events-none"
-      )}
-       style={{
-          transformOrigin: 'bottom center',
-       }}
-       initial={false}
-       animate={isSelected ? {
-           opacity: 0,
-           transition: { duration: 0.3, delay: 0.1 }
-       } : {}}
-    >
-        <Card className="w-full h-full bg-card/70 backdrop-blur-sm hover:border-primary/50 transition-colors duration-300">
-            <CardHeader className="items-center text-center p-4">
-                <motion.div layoutId={`card-icon-${card.id}`}>
-                    <card.Icon className="w-8 h-8 text-accent" />
-                </motion.div>
-                <CardTitle>
-                    <motion.span layoutId={`card-title-${card.id}`} className="text-base md:text-lg">
-                        {card.title}
-                    </motion.span>
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="text-center text-xs md:text-sm text-muted-foreground p-4 pt-0">
-                {card.description}
-            </CardContent>
-        </Card>
-    </motion.div>
-  )
-}
-
-const ExpandedCard = ({ card, onDeselect }: { card: typeof featureCards[0], onDeselect: () => void }) => {
-    const displayText = useTypingEffect(card.detailedDescription, 50);
-
-    return (
-        <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-lg"
-          onClick={onDeselect}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-        >
-            <motion.div 
-                className="w-[90vw] max-w-lg h-auto rounded-2xl shadow-2xl shadow-primary/20 border border-primary/30 overflow-hidden" 
-                layoutId={`card-container-${card.id}`}
-                onClick={(e) => e.stopPropagation()} // Prevent closing when clicking on the card
-            >
-                <Card className="w-full h-full bg-card/80">
-                     <CardHeader className="items-center text-center p-6">
-                        <motion.div layoutId={`card-icon-${card.id}`}>
-                            <card.Icon className="w-10 h-10 text-accent" />
-                        </motion.div>
-                        <CardTitle>
-                            <motion.span layoutId={`card-title-${card.id}`} className="text-2xl">
-                                {card.title}
-                            </motion.span>
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="text-center text-base text-muted-foreground p-6 pt-0 min-h-[150px]">
-                        <p>{displayText}</p>
-                    </CardContent>
-                </Card>
-            </motion.div>
-        </motion.div>
-    )
-}
-
 
 export default function EmptyChat({ createChat }: EmptyChatProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const [suggestionsPool, setSuggestionsPool] = useState<PromptSuggestion[]>([]);
-  const [loadingSuggestions, setLoadingSuggestions] = useState(true);
+  const router = useRouter();
 
   const chatInputRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
   const [isCreatingChat, setIsCreatingChat] = useState(false);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-
-  useEffect(() => {
-    const fetchSuggestions = async () => {
-      setLoadingSuggestions(true);
-      try {
-        const newSuggestions = await getSuggestions();
-        setSuggestionsPool(newSuggestions);
-      } catch (error) {
-        console.error('Failed to fetch suggestions:', error);
-      } finally {
-        setLoadingSuggestions(false);
-      }
-    };
-
-    fetchSuggestions();
-  }, []);
-
-  const displaySuggestions = useMemo(() => {
-    if (!suggestionsPool || suggestionsPool.length === 0) {
-      return [];
-    }
-    const categories = [...new Set(suggestionsPool.map((s) => s.category))];
-    const shuffledCategories = categories.sort(() => 0.5 - Math.random());
-    const selectedCategories = shuffledCategories.slice(0, 6);
-
-    const newSuggestions = selectedCategories.map((category) => {
-      const suggestionsForCategory = suggestionsPool.filter(
-        (s) => s.category === category
-      );
-      return suggestionsForCategory[
-        Math.floor(Math.random() * suggestionsForCategory.length)
-      ];
-    });
-
-    return newSuggestions.filter(Boolean);
-  }, [suggestionsPool]);
   
   const handleCreateChat = useCallback(async (input: string, imageUrl?: string) => {
       if ((!input.trim() && !imageUrl) || isCreatingChat) return;
@@ -203,16 +60,10 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
       // isCreatingChat will remain true, as the page will redirect.
   }, [createChat, isCreatingChat]);
 
-  const handleSuggestionClick = (suggestion: string) => {
-    handleCreateChat(suggestion);
-  };
-
   const handleNewConversation = () => {
     chatInputRef.current?.scrollIntoView({ behavior: 'smooth' });
     setTimeout(() => inputRef.current?.focus(), 400);
   };
-  
-  const selectedFeature = useMemo(() => featureCards.find(c => c.id === selectedId), [selectedId]);
 
 
   return (
@@ -242,39 +93,26 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
             </Button>
           </div>
           
-          <div className="w-full max-w-5xl mx-auto pt-8 pb-12" id="features">
-             <div className="relative h-56 flex items-center justify-center">
-                 {featureCards.map((card, index) => {
-                    const xOffset = isMobile ? 80 : 150;
-                    const xAnimate = isMobile ? 200 : 300;
-                    return (
-                        <motion.div
-                            key={card.id}
-                            className="absolute"
-                            style={{ zIndex: card.id === selectedId ? 20 : (selectedId === null && index === 1 ? 10 : 0) }}
-                            initial={{
-                                x: (index - 1) * (xOffset * 0.8),
-                                scale: index === 1 ? 1 : 0.9,
-                                rotateY: index === 0 ? 15 : index === 2 ? -15 : 0,
-                            }}
-                            animate={{
-                                x: selectedId === null ? (index - 1) * xOffset : (index - 1) * xAnimate,
-                                scale: selectedId === null ? (index === 1 ? 1 : 0.9) : (card.id === selectedId ? 1 : 0.8),
-                                opacity: selectedId === null ? 1 : (card.id === selectedId ? 0 : 0.5),
-                                rotateY: selectedId === null ? (index === 0 ? 15 : index === 2 ? -15 : 0) : 0,
-                            }}
-                            transition={{ type: 'spring', stiffness: 200, damping: 25 }}
-                        >
-                          <TriptychCard card={card} isSelected={selectedId === card.id} onSelect={() => setSelectedId(card.id)}/>
-                        </motion.div>
-                    )
-                 })}
+           <div className="w-full max-w-5xl mx-auto py-12" id="features">
+             <div className="grid md:grid-cols-3 gap-6 text-left">
+                {corporateFeatures.map((feature) => (
+                    <Card key={feature.title} className="bg-card/50 hover:border-primary/50 hover:bg-card/80 transition-all cursor-pointer" onClick={() => router.push(feature.href)}>
+                        <CardHeader className="flex-row items-center gap-4 space-y-0">
+                             <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
+                                <feature.Icon className="w-6 h-6 text-primary" />
+                             </div>
+                             <CardTitle>{feature.title}</CardTitle>
+                        </CardHeader>
+                        <CardDescription className="p-6 pt-0">
+                           {feature.description}
+                           <div className="flex items-center text-xs text-primary/80 font-semibold mt-4">
+                               <span>Explorar</span>
+                               <ChevronRight className="w-4 h-4 ml-1" />
+                           </div>
+                        </CardDescription>
+                    </Card>
+                ))}
              </div>
-             <AnimatePresence>
-                {selectedFeature && (
-                    <ExpandedCard card={selectedFeature} onDeselect={() => setSelectedId(null)}/>
-                )}
-             </AnimatePresence>
           </div>
 
         </div>
@@ -283,37 +121,7 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
         className="px-2 py-4 md:px-4 md:py-4 border-t bg-background/95 backdrop-blur-sm"
         ref={chatInputRef}
       >
-        <div className="w-full max-w-4xl mx-auto space-y-4">
-          {loadingSuggestions ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {[...Array(6)].map((_, i) => (
-                <Skeleton key={i} className="h-20 w-full rounded-lg" />
-              ))}
-            </div>
-          ) : displaySuggestions.length > 0 && (
-            <div>
-               <p className="text-sm text-muted-foreground mb-3 px-2">
-                O prueba con una de estas sugerencias para empezar:
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {displaySuggestions.map((suggestion, i) => {
-                  const Icon = getIconForCategory(suggestion.category);
-                  return (
-                    <button
-                      key={i}
-                      onClick={() => handleSuggestionClick(suggestion.text)}
-                      className="p-4 rounded-lg bg-card hover:bg-card/80 border border-card-border/50 text-left transition-all duration-200 hover:border-primary/50 hover:scale-[1.02] flex items-start gap-4 disabled:opacity-50"
-                      disabled={isCreatingChat}
-                    >
-                      <Icon className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
-                      <span className="text-sm font-medium">{suggestion.text}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-          <ChatInput
+        <ChatInput
             ref={inputRef}
             onSendMessage={handleCreateChat}
             isLoading={isCreatingChat}
@@ -322,7 +130,6 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
             onRefreshSuggestions={() => {}}
             isRefreshingSuggestions={false}
           />
-        </div>
       </div>
     </div>
   );

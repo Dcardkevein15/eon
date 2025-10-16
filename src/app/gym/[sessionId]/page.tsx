@@ -93,6 +93,7 @@ function SimulationPage() {
           setScenario(scenarioData || null);
           if (sessionData.feedback) {
               setFeedback(sessionData.feedback);
+              setShowFeedbackModal(true);
           }
         } else {
           console.error("Session not found");
@@ -216,6 +217,11 @@ function SimulationPage() {
   
   const handleFinishSimulation = async () => {
     if (!user || !firestore || !sessionId || !scenario) return;
+
+    if (feedback) {
+      setShowFeedbackModal(true);
+      return;
+    }
     
     setIsFinishing(true);
     const sessionRef = doc(firestore, `users/${user.uid}/gymSessions`, sessionId);
@@ -281,7 +287,7 @@ function SimulationPage() {
             {scenario?.title || 'Simulación'}
           </h2>
         </div>
-        <Button onClick={handleFinishSimulation} disabled={isFinishing || !!feedback}>
+        <Button onClick={handleFinishSimulation} disabled={isFinishing}>
           {isFinishing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           {feedback ? 'Ver Feedback' : 'Finalizar y Obtener Feedback'}
         </Button>

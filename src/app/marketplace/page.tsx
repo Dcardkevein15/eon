@@ -14,6 +14,7 @@ import { PlusCircle, ChevronLeft } from 'lucide-react';
 import TherapistEditModal from '@/components/marketplace/therapist-edit-modal';
 import { THERAPISTS_DATA } from '@/lib/placeholder-data';
 import Link from 'next/link';
+import { v4 as uuidv4 } from 'uuid';
 
 
 export default function MarketplacePage() {
@@ -39,7 +40,7 @@ export default function MarketplacePage() {
     };
   
     if (editingTherapist === 'new') {
-      const newTherapist = { ...processedData, id: Date.now().toString(), reviewsCount: 0, rating: 0, photoUrl: processedData.photoUrl || 'https://picsum.photos/seed/new-therapist/200/200' };
+      const newTherapist = { ...processedData, id: uuidv4(), reviewsCount: 0, rating: 0, photoUrl: processedData.photoUrl || 'https://picsum.photos/seed/new-therapist/200/200' };
       setTherapists(prev => [newTherapist, ...prev]);
     } else {
       setTherapists(prev => prev.map(t => t.id === processedData.id ? processedData : t));

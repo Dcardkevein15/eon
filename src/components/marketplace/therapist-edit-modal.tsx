@@ -19,6 +19,13 @@ import type { Therapist } from '@/lib/types';
 import { useEffect } from 'react';
 import { ScrollArea } from '../ui/scroll-area';
 
+interface TherapistEditModalProps {
+  therapist: Therapist | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (data: Therapist) => void;
+}
+
 // Helper to safely convert a value to an array of strings
 const toArray = (value: string | string[] | undefined): string[] => {
   if (Array.isArray(value)) return value.map(s => s.trim()).filter(Boolean);

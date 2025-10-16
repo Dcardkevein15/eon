@@ -123,7 +123,6 @@ export const SIMULATION_SCENARIOS: SimulationScenario[] = [
     title: 'Dar Feedback Constructivo a un Colega',
     description: 'Simula cómo darle a un compañero de trabajo una retroalimentación sobre un aspecto de su trabajo que está afectando al equipo.',
     category: 'Trabajo',
-    personaPrompt_es: "Actúa como un/a colega de trabajo que generalmente es amigable pero sensible a la crítica sobre su desempeño. Cuando el usuario comience a darte feedback, reacciona con una actitud defensiva y justificativa ('Bueno, es que he estado muy ocupado', 'Nadie me explicó bien cómo hacerlo'). Tu objetivo es desviar la responsabilidad. Sin embargo, si el usuario utiliza la técnica del 'sándwich' (positivo-negativo-positivo) y se enfoca en el comportamiento y no en la persona, gradualmente acepta el feedback y muéstrate dispuesto/a a colaborar para encontrar una solución.",
     personaPrompt: "Actúa como un/a colega de trabajo que generalmente es amigable pero sensible a la crítica sobre su desempeño. Cuando el usuario comience a darte feedback, reacciona con una actitud defensiva y justificativa ('Bueno, es que he estado muy ocupado', 'Nadie me explicó bien cómo hacerlo'). Tu objetivo es desviar la responsabilidad. Sin embargo, si el usuario utiliza la técnica del 'sándwich' (positivo-negativo-positivo) y se enfoca en el comportamiento y no en la persona, gradualmente acepta el feedback y muéstrate dispuesto/a a colaborar para encontrar una solución.",
   },
 ];

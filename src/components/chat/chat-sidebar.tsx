@@ -30,6 +30,7 @@ import {
   SidebarHeader,
 } from '@/components/ui/sidebar';
 import { useAuth } from '@/firebase';
+import { usePathname } from 'next/navigation';
 
 interface ChatSidebarProps {
   chats: Chat[];
@@ -48,6 +49,7 @@ function ChatSidebar({
 }: ChatSidebarProps) {
   const [isClient, setIsClient] = useState(false);
   const { user } = useAuth();
+  const pathname = usePathname();
 
   useEffect(() => {
     setIsClient(true);
@@ -73,6 +75,13 @@ function ChatSidebar({
       return '';
     }
   };
+  
+  const navItems = [
+    { href: "/gym", icon: Dumbbell, label: "Gimnasio Emocional" },
+    { href: "/profile", icon: UserCircle, label: "Perfil Psicológico" },
+    { href: "/marketplace", icon: Briefcase, label: "Marketplace" },
+    { href: "/dreams", icon: Star, label: "Portal de Sueños" },
+  ];
 
   return (
     <>
@@ -88,40 +97,25 @@ function ChatSidebar({
       <SidebarContent className="flex-1">
         <ScrollArea className="h-full px-2">
            <div className="p-2 space-y-2">
-             <Button asChild className="w-full justify-center">
+             <Button asChild className="w-full justify-center" variant={pathname === '/' || pathname.startsWith('/c/') ? 'default' : 'secondary'}>
                 <Link href="/">
                   <Plus className="mr-2 h-4 w-4" />
                   NUEVA CONVERSACIÓN
                 </Link>
               </Button>
-              {user && (
-                <>
-                  <Button asChild variant="secondary" className="w-full justify-center">
-                    <Link href="/gym">
-                      <Dumbbell className="mr-2 h-4 w-4" />
-                      Gimnasio Emocional
+              {user && navItems.map((item) => (
+                 <Button 
+                    key={item.href} 
+                    asChild 
+                    variant={pathname.startsWith(item.href) ? 'default' : 'secondary'} 
+                    className="w-full justify-start"
+                 >
+                    <Link href={item.href}>
+                      <item.icon className="mr-2 h-4 w-4" />
+                      {item.label}
                     </Link>
                   </Button>
-                  <Button asChild variant="secondary" className="w-full justify-center">
-                    <Link href="/profile">
-                      <UserCircle className="mr-2 h-4 w-4" />
-                      Perfil Psicológico
-                    </Link>
-                  </Button>
-                  <Button asChild variant="secondary" className="w-full justify-center">
-                    <Link href="/marketplace">
-                      <Briefcase className="mr-2 h-4 w-4" />
-                      Marketplace
-                    </Link>
-                  </Button>
-                  <Button asChild variant="secondary" className="w-full justify-center">
-                    <Link href="/dreams">
-                      <Star className="mr-2 h-4 w-4" />
-                      Portal de Sueños
-                    </Link>
-                  </Button>
-                </>
-              )}
+              ))}
            </div>
 
            <div className='px-4 pt-4 pb-2'>

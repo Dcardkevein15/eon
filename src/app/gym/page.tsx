@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { ArrowRight, ChevronLeft, CheckCircle, RotateCcw } from 'lucide-react';
+import { ArrowRight, ChevronLeft, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth, useFirestore, useCollection } from '@/firebase';
 import { collection, addDoc, serverTimestamp, updateDoc, query, orderBy } from 'firebase/firestore';

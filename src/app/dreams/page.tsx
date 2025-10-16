@@ -7,7 +7,7 @@ import { interpretDreamAction } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ChevronLeft, Loader2, Wand2, Info, BookOpen, Trash2, History } from 'lucide-react';
+import { ChevronLeft, Loader2, Wand2, Info, BookOpen, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Sidebar, SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -31,9 +31,6 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet";
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth, useFirestore, useCollection } from '@/firebase';
@@ -262,12 +259,12 @@ export default function DreamWeaverPage() {
                         </div>
                         <div className="md:hidden">
                             <Sheet open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
-                                <SheetTrigger asChild>
+                                <Sheet.Trigger asChild>
                                     <Button variant="ghost" size="icon">
                                         <BookOpen className="h-5 w-5" />
                                         <span className="sr-only">Abrir diario de sueños</span>
                                     </Button>
-                                </SheetTrigger>
+                                </Sheet.Trigger>
                                 <SheetContent className="p-0 w-[85vw] sm:w-96">
                                      <DreamHistorySidebar dreams={dreamHistory} isLoading={isLoadingHistory} onSelectDream={handleSelectDream} onDeleteDream={handleDeleteDream} />
                                 </SheetContent>
