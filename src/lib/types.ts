@@ -201,14 +201,3 @@ export const ClassifyIntentOutputSchema = z.object({
   intent: z.string(),
 });
 export type ClassifyIntentOutput = z.infer<typeof ClassifyIntentOutputSchema>;
-
-// Text to Speech Types
-export const TextToSpeechInputSchema = z.object({
-  text: z.string(),
-});
-export type TextToSpeechInput = z.infer<typeof TextToSpeechInputSchema>;
-
-export const TextToSpeechOutputSchema = z.object({
-  audioDataUri: z.string(),
-});
-export type TextToSpeechOutput = z.infer<typeof TextToSpeechOutputSchema>;

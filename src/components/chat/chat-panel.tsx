@@ -2,7 +2,7 @@
 
 import { useState, useCallback, memo, useEffect, useMemo, useRef } from 'react';
 import type { Chat, Message, ProfileData, CachedProfile } from '@/lib/types';
-import { generateChatTitle, getAIResponse, getSmartComposeSuggestions, generateSpeechAction } from '@/app/actions';
+import { generateChatTitle, getAIResponse, getSmartComposeSuggestions } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import ChatMessages from './chat-messages';
 import ChatInput from './chat-input';
@@ -15,7 +15,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import type { SecurityRuleContext } from '@/firebase/errors';
-import VoiceInterface from './voice-interface';
 
 
 interface ChatPanelProps {
@@ -29,7 +28,6 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const suggestionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isRefreshingSuggestions, setIsRefreshingSuggestions] = useState(false);
-  const [isVoiceMode, setIsVoiceMode] = useState(false);
 
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -240,39 +238,6 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
         clearTimeout(suggestionTimeoutRef.current);
     }
   };
-  
-  const handleVoiceMessage = useCallback(async (transcribedText: string) => {
-    if (!transcribedText.trim() || !user) return;
-
-    // 1. Append user message to Firestore
-    const userMessage: Omit<Message, 'id'> = {
-      role: 'user',
-      content: transcribedText,
-      timestamp: Timestamp.now(),
-    };
-    await appendMessage(chat.id, userMessage);
-    const updatedMessages = [...(messages || []), { ...userMessage, id: uuidv4() }];
-
-    // 2. Get AI text response
-    const historyForAI = updatedMessages.map(m => ({
-        ...m,
-        timestamp: m.timestamp instanceof Timestamp ? m.timestamp.toDate() : m.timestamp,
-    }));
-    const aiResponseText = await getAIResponse(historyForAI, user.uid, chat.anchorRole, cachedProfile);
-    
-    // 3. Append AI text response to Firestore
-    const aiMessage: Omit<Message, 'id'> = {
-        role: 'assistant',
-        content: aiResponseText,
-        timestamp: Timestamp.now(),
-    };
-    await appendMessage(chat.id, aiMessage);
-
-    // 4. Generate and return AI speech
-    const { audioDataUri } = await generateSpeechAction({ text: aiResponseText });
-    return { text: aiResponseText, audio: audioDataUri };
-
-  }, [user, chat.id, chat.anchorRole, cachedProfile, appendMessage, messages]);
 
 
   return (
@@ -301,16 +266,8 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
           onClearSuggestions={handleClearSuggestions}
           onRefreshSuggestions={fetchSuggestions}
           isRefreshingSuggestions={isRefreshingSuggestions}
-          onStartVoice={() => setIsVoiceMode(true)}
         />
       </div>
-      
-      {isVoiceMode && (
-          <VoiceInterface
-            onClose={() => setIsVoiceMode(false)}
-            onProcessAudio={handleVoiceMessage}
-          />
-      )}
     </div>
   );
 }

@@ -11,7 +11,7 @@ import {
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Send, Sparkles, Paperclip, X, RefreshCw, Mic } from 'lucide-react';
+import { Send, Sparkles, Paperclip, X, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem } from '@/components/ui/form';
@@ -32,11 +32,10 @@ interface ChatInputProps {
   onClearSuggestions: () => void;
   onRefreshSuggestions: () => void;
   isRefreshingSuggestions: boolean;
-  onStartVoice: () => void;
 }
 
 const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
-  ({ onSendMessage, isLoading, suggestions, onClearSuggestions, onRefreshSuggestions, isRefreshingSuggestions, onStartVoice }, ref) => {
+  ({ onSendMessage, isLoading, suggestions, onClearSuggestions, onRefreshSuggestions, isRefreshingSuggestions }, ref) => {
     const localTextareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isFocused, setIsFocused] = useState(false);
@@ -205,17 +204,6 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p>{showSuggestions && suggestions.length > 0 ? 'Ocultar' : 'Mostrar'} Sugerencias</p>
-                              </TooltipContent>
-                           </Tooltip>
-                           <Tooltip>
-                              <TooltipTrigger asChild>
-                                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={onStartVoice}>
-                                    <Mic className="h-5 w-5" />
-                                    <span className="sr-only">Chat de Voz</span>
-                                  </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Iniciar Chat de Voz</p>
                               </TooltipContent>
                            </Tooltip>
                             <Tooltip>

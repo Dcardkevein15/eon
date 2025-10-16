@@ -8,11 +8,10 @@ import { collection, getDocs, query, orderBy, limit, Timestamp } from 'firebase/
 import { firestore } from '@/lib/firebase';
 import { SUGGESTIONS_FALLBACK } from '@/lib/suggestions-fallback';
 import { generateBreakdownExercise as genExercise } from '@/ai/flows/generate-breakdown-exercise';
-import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, ProfileData, PromptSuggestion, InterpretDreamInput, DreamInterpretation, AnalyzeSentimentInput, AnalyzeSentimentOutput, GetTacticalAdviceInput, GetTacticalAdviceOutput, TextToSpeechInput, TextToSpeechOutput } from '@/lib/types';
+import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, ProfileData, PromptSuggestion, InterpretDreamInput, DreamInterpretation, AnalyzeSentimentInput, AnalyzeSentimentOutput, GetTacticalAdviceInput, GetTacticalAdviceOutput } from '@/lib/types';
 import { interpretDream as interpretDreamFlow } from '@/ai/flows/interpret-dream';
 import { analyzeSentiment as analyzeSentimentFlow } from '@/ai/flows/analyze-sentiment';
 import { getTacticalAdvice as getTacticalAdviceFlow } from '@/ai/flows/get-tactical-advice';
-import { generateSpeech as generateSpeechFlow } from '@/ai/flows/generate-speech';
 
 
 const expertRoles = [
@@ -215,15 +214,5 @@ export async function getTacticalAdviceAction(input: GetTacticalAdviceInput): Pr
   } catch (error) {
     console.error('Error getting tactical advice:', error);
     return { suggestions: [] };
-  }
-}
-
-
-export async function generateSpeechAction(input: TextToSpeechInput): Promise<TextToSpeechOutput> {
-  try {
-    return await generateSpeechFlow(input);
-  } catch (error) {
-    console.error('Error generating speech:', error);
-    throw new Error('Failed to generate speech.');
   }
 }
