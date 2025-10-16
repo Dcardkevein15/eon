@@ -6,7 +6,7 @@ import { AppLogo } from '@/components/logo';
 import ChatInput from './chat-input';
 import type { Message } from '@/lib/types';
 import { Feather, Briefcase, Dumbbell, Star, ChevronRight } from 'lucide-react';
-import { Card, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { SidebarTrigger } from '../ui/sidebar';
 import { Timestamp } from 'firebase/firestore';
@@ -96,20 +96,22 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
            <div className="w-full max-w-5xl mx-auto py-12" id="features">
              <div className="grid md:grid-cols-3 gap-6 text-left">
                 {corporateFeatures.map((feature) => (
-                    <Card key={feature.title} className="bg-card/50 hover:border-primary/50 hover:bg-card/80 transition-all cursor-pointer" onClick={() => router.push(feature.href)}>
+                    <Card key={feature.title} className="bg-card/50 hover:border-primary/50 hover:bg-card/80 transition-all cursor-pointer flex flex-col" onClick={() => router.push(feature.href)}>
                         <CardHeader className="flex-row items-center gap-4 space-y-0">
                              <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
                                 <feature.Icon className="w-6 h-6 text-primary" />
                              </div>
                              <CardTitle>{feature.title}</CardTitle>
                         </CardHeader>
-                        <CardDescription className="p-6 pt-0">
-                           {feature.description}
-                           <div className="flex items-center text-xs text-primary/80 font-semibold mt-4">
+                        <CardContent className="p-6 pt-0 flex-grow flex flex-col justify-between">
+                            <CardDescription>
+                               {feature.description}
+                            </CardDescription>
+                            <div className="flex items-center text-xs text-primary/80 font-semibold mt-4">
                                <span>Explorar</span>
                                <ChevronRight className="w-4 h-4 ml-1" />
                            </div>
-                        </CardDescription>
+                        </CardContent>
                     </Card>
                 ))}
              </div>
