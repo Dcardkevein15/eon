@@ -7,7 +7,7 @@ import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-const Sheet = SheetPrimitive.Root
+const SheetRoot = SheetPrimitive.Root
 
 const SheetTrigger = SheetPrimitive.Trigger
 
@@ -125,6 +125,13 @@ const SheetDescription = React.forwardRef<
   />
 ))
 SheetDescription.displayName = SheetPrimitive.Description.displayName
+
+
+const Sheet = Object.assign(SheetRoot, {
+  Trigger: SheetTrigger,
+  Close: SheetClose,
+});
+
 
 export {
   Sheet,
