@@ -39,6 +39,50 @@ export default function VoiceInterface({ onClose, onProcessAudio }: VoiceInterfa
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const animationFrameRef = useRef<number>();
 
+  // Refs to get latest state in callbacks
+  const statusRef = useRef(status);
+  const transcriptRef = useRef(transcript);
+  useEffect(() => {
+    statusRef.current = status;
+    transcriptRef.current = transcript;
+  }, [status, transcript]);
+
+
+  const stopListeningAndProcess = useCallback(async (finalTranscript: string) => {
+      if (statusRef.current !== Status.Listening) return;
+
+      if (recognitionRef.current) {
+          recognitionRef.current.stop();
+      }
+      
+      if (finalTranscript.trim().length === 0) {
+          setStatus(Status.Idle);
+          return;
+      }
+      
+      setStatus(Status.Processing);
+      
+      try {
+          const response = await onProcessAudio(finalTranscript);
+          if (response) {
+              setAiResponse(response.text);
+              setStatus(Status.Speaking);
+              const audio = new Audio(response.audio);
+              audioRef.current = audio;
+              audio.play();
+              audio.onended = () => {
+                  setStatus(Status.Idle);
+                  setAiResponse('');
+              };
+          } else {
+              setStatus(Status.Error);
+          }
+      } catch (e) {
+          console.error(e);
+          setStatus(Status.Error);
+      }
+  }, [onProcessAudio]);
+
   const startListening = useCallback(async () => {
     if (status === Status.Listening || status === Status.Processing) return;
 
@@ -115,50 +159,8 @@ export default function VoiceInterface({ onClose, onProcessAudio }: VoiceInterfa
         console.error("Error accessing microphone:", err);
         setStatus(Status.Error);
     }
-  }, []);
+  }, [status, stopListeningAndProcess]);
   
-  // Refs to get latest state in callbacks
-  const statusRef = useRef(status);
-  const transcriptRef = useRef(transcript);
-  useEffect(() => {
-    statusRef.current = status;
-    transcriptRef.current = transcript;
-  }, [status, transcript]);
-
-
-  const stopListeningAndProcess = useCallback(async (finalTranscript: string) => {
-      if (statusRef.current !== Status.Listening) return;
-
-      if (recognitionRef.current) {
-          recognitionRef.current.stop();
-      }
-      
-      setStatus(Status.Processing);
-      
-      try {
-          if (finalTranscript.trim().length === 0) {
-              setStatus(Status.Idle);
-              return;
-          }
-          const response = await onProcessAudio(finalTranscript);
-          if (response) {
-              setAiResponse(response.text);
-              setStatus(Status.Speaking);
-              const audio = new Audio(response.audio);
-              audioRef.current = audio;
-              audio.play();
-              audio.onended = () => {
-                  setStatus(Status.Idle);
-                  setAiResponse('');
-              };
-          } else {
-              setStatus(Status.Error);
-          }
-      } catch (e) {
-          console.error(e);
-          setStatus(Status.Error);
-      }
-  }, [onProcessAudio]);
 
   const handleOrbClick = () => {
     if (status === Status.Idle || status === Status.Error) {
