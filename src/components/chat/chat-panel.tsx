@@ -155,9 +155,9 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
       
       const updatedMessages = [...currentMessages, { ...aiMessage, id: uuidv4() }];
 
-      // Delayed suggestions logic, made 5x slower.
+      // Delayed suggestions logic, made 6x slower.
       const words = aiResponseContent.split(/\s+/).length;
-      const readingTime = Math.max(10000, words * 300); // 300ms per word, minimum 10 seconds
+      const readingTime = Math.max(12000, words * 360); // 360ms per word, minimum 12 seconds
       
       suggestionTimeoutRef.current = setTimeout(async () => {
          const historyString = updatedMessages.map((m) => `${m.role}: ${m.content}`).join('\n');
