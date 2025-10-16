@@ -11,6 +11,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { SidebarTrigger } from '../ui/sidebar';
 import { Timestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
+import { v4 as uuidv4 } from 'uuid';
 
 
 interface EmptyChatProps {
@@ -50,14 +51,21 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
       if ((!input.trim() && !imageUrl) || isCreatingChat) return;
 
       setIsCreatingChat(true);
-      const firstMessage: Omit<Message, 'id'> = {
+      const firstMessage: Message = {
+          id: uuidv4(),
           role: 'user',
           content: input,
-          timestamp: Timestamp.now(),
+          timestamp: new Date(), // Use JS Date for localStorage
           ...(imageUrl && { imageUrl }),
       };
-      await createChat(firstMessage);
-      // isCreatingChat will remain true, as the page will redirect.
+      
+      // Store the first message and redirect immediately for instant UI update
+      sessionStorage.setItem('pending_chat_message', JSON.stringify(firstMessage));
+      
+      // The createChat function will handle DB creation and final redirection
+      // but we don't wait for it to finish here.
+      createChat(firstMessage);
+      
   }, [createChat, isCreatingChat]);
 
   const handleNewConversation = () => {
@@ -107,7 +115,7 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
                             <CardDescription>
                                {feature.description}
                             </CardDescription>
-                            <div className="flex items-center text-xs text-primary/80 font-semibold mt-4">
+                             <div className="flex items-center text-xs text-primary/80 font-semibold mt-4">
                                <span>Explorar</span>
                                <ChevronRight className="w-4 h-4 ml-1" />
                            </div>

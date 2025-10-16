@@ -214,13 +214,15 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
         </Sidebar>
         <SidebarInset>
           <div className={cn('flex flex-col', chatId ? 'h-screen' : 'min-h-screen')}>
-            {chatId && activeChat ? (
-              <ChatPanel
-                key={chatId} // Ensure re-mount when chat changes
-                chat={activeChat}
-                appendMessage={appendMessage}
-                updateChatTitle={updateChatTitle}
-              />
+            {chatId ? (
+              activeChat ? (
+                <ChatPanel
+                  key={chatId} // Ensure re-mount when chat changes
+                  chat={activeChat}
+                  appendMessage={appendMessage}
+                  updateChatTitle={updateChatTitle}
+                />
+              ) : null // Don't render empty chat when a chat is supposed to be active
             ) : (
               <EmptyChat createChat={createChat} />
             )}

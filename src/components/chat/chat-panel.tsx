@@ -35,6 +35,10 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
   const firestore = useFirestore();
   const [cachedProfile, setCachedProfile] = useState<ProfileData | null>(null);
 
+  // Local messages state for optimistic updates
+  const [optimisticMessages, setOptimisticMessages] = useState<Message[]>([]);
+
+
   const messagesQuery = useMemo(
     () =>
       user?.uid && firestore && chat.id
@@ -47,6 +51,12 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
   );
   
   const { data: messages, loading: messagesLoading } = useCollection<Message>(messagesQuery);
+  
+  const allMessages = useMemo(() => {
+    // If we have messages from firestore, use them. Otherwise, use optimistic messages.
+    return messages && messages.length > 0 ? messages : optimisticMessages;
+  }, [messages, optimisticMessages]);
+  
   
   // Load cached profile on component mount
   useEffect(() => {
@@ -64,6 +74,26 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
       }
     }
   }, [user]);
+
+  // Effect to handle pending message from new chat creation
+  useEffect(() => {
+    const pendingMessageJSON = sessionStorage.getItem('pending_chat_message');
+    if (pendingMessageJSON) {
+      sessionStorage.removeItem('pending_chat_message');
+      try {
+        const pendingMessage = JSON.parse(pendingMessageJSON) as Message;
+        // Convert date string back to Date object
+        pendingMessage.timestamp = new Date(pendingMessage.timestamp);
+        
+        // Optimistically add the user's first message and trigger AI response
+        setOptimisticMessages([pendingMessage]);
+        getAIResponseAndUpdate([pendingMessage]);
+      } catch (e) {
+        console.error("Failed to parse pending message", e);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chat.id]);
 
 
   const triggerBlueprintUpdate = useCallback(async (currentMessages: Message[]) => {
@@ -208,20 +238,14 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
       ...(imageUrl && { imageUrl }),
     };
 
-    const currentMessages = [...(messages || []), { ...userMessage, id: uuidv4() }];
+    // Use `allMessages` which includes optimistic messages for context
+    const currentMessages = [...allMessages, { ...userMessage, id: uuidv4() }];
     
     await appendMessage(chat.id, userMessage);
     await getAIResponseAndUpdate(currentMessages);
 
-  }, [user, messages, appendMessage, chat.id, getAIResponseAndUpdate, toast]);
+  }, [user, allMessages, appendMessage, chat.id, getAIResponseAndUpdate, toast]);
 
-  // Effect to handle the very first response in a new chat
-  useEffect(() => {
-    // Only trigger if we have exactly one message and it's from the user
-    if (messages && messages.length === 1 && messages[0].role === 'user' && !isResponding) {
-      getAIResponseAndUpdate(messages);
-    }
-  }, [messages, isResponding, getAIResponseAndUpdate]);
 
   useEffect(() => {
     // Clear suggestion timeout on unmount
@@ -256,7 +280,7 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
         </div>
       </header>
       <div className="flex-1 overflow-y-auto">
-        <ChatMessages messages={messages || []} isResponding={isResponding || messagesLoading} />
+        <ChatMessages messages={allMessages} isResponding={isResponding || messagesLoading} />
       </div>
       <div className="mt-auto px-2 py-4 md:px-4 md:py-4 border-t bg-background/95 backdrop-blur-sm">
         <ChatInput
