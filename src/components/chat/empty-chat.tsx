@@ -319,6 +319,8 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
             isLoading={isCreatingChat}
             suggestions={[]}
             onClearSuggestions={() => {}}
+            onRefreshSuggestions={() => {}}
+            isRefreshingSuggestions={false}
           />
         </div>
       </div>
