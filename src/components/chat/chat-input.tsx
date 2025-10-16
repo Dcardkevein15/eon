@@ -4,7 +4,6 @@ import {
   useState,
   useRef,
   useEffect,
-  useCallback,
   forwardRef,
   useImperativeHandle,
   memo,
@@ -12,11 +11,10 @@ import {
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Send, Sparkles, Paperclip, X, RefreshCw } from 'lucide-react';
+import { Send, Sparkles, Paperclip, X, RefreshCw, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem } from '@/components/ui/form';
-import type { Message } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import Image from 'next/image';
@@ -34,10 +32,11 @@ interface ChatInputProps {
   onClearSuggestions: () => void;
   onRefreshSuggestions: () => void;
   isRefreshingSuggestions: boolean;
+  onStartVoice: () => void;
 }
 
 const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
-  ({ onSendMessage, isLoading, suggestions, onClearSuggestions, onRefreshSuggestions, isRefreshingSuggestions }, ref) => {
+  ({ onSendMessage, isLoading, suggestions, onClearSuggestions, onRefreshSuggestions, isRefreshingSuggestions, onStartVoice }, ref) => {
     const localTextareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isFocused, setIsFocused] = useState(false);
@@ -105,7 +104,6 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
       }
     }, [messageValue]);
     
-    // Si llegan nuevas sugerencias, nos aseguramos de que el contenedor sea visible.
     useEffect(() => {
         if (suggestions.length > 0) {
             setShowSuggestions(true);
@@ -115,8 +113,11 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
     const handleToggleSuggestions = () => {
         if (showSuggestions && suggestions.length > 0) {
             onClearSuggestions();
+            setShowSuggestions(false);
+        } else {
+            onRefreshSuggestions();
+            setShowSuggestions(true);
         }
-        setShowSuggestions(!showSuggestions);
     };
 
 
@@ -140,7 +141,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
               </Tooltip>
               <Tooltip>
                   <TooltipTrigger asChild>
-                       <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full text-red-500 hover:text-red-500 hover:bg-red-500/10" onClick={onClearSuggestions}>
+                       <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full text-red-500 hover:text-red-500 hover:bg-red-500/10" onClick={() => setShowSuggestions(false)}>
                         <X className="h-4 w-4" />
                       </Button>
                   </TooltipTrigger>
@@ -204,6 +205,17 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p>{showSuggestions && suggestions.length > 0 ? 'Ocultar' : 'Mostrar'} Sugerencias</p>
+                              </TooltipContent>
+                           </Tooltip>
+                           <Tooltip>
+                              <TooltipTrigger asChild>
+                                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={onStartVoice}>
+                                    <Mic className="h-5 w-5" />
+                                    <span className="sr-only">Chat de Voz</span>
+                                  </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Iniciar Chat de Voz</p>
                               </TooltipContent>
                            </Tooltip>
                             <Tooltip>
