@@ -9,5 +9,6 @@
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5",
-    "@types/wav": "^1.0.5"
+    "@types/wav": "^1.0.3",
+    "@types/dom-speech-recognition": "^0.0.4"
 }

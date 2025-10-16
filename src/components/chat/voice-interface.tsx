@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, Loader2, X, Bot, BrainCircuit } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Mic, Loader2, X, Bot, BrainCircuit, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -26,7 +26,7 @@ const statusInfo = {
   [Status.Listening]: { text: 'Escuchando...', icon: Mic },
   [Status.Processing]: { text: 'Nimbus está pensando...', icon: BrainCircuit },
   [Status.Speaking]: { text: 'Nimbus está respondiendo...', icon: Bot },
-  [Status.Error]: { text: 'Hubo un error. Toca para reintentar.', icon: Mic },
+  [Status.Error]: { text: 'Hubo un error. Toca para reintentar.', icon: AlertTriangle },
 };
 
 export default function VoiceInterface({ onClose, onProcessAudio }: VoiceInterfaceProps) {
@@ -44,8 +44,14 @@ export default function VoiceInterface({ onClose, onProcessAudio }: VoiceInterfa
   const animationFrameIdRef = useRef<number | null>(null);
   const audioPlaybackRef = useRef<HTMLAudioElement | null>(null);
 
-  const stopListening = useCallback(() => {
-    recognitionRef.current?.stop();
+  const cleanup = useCallback(() => {
+    if (recognitionRef.current) {
+        recognitionRef.current.onresult = null;
+        recognitionRef.current.onend = null;
+        recognitionRef.current.onerror = null;
+        recognitionRef.current.stop();
+        recognitionRef.current = null;
+    }
     if (animationFrameIdRef.current) {
       cancelAnimationFrame(animationFrameIdRef.current);
       animationFrameIdRef.current = null;
@@ -53,19 +59,17 @@ export default function VoiceInterface({ onClose, onProcessAudio }: VoiceInterfa
     streamRef.current?.getTracks().forEach(track => track.stop());
     sourceRef.current?.disconnect();
     if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-      audioContextRef.current.close();
+        audioContextRef.current.close().catch(console.error);
     }
-    
-    recognitionRef.current = null;
-    audioContextRef.current = null;
-    analyserRef.current = null;
-    sourceRef.current = null;
-    streamRef.current = null;
+     if (audioPlaybackRef.current) {
+      audioPlaybackRef.current.pause();
+      audioPlaybackRef.current = null;
+    }
     setVolume(0);
   }, []);
 
   const processAndRespond = useCallback(async (finalTranscript: string) => {
-    stopListening();
+    cleanup();
     if (!finalTranscript.trim()) {
       setStatus(Status.Idle);
       return;
@@ -76,13 +80,17 @@ export default function VoiceInterface({ onClose, onProcessAudio }: VoiceInterfa
 
     try {
       const response = await onProcessAudio(finalTranscript);
-      if (response) {
+      if (response && response.audio) {
         setAiResponse(response.text);
         setStatus(Status.Speaking);
         
         const audio = new Audio(response.audio);
         audioPlaybackRef.current = audio;
-        audio.play();
+        audio.play().catch(e => {
+            console.error("Error playing audio:", e);
+            setErrorMessage("No se pudo reproducir la respuesta.");
+            setStatus(Status.Error);
+        });
         audio.onended = () => {
           setStatus(Status.Idle);
           setAiResponse('');
@@ -96,7 +104,7 @@ export default function VoiceInterface({ onClose, onProcessAudio }: VoiceInterfa
       setErrorMessage(e.message || "Ocurrió un error al procesar tu voz.");
       setStatus(Status.Error);
     }
-  }, [onProcessAudio, stopListening]);
+  }, [onProcessAudio, cleanup]);
 
 
   const startListening = useCallback(async () => {
@@ -107,22 +115,24 @@ export default function VoiceInterface({ onClose, onProcessAudio }: VoiceInterfa
       return;
     }
 
+    cleanup();
     setStatus(Status.RequestingPermission);
     setTranscript('');
     setAiResponse('');
+    setErrorMessage('');
 
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         streamRef.current = stream;
         setStatus(Status.Listening);
 
-        // Setup recognition
         recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.lang = 'es-ES';
-        recognitionRef.current.interimResults = true;
-        recognitionRef.current.continuous = true;
+        const recognition = recognitionRef.current;
+        recognition.lang = 'es-ES';
+        recognition.interimResults = true;
+        recognition.continuous = false; // Process after a pause
 
-        recognitionRef.current.onresult = (event) => {
+        recognition.onresult = (event) => {
             let interimTranscript = '';
             let finalTranscript = '';
             for (let i = event.resultIndex; i < event.results.length; ++i) {
@@ -132,70 +142,68 @@ export default function VoiceInterface({ onClose, onProcessAudio }: VoiceInterfa
                     interimTranscript += event.results[i][0].transcript;
                 }
             }
-            setTranscript(interimTranscript);
-            if (finalTranscript) {
+            setTranscript(prev => prev + interimTranscript);
+             if (finalTranscript) {
                 processAndRespond(finalTranscript);
             }
         };
 
-        recognitionRef.current.onend = () => {
-            if (status !== Status.Processing && status !== Status.Speaking) {
-                 processAndRespond(transcript);
+        recognition.onend = () => {
+            if (statusRef.current === Status.Listening) {
+                 processAndRespond(transcriptRef.current);
             }
         };
 
-        recognitionRef.current.onerror = (event) => {
+        recognition.onerror = (event) => {
             console.error('Speech recognition error', event.error);
             setErrorMessage(`Error de reconocimiento: ${event.error}`);
             setStatus(Status.Error);
-            stopListening();
+            cleanup();
         };
 
-        recognitionRef.current.start();
+        recognition.start();
         
-        // Setup Volume Meter
         audioContextRef.current = new AudioContext();
         analyserRef.current = audioContextRef.current.createAnalyser();
-        analyserRef.current.fftSize = 512;
+        analyserRef.current.fftSize = 256;
         sourceRef.current = audioContextRef.current.createMediaStreamSource(stream);
         sourceRef.current.connect(analyserRef.current);
         
         const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
         const updateVolume = () => {
-            if (analyserRef.current) {
-                analyserRef.current.getByteFrequencyData(dataArray);
-                const avg = dataArray.reduce((acc, val) => acc + val, 0) / dataArray.length;
-                setVolume(avg / 128); // Normalize to 0-1 range
-            }
+            if (!analyserRef.current) return;
+            analyserRef.current.getByteFrequencyData(dataArray);
+            const avg = dataArray.reduce((acc, val) => acc + val, 0) / dataArray.length;
+            setVolume(avg / 128);
             animationFrameIdRef.current = requestAnimationFrame(updateVolume);
         };
         updateVolume();
 
     } catch (err) {
         console.error("Error accessing microphone:", err);
-        setErrorMessage('No se pudo acceder al micrófono. Por favor, concede permiso.');
+        setErrorMessage('No se pudo acceder al micrófono. Por favor, concede permiso e inténtalo de nuevo.');
         setStatus(Status.Error);
     }
-  }, [processAndRespond, stopListening, status, transcript]);
+  }, [cleanup, processAndRespond]);
+
+  const statusRef = useRef(status);
+  statusRef.current = status;
+  const transcriptRef = useRef(transcript);
+  transcriptRef.current = transcript;
 
   const handleOrbClick = useCallback(() => {
-    if (status === Status.Idle || status === Status.Error) {
+    if (statusRef.current === Status.Idle || statusRef.current === Status.Error) {
       startListening();
-    } else if (status === Status.Listening) {
+    } else if (statusRef.current === Status.Listening) {
       recognitionRef.current?.stop();
     }
-  }, [status, startListening]);
+  }, [startListening]);
   
   useEffect(() => {
-      // Cleanup function when component unmounts
       return () => {
-          stopListening();
-          if (audioPlaybackRef.current) {
-              audioPlaybackRef.current.pause();
-          }
+          cleanup();
       };
-  }, [stopListening]);
-
+  }, [cleanup]);
 
   const StatusIcon = statusInfo[status].icon;
   const isOrbActive = status === Status.Listening;
@@ -219,7 +227,6 @@ export default function VoiceInterface({ onClose, onProcessAudio }: VoiceInterfa
       </Button>
 
       <div className="relative w-64 h-64 md:w-80 md:h-80 flex items-center justify-center">
-        {/* Outer rotating rings */}
         <motion.div
             className="absolute w-full h-full rounded-full border-2 border-primary/20"
             animate={{ rotate: 360 }}
@@ -231,7 +238,6 @@ export default function VoiceInterface({ onClose, onProcessAudio }: VoiceInterfa
             transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
         />
 
-        {/* Pulsing glow */}
         <motion.div
           className="absolute w-full h-full rounded-full bg-primary"
           animate={{ 
@@ -241,7 +247,6 @@ export default function VoiceInterface({ onClose, onProcessAudio }: VoiceInterfa
           transition={{ type: 'spring', stiffness: 400, damping: 30 }}
         />
         
-        {/* Central Orb */}
         <motion.div
           onClick={handleOrbClick}
           className={cn(
@@ -268,15 +273,10 @@ export default function VoiceInterface({ onClose, onProcessAudio }: VoiceInterfa
       </div>
       
       <div className="text-center mt-12 h-36 flex flex-col justify-center items-center text-foreground w-full max-w-2xl">
-        <AnimatePresence mode="wait">
-            <motion.div
-              key={status}
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: -20, opacity: 0 }}
+        <div
               className="w-full"
             >
-              <p className="text-xl font-medium tracking-tight mb-4">
+              <p className="text-xl font-medium tracking-tight mb-4 text-foreground/90">
                 {status === Status.Error ? errorMessage : statusInfo[status].text}
               </p>
               
@@ -285,8 +285,7 @@ export default function VoiceInterface({ onClose, onProcessAudio }: VoiceInterfa
                   {(status === Status.Processing && transcript) && <p>"{transcript}"</p>}
                   {status === Status.Speaking && <p>{aiResponse}</p>}
               </div>
-            </motion.div>
-        </AnimatePresence>
+        </div>
       </div>
     </motion.div>
   );
