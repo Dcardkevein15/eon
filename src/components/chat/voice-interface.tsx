@@ -26,165 +26,222 @@ const statusInfo = {
   [Status.Error]: { text: 'Hubo un error. Toca para reintentar.', icon: MicOff },
 };
 
+
+/**
+ * Controller class to manage all Web Audio and Speech Recognition APIs.
+ * This encapsulates the complexity and ensures resources are handled correctly.
+ */
+class AudioController {
+    private recognition: SpeechRecognition | null = null;
+    private audioContext: AudioContext | null = null;
+    private analyser: AnalyserNode | null = null;
+    private source: MediaStreamAudioSourceNode | null = null;
+    private animationFrameId: number | null = null;
+    private stream: MediaStream | null = null;
+
+    private readonly onTranscriptUpdate: (transcript: string, isFinal: boolean) => void;
+    private readonly onVolumeChange: (volume: number) => void;
+    private readonly onListeningEnd: () => void;
+    private readonly onError: (error: string) => void;
+
+    constructor({ onTranscriptUpdate, onVolumeChange, onListeningEnd, onError }: {
+        onTranscriptUpdate: (transcript: string, isFinal: boolean) => void;
+        onVolumeChange: (volume: number) => void;
+        onListeningEnd: () => void;
+        onError: (error: string) => void;
+    }) {
+        this.onTranscriptUpdate = onTranscriptUpdate;
+        this.onVolumeChange = onVolumeChange;
+        this.onListeningEnd = onListeningEnd;
+        this.onError = onError;
+    }
+
+    private async getStream(): Promise<MediaStream> {
+        if (this.stream) return this.stream;
+        this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        return this.stream;
+    }
+
+    public async startListening(): Promise<void> {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            this.onError('La API de reconocimiento de voz no es compatible con este navegador.');
+            return;
+        }
+
+        try {
+            const stream = await this.getStream();
+            
+            // Setup recognition
+            this.recognition = new SpeechRecognition();
+            this.recognition.lang = 'es-ES';
+            this.recognition.interimResults = true;
+            this.recognition.continuous = true;
+
+            this.recognition.onresult = (event) => {
+                let interimTranscript = '';
+                let finalTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+                this.onTranscriptUpdate(finalTranscript || interimTranscript, !!finalTranscript);
+            };
+
+            this.recognition.onend = () => {
+                this.onListeningEnd();
+            };
+
+            this.recognition.onerror = (event) => {
+                console.error('Speech recognition error', event.error);
+                this.onError(`Error de reconocimiento: ${event.error}`);
+            };
+
+            this.recognition.start();
+            this.startVolumeMeter(stream);
+
+        } catch (err) {
+            console.error("Error accessing microphone:", err);
+            this.onError('No se pudo acceder al micrófono. Por favor, concede permiso.');
+        }
+    }
+
+    public stopListening(): void {
+        if (this.recognition) {
+            this.recognition.stop();
+        }
+        this.stopVolumeMeter();
+    }
+    
+    private startVolumeMeter(stream: MediaStream): void {
+        if (!this.audioContext) {
+            this.audioContext = new AudioContext();
+            this.analyser = this.audioContext.createAnalyser();
+            this.analyser.fftSize = 512;
+            this.source = this.audioContext.createMediaStreamSource(stream);
+            this.source.connect(this.analyser);
+        }
+
+        const dataArray = new Uint8Array(this.analyser!.frequencyBinCount);
+        const updateVolume = () => {
+            if (this.analyser) {
+                this.analyser.getByteFrequencyData(dataArray);
+                const avg = dataArray.reduce((acc, val) => acc + val, 0) / dataArray.length;
+                this.onVolumeChange(avg / 128); // Normalize to 0-1 range
+            }
+            this.animationFrameId = requestAnimationFrame(updateVolume);
+        };
+        updateVolume();
+    }
+
+    private stopVolumeMeter(): void {
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+        }
+    }
+    
+    public cleanup(): void {
+        this.stopListening();
+        this.stream?.getTracks().forEach(track => track.stop());
+        this.source?.disconnect();
+        if (this.audioContext && this.audioContext.state !== 'closed') {
+           this.audioContext.close();
+        }
+        this.recognition = null;
+        this.audioContext = null;
+        this.stream = null;
+    }
+}
+
+
 export default function VoiceInterface({ onClose, onProcessAudio }: VoiceInterfaceProps) {
   const [status, setStatus] = useState<Status>(Status.Idle);
   const [transcript, setTranscript] = useState('');
   const [aiResponse, setAiResponse] = useState('');
   const [volume, setVolume] = useState(0);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const animationFrameRef = useRef<number>();
-
-  // Refs to get latest state in callbacks
-  const statusRef = useRef(status);
-  const transcriptRef = useRef(transcript);
-  useEffect(() => {
-    statusRef.current = status;
-    transcriptRef.current = transcript;
-  }, [status, transcript]);
-
-
-  const stopListeningAndProcess = useCallback(async (finalTranscript: string) => {
-      if (statusRef.current !== Status.Listening) return;
-
-      if (recognitionRef.current) {
-          recognitionRef.current.stop();
-      }
-      
-      if (finalTranscript.trim().length === 0) {
-          setStatus(Status.Idle);
-          return;
-      }
-      
-      setStatus(Status.Processing);
-      
-      try {
-          const response = await onProcessAudio(finalTranscript);
-          if (response) {
-              setAiResponse(response.text);
-              setStatus(Status.Speaking);
-              const audio = new Audio(response.audio);
-              audioRef.current = audio;
-              audio.play();
-              audio.onended = () => {
-                  setStatus(Status.Idle);
-                  setAiResponse('');
-              };
-          } else {
-              setStatus(Status.Error);
-          }
-      } catch (e) {
-          console.error(e);
-          setStatus(Status.Error);
-      }
-  }, [onProcessAudio]);
-
-  const startListening = useCallback(async () => {
-    if (status === Status.Listening || status === Status.Processing) return;
-
-    setTranscript('');
-    setAiResponse('');
-    setStatus(Status.Listening);
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setStatus(Status.Error);
-      alert('La API de reconocimiento de voz no es compatible con este navegador.');
+  const audioControllerRef = useRef<AudioController | null>(null);
+  const audioPlaybackRef = useRef<HTMLAudioElement | null>(null);
+  
+  const processAndRespond = useCallback(async (finalTranscript: string) => {
+    if (!finalTranscript.trim()) {
+      setStatus(Status.Idle);
       return;
     }
-
+    
+    setStatus(Status.Processing);
     try {
-        // Request permission and get stream first
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-        recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.lang = 'es-ES';
-        recognitionRef.current.interimResults = true;
-        recognitionRef.current.continuous = false;
-
-        recognitionRef.current.onresult = (event) => {
-          let interimTranscript = '';
-          let finalTranscript = '';
-          for (let i = event.resultIndex; i < event.results.length; ++i) {
-            if (event.results[i].isFinal) {
-              finalTranscript += event.results[i][0].transcript;
-            } else {
-              interimTranscript += event.results[i][0].transcript;
-            }
-          }
-          setTranscript(prev => finalTranscript || interimTranscript);
-        };
+      const response = await onProcessAudio(finalTranscript);
+      if (response) {
+        setAiResponse(response.text);
+        setStatus(Status.Speaking);
         
-        recognitionRef.current.onend = () => {
-            // Check the status before deciding to stop.
-            // This prevents transitioning to Idle if we're already Processing.
-            if (statusRef.current === Status.Listening) {
-                 stopListeningAndProcess(transcriptRef.current);
-            }
+        const audio = new Audio(response.audio);
+        audioPlaybackRef.current = audio;
+        audio.play();
+        audio.onended = () => {
+          setStatus(Status.Idle);
+          setAiResponse('');
         };
-        
-        recognitionRef.current.onerror = (event) => {
-            console.error('Speech recognition error', event.error);
-            setStatus(Status.Error);
-        };
-        
-        recognitionRef.current.start();
-
-        // Setup Volume Meter
-        if (!audioContextRef.current) {
-            const context = new AudioContext();
-            audioContextRef.current = context;
-            analyserRef.current = context.createAnalyser();
-            analyserRef.current.fftSize = 256;
-            sourceRef.current = context.createMediaStreamSource(stream);
-            sourceRef.current.connect(analyserRef.current);
-            
-            const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
-
-            const updateVolume = () => {
-              if (analyserRef.current) {
-                analyserRef.current.getByteFrequencyData(dataArray);
-                const avg = dataArray.reduce((acc, val) => acc + val, 0) / dataArray.length;
-                setVolume(avg / 128); // Normalize to 0-1 range
-              }
-              animationFrameRef.current = requestAnimationFrame(updateVolume);
-            };
-            updateVolume();
-        }
-    } catch (err) {
-        console.error("Error accessing microphone:", err);
-        setStatus(Status.Error);
+      } else {
+        throw new Error("La IA no devolvió una respuesta de audio válida.");
+      }
+    } catch (e: any) {
+      console.error(e);
+      setErrorMessage(e.message || "Ocurrió un error al procesar tu voz.");
+      setStatus(Status.Error);
     }
-  }, [status, stopListeningAndProcess]);
-  
+  }, [onProcessAudio]);
 
-  const handleOrbClick = () => {
-    if (status === Status.Idle || status === Status.Error) {
-      startListening();
-    } else if (status === Status.Listening) {
-      stopListeningAndProcess(transcript);
-    }
-  };
 
   useEffect(() => {
-    // Cleanup on unmount
-    return () => {
-      if (recognitionRef.current) recognitionRef.current.abort();
-      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-      if (sourceRef.current) sourceRef.current.disconnect();
-      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-         audioContextRef.current.close();
+    audioControllerRef.current = new AudioController({
+      onTranscriptUpdate: (text, isFinal) => {
+        setTranscript(text);
+        if (isFinal) {
+           audioControllerRef.current?.stopListening();
+           processAndRespond(text);
+        }
+      },
+      onVolumeChange: setVolume,
+      onListeningEnd: () => {
+        if (status !== Status.Processing && status !== Status.Speaking) {
+           // This handles cases where recognition ends naturally (e.g., silence)
+           // and we haven't already started processing a final transcript.
+           processAndRespond(transcript);
+        }
+      },
+      onError: (error) => {
+        setErrorMessage(error);
+        setStatus(Status.Error);
       }
-      if (audioRef.current) {
-          audioRef.current.pause();
-          audioRef.current = null;
+    });
+
+    return () => {
+      audioControllerRef.current?.cleanup();
+      if (audioPlaybackRef.current) {
+          audioPlaybackRef.current.pause();
       }
     };
-  }, []);
+  }, [processAndRespond, status, transcript]);
+
+  const handleOrbClick = useCallback(() => {
+    if (status === Status.Idle || status === Status.Error) {
+      setTranscript('');
+      setAiResponse('');
+      setErrorMessage('');
+      setStatus(Status.Listening);
+      audioControllerRef.current?.startListening();
+    } else if (status === Status.Listening) {
+      audioControllerRef.current?.stopListening(); // This will trigger onListeningEnd -> processAndRespond
+    }
+  }, [status]);
+
 
   const StatusIcon = statusInfo[status].icon;
   const isOrbActive = status === Status.Listening || status === Status.Processing;
@@ -219,6 +276,7 @@ export default function VoiceInterface({ onClose, onProcessAudio }: VoiceInterfa
             duration: 2,
             repeat: Infinity,
             ease: 'easeInOut',
+            ...(status !== Status.Listening && { repeat: 0, duration: 0.5 })
           }}
         />
         <motion.div
@@ -241,12 +299,12 @@ export default function VoiceInterface({ onClose, onProcessAudio }: VoiceInterfa
               exit={{ y: -20, opacity: 0 }}
               className="text-xl font-medium tracking-tight"
             >
-              {statusInfo[status].text}
+              {status === Status.Error ? errorMessage : statusInfo[status].text}
             </motion.p>
         </AnimatePresence>
 
         <div className="text-lg mt-4 h-16 max-w-xl mx-auto">
-            {status === Status.Listening && <p>{transcript}</p>}
+            {(status === Status.Listening || (status === Status.Processing && transcript)) && <p>{transcript}</p>}
             {status === Status.Speaking && <p>{aiResponse}</p>}
         </div>
       </div>
