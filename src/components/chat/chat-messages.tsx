@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useRef, useState, useLayoutEffect } from 'react';
@@ -37,16 +38,17 @@ const FullscreenThinkingIndicator = () => {
     ];
     
     const useRandomNodes = (numNodes: number, width: number, height: number) => {
-        const [nodes, setNodes] = useState<{ x: number; y: number; text: string; }[]>([]);
+        const [nodes, setNodes] = useState<{ x: number; y: number; text: string; size: number; }[]>([]);
 
         useEffect(() => {
             if (width === 0 || height === 0) return;
 
             const shuffledConcepts = [...concepts].sort(() => 0.5 - Math.random());
             const newNodes = Array.from({ length: numNodes }).map((_, i) => ({
-                x: Math.random() * (width - 120) + 60,
-                y: Math.random() * (height - 80) + 40,
-                text: shuffledConcepts[i % shuffledConcepts.length]
+                x: Math.random() * (width * 0.8) + (width * 0.1),
+                y: Math.random() * (height * 0.8) + (height * 0.1),
+                text: shuffledConcepts[i % shuffledConcepts.length],
+                size: Math.random() * 6 + 4 // Random sizes for nodes
             }));
             setNodes(newNodes);
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -86,7 +88,14 @@ const FullscreenThinkingIndicator = () => {
         >
             <AnimatePresence>
                 {dimensions.width > 0 && (
-                    <svg width="100%" height="100%" viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}>
+                    <motion.svg 
+                        width="100%" 
+                        height="100%" 
+                        viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
+                        initial={{ scale: 0.5, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1, transition: { duration: 0.8, ease: "easeOut" } }}
+                        exit={{ scale: 0.5, opacity: 0, transition: { duration: 0.5, ease: "easeIn" } }}
+                    >
                         {/* Acto II: Exploración de rutas */}
                         <g>
                             {links.map((link, i) => (
@@ -112,8 +121,34 @@ const FullscreenThinkingIndicator = () => {
                                     animate={{ opacity: 1, scale: 1 }}
                                     transition={{ duration: 0.5, delay: i * 0.1 }}
                                 >
-                                    <circle cx={node.x} cy={node.y} r="8" fill="hsl(var(--primary))" />
-                                    <text x={node.x} y={node.y - 18} textAnchor="middle" fontSize="13" fill="hsl(var(--muted-foreground))" fontWeight="600">
+                                    <motion.circle 
+                                      cx={node.x} 
+                                      cy={node.y} 
+                                      r={node.size} 
+                                      fill="hsl(var(--primary))"
+                                      animate={mainPathIndices.includes(i) 
+                                        ? { 
+                                            scale: [1, 1.5, 1], 
+                                            fill: ["hsl(var(--primary))", "hsl(var(--accent))", "hsl(var(--primary))"]
+                                          } 
+                                        : { scale: 1, fill: "hsl(var(--primary))" }
+                                      }
+                                      transition={mainPathIndices.includes(i) ? { delay: 3 + mainPathIndices.indexOf(i) * 0.3, duration: 0.5 } : {}}
+                                    />
+                                    {mainPathIndices.includes(i) && (
+                                        <motion.circle
+                                            cx={node.x}
+                                            cy={node.y}
+                                            r={node.size}
+                                            fill="transparent"
+                                            stroke="hsl(var(--accent))"
+                                            strokeWidth="2"
+                                            initial={{ scale: 1, opacity: 0 }}
+                                            animate={{ scale: 3, opacity: [0.8, 0] }}
+                                            transition={{ delay: 3 + mainPathIndices.indexOf(i) * 0.3 + 0.1, duration: 0.7, ease: "easeOut" }}
+                                        />
+                                    )}
+                                    <text x={node.x} y={node.y - node.size - 8} textAnchor="middle" fontSize="14" fill="hsl(var(--muted-foreground))" fontWeight="600">
                                         {node.text}
                                     </text>
                                 </motion.g>
@@ -129,8 +164,8 @@ const FullscreenThinkingIndicator = () => {
                                         animate={{ opacity: [1, 0.3, 1] }}
                                         transition={{ duration: 2, repeat: Infinity, delay: 2.5 }}
                                     >
-                                         <circle cx={node.x} cy={node.y} r="8" fill="hsl(var(--primary))" />
-                                         <text x={node.x} y={node.y - 18} textAnchor="middle" fontSize="13" fill="hsl(var(--muted-foreground))" fontWeight="600">
+                                         <circle cx={node.x} cy={node.y} r={node.size} fill="hsl(var(--primary))" />
+                                         <text x={node.x} y={node.y - node.size - 8} textAnchor="middle" fontSize="14" fill="hsl(var(--muted-foreground))" fontWeight="600">
                                             {node.text}
                                         </text>
                                     </motion.g>
@@ -153,7 +188,7 @@ const FullscreenThinkingIndicator = () => {
                                 />
                             ))}
                         </g>
-                    </svg>
+                    </motion.svg>
                 )}
             </AnimatePresence>
         </motion.div>
