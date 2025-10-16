@@ -12,7 +12,7 @@ import {
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Send, Sparkles, Paperclip, X } from 'lucide-react';
+import { Send, Sparkles, Paperclip, X, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem } from '@/components/ui/form';
@@ -32,14 +32,17 @@ interface ChatInputProps {
   isLoading: boolean;
   suggestions: string[];
   onClearSuggestions: () => void;
+  onRefreshSuggestions: () => void;
+  isRefreshingSuggestions: boolean;
 }
 
 const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
-  ({ onSendMessage, isLoading, suggestions, onClearSuggestions }, ref) => {
+  ({ onSendMessage, isLoading, suggestions, onClearSuggestions, onRefreshSuggestions, isRefreshingSuggestions }, ref) => {
     const localTextareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isFocused, setIsFocused] = useState(false);
     const [attachedImage, setAttachedImage] = useState<string | null>(null);
+    const [showSuggestions, setShowSuggestions] = useState(true);
 
     useImperativeHandle(ref, () => localTextareaRef.current as HTMLTextAreaElement);
 
@@ -101,25 +104,49 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
         localTextareaRef.current.style.height = `${Math.min(scrollHeight, maxHeight)}px`;
       }
     }, [messageValue]);
+    
+    // Si llegan nuevas sugerencias, nos aseguramos de que el contenedor sea visible.
+    useEffect(() => {
+        if (suggestions.length > 0) {
+            setShowSuggestions(true);
+        }
+    }, [suggestions]);
+
+    const handleToggleSuggestions = () => {
+        if (showSuggestions && suggestions.length > 0) {
+            onClearSuggestions();
+        }
+        setShowSuggestions(!showSuggestions);
+    };
+
 
     return (
       <TooltipProvider delayDuration={200}>
       <div className="w-full max-w-4xl mx-auto space-y-4">
-        {suggestions.length > 0 && !isLoading && (
+        {showSuggestions && suggestions.length > 0 && !isLoading && (
            <div className="relative flex flex-col items-start gap-2">
             <div className="flex items-center gap-2 text-sm text-muted-foreground w-full">
               <Sparkles className="w-4 h-4 text-accent flex-shrink-0" />
               <span>Sugerencias:</span>
             </div>
-             <Button
-                variant="destructive"
-                size="icon"
-                className="absolute top-0 right-0 h-6 w-6 rounded-full bg-red-600 hover:bg-red-700 text-white"
-                onClick={onClearSuggestions}
-              >
-                <X className="h-4 w-4" />
-                <span className="sr-only">Cerrar sugerencias</span>
-              </Button>
+            <div className="absolute top-0 right-0 flex items-center">
+              <Tooltip>
+                  <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full" onClick={onRefreshSuggestions} disabled={isRefreshingSuggestions}>
+                          <RefreshCw className={cn("h-3 w-3", isRefreshingSuggestions && "animate-spin")} />
+                      </Button>
+                  </TooltipTrigger>
+                  <TooltipContent><p>Recargar Sugerencias</p></TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                  <TooltipTrigger asChild>
+                       <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full text-red-500 hover:text-red-500 hover:bg-red-500/10" onClick={onClearSuggestions}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                  </TooltipTrigger>
+                   <TooltipContent><p>Cerrar Sugerencias</p></TooltipContent>
+              </Tooltip>
+            </div>
             <div className="flex items-center gap-2 flex-wrap">
               {suggestions.map((s, i) => (
                 <Button
@@ -170,13 +197,13 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
                         <div className="flex items-center pl-2">
                            <Tooltip>
                               <TooltipTrigger asChild>
-                                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={onClearSuggestions}>
-                                    <Sparkles className={cn("h-5 w-5", suggestions.length > 0 && "text-accent")} />
+                                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={handleToggleSuggestions}>
+                                    <Sparkles className={cn("h-5 w-5", suggestions.length > 0 && showSuggestions && "text-accent")} />
                                     <span className="sr-only">Toggle Suggestions</span>
                                   </Button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>{suggestions.length > 0 ? 'Ocultar' : 'Mostrar'} Sugerencias</p>
+                                <p>{showSuggestions && suggestions.length > 0 ? 'Ocultar' : 'Mostrar'} Sugerencias</p>
                               </TooltipContent>
                            </Tooltip>
                             <Tooltip>

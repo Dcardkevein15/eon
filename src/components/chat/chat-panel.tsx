@@ -28,6 +28,7 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
   const [isResponding, setIsResponding] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const suggestionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isRefreshingSuggestions, setIsRefreshingSuggestions] = useState(false);
 
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -107,6 +108,21 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
          }
       }
   }, [user, firestore]);
+
+    const fetchSuggestions = useCallback(async () => {
+        if (!messages || messages.length === 0) return;
+        setIsRefreshingSuggestions(true);
+        try {
+            const historyString = messages.map((m) => `${m.role}: ${m.content}`).join('\n');
+            const newSuggestions = await getSmartComposeSuggestions(historyString);
+            setSuggestions(newSuggestions.slice(0, 3));
+        } catch (error) {
+            console.error("Error fetching suggestions", error);
+        } finally {
+            setIsRefreshingSuggestions(false);
+        }
+    }, [messages]);
+
 
   const getAIResponseAndUpdate = useCallback(async (currentMessages: Message[]) => {
     if (!user) return;
@@ -249,6 +265,8 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
           isLoading={isResponding || messagesLoading}
           suggestions={suggestions}
           onClearSuggestions={handleClearSuggestions}
+          onRefreshSuggestions={fetchSuggestions}
+          isRefreshingSuggestions={isRefreshingSuggestions}
         />
       </div>
     </div>
