@@ -49,7 +49,7 @@ const FullscreenThinkingIndicator = () => {
                 x: Math.random() * (width * 0.8) + (width * 0.1),
                 y: Math.random() * (height * 0.8) + (height * 0.1),
                 text: shuffledConcepts[i % shuffledConcepts.length],
-                size: Math.random() * 8 + 6
+                size: Math.random() * 12 + 10 // Increased node size
             }));
             setNodes(newNodes);
             
@@ -82,7 +82,13 @@ const FullscreenThinkingIndicator = () => {
         }
     }
     
-    const totalDuration = 3 + mainPathLinks.length * 1 + 2; // Adjusted total duration
+    // Extended total duration to account for new act
+    const act1_node_appearance = 2;
+    const act2_exploration = 1.5;
+    const act3_path_revelation = mainPathLinks.length * 1;
+    const act4_synthesis_explosion = 1;
+    const act5_resolution_wave = 1.5;
+    const totalDuration = act1_node_appearance + act2_exploration + act3_path_revelation + act4_synthesis_explosion + act5_resolution_wave;
 
     return (
         <motion.div
@@ -91,9 +97,9 @@ const FullscreenThinkingIndicator = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1, transition: { duration: 0.5 } }}
             exit={{ 
-                scale: 0,
                 opacity: 0,
-                transition: { duration: 0.7, ease: "easeIn" }
+                scale: 0,
+                transition: { duration: 0.7, ease: [0.8, 0, 1, 1] }
             }}
         >
             <AnimatePresence>
@@ -105,7 +111,7 @@ const FullscreenThinkingIndicator = () => {
                         initial={{ scale: 0.5, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1, transition: { duration: 0.8, ease: "easeOut" } }}
                         exit={{
-                            scale: 0.1,
+                            scale: 0,
                             opacity: 0,
                             transition: { duration: 0.7, ease: [0.8, 0, 1, 1] }
                         }}
@@ -122,7 +128,7 @@ const FullscreenThinkingIndicator = () => {
                                     strokeWidth="0.5"
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: [0, 0.1, 0] }}
-                                    transition={{ duration: 1.5, repeat: Infinity, delay: 1 + Math.random() * 2 }}
+                                    transition={{ duration: 1.5, repeat: Infinity, delay: act1_node_appearance + Math.random() * 2 }}
                                 />
                             ))}
                         </g>
@@ -132,7 +138,8 @@ const FullscreenThinkingIndicator = () => {
                             {nodes.map((node, i) => {
                                 const isMainPathNode = mainPathIndices.includes(i);
                                 const mainPathIndex = mainPathIndices.indexOf(i);
-                                const delay = 3 + mainPathIndex * 1;
+                                const pathDelay = act1_node_appearance + act2_exploration;
+                                const revealDelay = pathDelay + mainPathIndex * 1;
 
                                 return (
                                     <motion.g
@@ -141,16 +148,29 @@ const FullscreenThinkingIndicator = () => {
                                         animate={{ opacity: 1, scale: 1 }}
                                         transition={{ duration: 0.5, delay: i * 0.1 }}
                                     >
+                                        <defs>
+                                            <radialGradient id={`grad-${i}`}>
+                                                <stop offset="0%" stopColor="hsl(var(--primary) / 0.8)" />
+                                                <stop offset="70%" stopColor="hsl(var(--primary))" />
+                                                <stop offset="100%" stopColor="hsl(var(--primary) / 0.5)" />
+                                            </radialGradient>
+                                            <radialGradient id={`grad-accent-${i}`}>
+                                                <stop offset="0%" stopColor="hsl(var(--accent) / 0.8)" />
+                                                <stop offset="70%" stopColor="hsl(var(--accent))" />
+                                                <stop offset="100%" stopColor="hsl(var(--accent) / 0.5)" />
+                                            </radialGradient>
+                                        </defs>
+
                                         <motion.circle 
                                           cx={node.x} 
                                           cy={node.y} 
                                           r={node.size} 
-                                          fill="hsl(var(--primary))"
+                                          fill={`url(#grad-${i})`}
                                           animate={isMainPathNode
-                                            ? { fill: ["hsl(var(--primary))", "hsl(var(--accent))"] }
+                                            ? { fill: `url(#grad-accent-${i})` }
                                             : { scale: [1, 1.05, 1], transition: { delay: 2.5, duration: 2, repeat: Infinity } }
                                           }
-                                          transition={isMainPathNode ? { delay, duration: 0.5 } : {}}
+                                          transition={isMainPathNode ? { delay: revealDelay, duration: 0.5 } : {}}
                                         />
                                         {isMainPathNode && (
                                             <>
@@ -163,7 +183,7 @@ const FullscreenThinkingIndicator = () => {
                                                     strokeWidth="2"
                                                     initial={{ scale: 1, opacity: 0 }}
                                                     animate={{ scale: 4, opacity: [0.8, 0] }}
-                                                    transition={{ delay: delay + 0.1, duration: 1.2, ease: "easeOut" }}
+                                                    transition={{ delay: revealDelay + 0.1, duration: 1.2, ease: "easeOut" }}
                                                 />
                                                  <motion.circle
                                                     cx={node.x}
@@ -171,12 +191,12 @@ const FullscreenThinkingIndicator = () => {
                                                     r={node.size}
                                                     fill="hsl(var(--accent))"
                                                     initial={{ scale: 1, opacity: 0}}
-                                                    animate={{ opacity: [0, 1, 1] }}
-                                                    transition={{ delay, duration: totalDuration - delay }}
+                                                    animate={{ opacity: [0, 1] }}
+                                                    transition={{ delay: revealDelay, duration: totalDuration - revealDelay }}
                                                 />
                                             </>
                                         )}
-                                        <text x={node.x} y={node.y} textAnchor="middle" dy=".3em" fontSize="14" fill="hsl(var(--primary-foreground))" fontWeight="600" style={{pointerEvents: 'none'}}>
+                                        <text x={node.x} y={node.y} textAnchor="middle" dy=".3em" fontSize="14" fill="hsl(var(--primary-foreground))" fontWeight="600" style={{pointerEvents: 'none', textShadow: '0 0 5px hsl(var(--background))'}}>
                                             {node.text}
                                         </text>
                                     </motion.g>
@@ -184,7 +204,7 @@ const FullscreenThinkingIndicator = () => {
                             })}
                         </g>
 
-                        {/* Acto IV: La Revelación (Ruta Principal) */}
+                        {/* Acto III: La Revelación (Ruta Principal) */}
                         <g>
                             {mainPathLinks.map((link, i) => (
                                 <motion.line
@@ -195,12 +215,12 @@ const FullscreenThinkingIndicator = () => {
                                     strokeWidth="2.5"
                                     initial={{ pathLength: 0, opacity: 0 }}
                                     animate={{ pathLength: 1, opacity: 1 }}
-                                    transition={{ duration: 1, delay: 3 + i * 1, ease: "easeInOut" }}
+                                    transition={{ duration: 1, delay: act1_node_appearance + act2_exploration + i * 1, ease: "easeInOut" }}
                                 />
                             ))}
                         </g>
 
-                         {/* Act V: Explosión Final de Síntesis */}
+                        {/* Acto IV: Explosión Final de Síntesis */}
                         {mainPathLinks.length > 0 && (
                           <g>
                             {Array.from({length: 12}).map((_, i) => (
@@ -218,7 +238,7 @@ const FullscreenThinkingIndicator = () => {
                                         y: mainPathLinks[mainPathLinks.length-1].target.y + (Math.random() - 0.5) * 150,
                                     }}
                                     transition={{
-                                        delay: 3 + mainPathLinks.length * 1,
+                                        delay: act1_node_appearance + act2_exploration + mainPathLinks.length * 1,
                                         duration: 1,
                                         ease: "easeOut"
                                     }}
@@ -226,6 +246,28 @@ const FullscreenThinkingIndicator = () => {
                             ))}
                           </g>
                         )}
+                        
+                        {/* Acto V: Onda de Resolución */}
+                         {mainPathLinks.length > 0 && (
+                            <motion.circle
+                                cx={mainPathLinks[mainPathLinks.length-1].target.x}
+                                cy={mainPathLinks[mainPathLinks.length-1].target.y}
+                                r="1"
+                                stroke="hsl(var(--accent))"
+                                strokeWidth="2"
+                                fill="transparent"
+                                initial={{ opacity: 0 }}
+                                animate={{ 
+                                    r: Math.max(dimensions.width, dimensions.height),
+                                    opacity: [0.7, 0]
+                                }}
+                                transition={{
+                                    delay: act1_node_appearance + act2_exploration + act3_path_revelation + act4_synthesis_explosion,
+                                    duration: act5_resolution_wave,
+                                    ease: "easeOut"
+                                }}
+                            />
+                         )}
                     </motion.svg>
                 )}
             </AnimatePresence>
@@ -244,7 +286,7 @@ export default function ChatMessages({ messages, isResponding }: { messages: Mes
   }, [messages, isResponding]);
 
   return (
-    <>
+    <div className="relative h-full">
       <ScrollArea className="h-full" viewportRef={viewportRef}>
         <div className="p-4 md:p-6 space-y-6">
           {messages.map((message, index) => (
@@ -253,8 +295,10 @@ export default function ChatMessages({ messages, isResponding }: { messages: Mes
         </div>
       </ScrollArea>
       <AnimatePresence>
-        {isResponding && <FullscreenThinkingIndicator />}
+        {isResponding && messages.length > 0 && <FullscreenThinkingIndicator />}
       </AnimatePresence>
-    </>
+    </div>
   );
 }
+
+    
