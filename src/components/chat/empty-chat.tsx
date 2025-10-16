@@ -317,7 +317,8 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
             ref={inputRef}
             onSendMessage={handleCreateChat}
             isLoading={isCreatingChat}
-            chatHistory={[]}
+            suggestions={[]}
+            onClearSuggestions={() => {}}
           />
         </div>
       </div>
