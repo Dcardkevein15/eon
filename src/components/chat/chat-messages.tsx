@@ -297,16 +297,26 @@ const FullscreenThinkingIndicator = () => {
 
 export default function ChatMessages({ messages, isResponding }: { messages: Message[]; isResponding: boolean; }) {
   const viewportRef = useRef<HTMLDivElement>(null);
+  const isAtBottomRef = useRef(true);
+
+  const handleScroll = () => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const { scrollTop, scrollHeight, clientHeight } = viewport;
+    // Check if user is at the bottom of the chat, with a small tolerance
+    isAtBottomRef.current = scrollHeight - scrollTop - clientHeight <= 5;
+  };
 
   useEffect(() => {
-    if (viewportRef.current) {
-      viewportRef.current.scrollTop = viewportRef.current.scrollHeight;
+    const viewport = viewportRef.current;
+    if (viewport && isAtBottomRef.current) {
+        viewport.scrollTop = viewport.scrollHeight;
     }
   }, [messages, isResponding]);
 
   return (
     <div className="relative h-full">
-      <ScrollArea className="h-full" viewportRef={viewportRef}>
+      <ScrollArea className="h-full" viewportRef={viewportRef} onScroll={handleScroll}>
         <div className="p-4 md:p-6 space-y-6">
           {messages.map((message, index) => (
             <ChatMessage key={message.id || index} message={message} />
@@ -319,5 +329,3 @@ export default function ChatMessages({ messages, isResponding }: { messages: Mes
     </div>
   );
 }
-
-    

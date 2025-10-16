@@ -1,9 +1,9 @@
 
 'use client';
 
-import { useState, useCallback, memo, useEffect, useMemo } from 'react';
+import { useState, useCallback, memo, useEffect, useMemo, useRef } from 'react';
 import type { Chat, Message, ProfileData, CachedProfile } from '@/lib/types';
-import { generateChatTitle, getAIResponse } from '@/app/actions';
+import { generateChatTitle, getAIResponse, getSmartComposeSuggestions } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import ChatMessages from './chat-messages';
 import ChatInput from './chat-input';
@@ -26,6 +26,9 @@ interface ChatPanelProps {
 
 function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
   const [isResponding, setIsResponding] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const suggestionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { user } = useAuth();
@@ -108,6 +111,10 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
   const getAIResponseAndUpdate = useCallback(async (currentMessages: Message[]) => {
     if (!user) return;
     setIsResponding(true);
+    setSuggestions([]);
+    if (suggestionTimeoutRef.current) {
+        clearTimeout(suggestionTimeoutRef.current);
+    }
 
     try {
       const historyForAI: Message[] = currentMessages.map(m => ({
@@ -127,12 +134,22 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
         content: aiResponseContent,
         timestamp: Timestamp.now(),
       };
-      // Important: Stop "responding" animation BEFORE appending the message
-      // so the new message appears at the same time the animation disappears.
+      
       setIsResponding(false); 
       await appendMessage(chat.id, aiMessage);
       
       const updatedMessages = [...currentMessages, { ...aiMessage, id: uuidv4() }];
+
+      // Delayed suggestions logic
+      const words = aiResponseContent.split(/\s+/).length;
+      const readingTime = Math.max(2000, words * 60); // 60ms per word, minimum 2 seconds
+      
+      suggestionTimeoutRef.current = setTimeout(async () => {
+         const historyString = updatedMessages.map((m) => `${m.role}: ${m.content}`).join('\n');
+         const newSuggestions = await getSmartComposeSuggestions(historyString);
+         setSuggestions(newSuggestions.slice(0, 3));
+      }, readingTime);
+
 
       // Title is generated only if it's the default "Nuevo Chat"
       if (currentMessages.length === 1 && chat.title === 'Nuevo Chat') {
@@ -191,6 +208,22 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
     }
   }, [messages, isResponding, getAIResponseAndUpdate]);
 
+  useEffect(() => {
+    // Clear suggestion timeout on unmount
+    return () => {
+      if (suggestionTimeoutRef.current) {
+        clearTimeout(suggestionTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleClearSuggestions = () => {
+    setSuggestions([]);
+    if (suggestionTimeoutRef.current) {
+        clearTimeout(suggestionTimeoutRef.current);
+    }
+  };
+
 
   return (
     <div className="flex flex-col h-full">
@@ -214,7 +247,8 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
         <ChatInput
           onSendMessage={handleSendMessage}
           isLoading={isResponding || messagesLoading}
-          chatHistory={messages || []}
+          suggestions={suggestions}
+          onClearSuggestions={handleClearSuggestions}
         />
       </div>
     </div>

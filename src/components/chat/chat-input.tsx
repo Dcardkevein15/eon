@@ -16,7 +16,6 @@ import { Send, Sparkles, Paperclip, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem } from '@/components/ui/form';
-import { getSmartComposeSuggestions } from '@/app/actions';
 import type { Message } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
@@ -31,13 +30,12 @@ type ChatFormValues = z.infer<typeof chatSchema>;
 interface ChatInputProps {
   onSendMessage: (message: string, imageUrl?: string) => void;
   isLoading: boolean;
-  chatHistory: Message[];
+  suggestions: string[];
+  onClearSuggestions: () => void;
 }
 
 const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
-  ({ onSendMessage, isLoading, chatHistory }, ref) => {
-    const [suggestions, setSuggestions] = useState<string[]>([]);
-    const [showSuggestions, setShowSuggestions] = useState(true);
+  ({ onSendMessage, isLoading, suggestions, onClearSuggestions }, ref) => {
     const localTextareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isFocused, setIsFocused] = useState(false);
@@ -58,31 +56,16 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
       if (isLoading) return;
       onSendMessage(suggestion);
       form.reset();
-      setSuggestions([]);
+      onClearSuggestions();
     };
 
     const handleSubmit: SubmitHandler<ChatFormValues> = (data) => {
       if (!canSubmit) return;
       onSendMessage(data.message, attachedImage || undefined);
       form.reset();
-      setSuggestions([]);
+      onClearSuggestions();
       setAttachedImage(null);
     };
-
-    const fetchSuggestions = useCallback(async () => {
-      if (chatHistory.length === 0 || !showSuggestions) return;
-      const historyString = chatHistory
-        .map((m) => `${m.role}: ${m.content}`)
-        .join('\n');
-      const newSuggestions = await getSmartComposeSuggestions(historyString);
-      setSuggestions(newSuggestions.slice(0, 3));
-    }, [chatHistory, showSuggestions]);
-
-    useEffect(() => {
-      if (chatHistory.length > 0) {
-        fetchSuggestions();
-      }
-    }, [chatHistory, fetchSuggestions]);
 
     const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (event.key === 'Enter' && !event.shiftKey) {
@@ -122,23 +105,34 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
     return (
       <TooltipProvider delayDuration={200}>
       <div className="w-full max-w-4xl mx-auto space-y-4">
-        {suggestions.length > 0 && !isLoading && showSuggestions && (
-           <div className="flex items-center gap-2 flex-wrap">
+        {suggestions.length > 0 && !isLoading && (
+           <div className="relative flex flex-col items-start gap-2">
             <div className="flex items-center gap-2 text-sm text-muted-foreground w-full">
               <Sparkles className="w-4 h-4 text-accent flex-shrink-0" />
               <span>Sugerencias:</span>
             </div>
-            {suggestions.map((s, i) => (
-              <Button
-                key={i}
-                variant="outline"
-                size="sm"
-                onClick={() => handleSuggestion(s)}
-                className="rounded-full text-xs md:text-sm whitespace-normal h-auto py-1.5 px-3"
+             <Button
+                variant="destructive"
+                size="icon"
+                className="absolute top-0 right-0 h-6 w-6 rounded-full bg-red-600 hover:bg-red-700 text-white"
+                onClick={onClearSuggestions}
               >
-                {s}
+                <X className="h-4 w-4" />
+                <span className="sr-only">Cerrar sugerencias</span>
               </Button>
-            ))}
+            <div className="flex items-center gap-2 flex-wrap">
+              {suggestions.map((s, i) => (
+                <Button
+                  key={i}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleSuggestion(s)}
+                  className="rounded-full text-xs md:text-sm whitespace-normal h-auto py-1.5 px-3"
+                >
+                  {s}
+                </Button>
+              ))}
+            </div>
           </div>
         )}
         <Form {...form}>
@@ -176,13 +170,13 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
                         <div className="flex items-center pl-2">
                            <Tooltip>
                               <TooltipTrigger asChild>
-                                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => setShowSuggestions(!showSuggestions)}>
-                                    <Sparkles className={cn("h-5 w-5", showSuggestions && "text-accent")} />
+                                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={onClearSuggestions}>
+                                    <Sparkles className={cn("h-5 w-5", suggestions.length > 0 && "text-accent")} />
                                     <span className="sr-only">Toggle Suggestions</span>
                                   </Button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>{showSuggestions ? 'Ocultar' : 'Mostrar'} Sugerencias</p>
+                                <p>{suggestions.length > 0 ? 'Ocultar' : 'Mostrar'} Sugerencias</p>
                               </TooltipContent>
                            </Tooltip>
                             <Tooltip>
