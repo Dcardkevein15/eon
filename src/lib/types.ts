@@ -36,6 +36,8 @@ export type Therapist = {
   userId: string;
   name: string;
   photoUrl: string;
+  email: string;
+  whatsapp: string;
   rating: number;
   reviewsCount: number;
   specialties: string[];
@@ -50,13 +52,17 @@ export type Therapist = {
 // --- Therapist Application ---
 export const TherapistApplicationDataSchema = z.object({
   name: z.string().min(3, "El nombre es requerido."),
+  email: z.string().email("Debe ser un correo electrónico válido."),
+  whatsapp: z.string().min(10, "El número de WhatsApp es requerido."),
   credentials: z.string().min(10, "Las credenciales son requeridas."),
   bio: z.string().min(50, "La biografía debe tener al menos 50 caracteres."),
-  specialties: z.string().min(1, "Ingresa al menos una especialidad."),
-  languages: z.string().min(1, "Ingresa al menos un idioma."),
+  specialties: z.union([z.string(), z.array(z.string())]).refine(val => (typeof val === 'string' && val.length > 0) || (Array.isArray(val) && val.length > 0), {
+    message: "Ingresa al menos una especialidad.",
+  }),
+  languages: z.union([z.string(), z.array(z.string())]).refine(val => (typeof val === 'string' && val.length > 0) || (Array.isArray(val) && val.length > 0), {
+    message: "Ingresa al menos un idioma.",
+  }),
   pricePerSession: z.coerce.number().min(0, "El precio no puede ser negativo."),
-  identityDocument: z.any(),
-  professionalLicense: z.any(),
 });
 export type TherapistApplicationData = z.infer<typeof TherapistApplicationDataSchema>;
 
@@ -69,6 +75,8 @@ export type TherapistApplication = {
   submittedAt: Timestamp;
   applicationData: {
     name: string;
+    email: string;
+    whatsapp: string;
     credentials: string;
     bio: string;
     specialties: string[];
@@ -76,7 +84,7 @@ export type TherapistApplication = {
     pricePerSession: number;
     identityDocumentUrl: string;
     professionalLicenseUrl: string;
-    photoUrl?: string; // photo is optional on application
+    photoUrl?: string;
   };
 };
 

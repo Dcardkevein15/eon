@@ -30,7 +30,7 @@ export default function ApplicationList({ applications, isLoading }: Application
       return <p className="text-muted-foreground text-center py-8">{emptyMessage}</p>;
     }
     return (
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {apps.map(app => <ApplicationCard key={app.id} application={app} />)}
       </div>
     );

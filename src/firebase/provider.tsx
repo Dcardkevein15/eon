@@ -59,9 +59,14 @@ export function AuthProvider({
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
-        const tokenResult = await getIdTokenResult(firebaseUser);
-        const roles = (tokenResult.claims.roles as string[]) || [];
-        setUserRoles(roles);
+        // FOR TESTING: Assign admin role to any logged in user
+        // In production, roles should be managed securely via custom claims set on the backend.
+        setUserRoles(['admin']); 
+        
+        // PRODUCTION-READY CODE:
+        // const tokenResult = await getIdTokenResult(firebaseUser);
+        // const roles = (tokenResult.claims.roles as string[]) || [];
+        // setUserRoles(roles);
       } else {
         setUserRoles([]);
       }

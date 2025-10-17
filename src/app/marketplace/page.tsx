@@ -122,7 +122,7 @@ export default function MarketplacePage() {
                     </Link>
                   </Button>
                   <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-                    Encuentra tu Terapeuta
+                    {isAdmin ? 'Portal de Administración' : 'Encuentra tu Terapeuta'}
                   </h1>
                 </div>
               </div>
@@ -130,8 +130,8 @@ export default function MarketplacePage() {
             
             <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
               {isAdmin ? (
-                <Tabs defaultValue="therapists" className="w-full">
-                  <TabsList className="mb-4">
+                <Tabs defaultValue="applications" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2 mb-4">
                     <TabsTrigger value="therapists">Terapeutas</TabsTrigger>
                     <TabsTrigger value="applications">
                       Solicitudes

@@ -4,6 +4,7 @@ import { doc, updateDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { getAdminApp } from '@/lib/firebase-admin';
 import { firestore } from '@/lib/firebase';
 import type { Therapist, User } from '@/lib/types';
+import { revalidatePath } from 'next/cache';
 
 export async function approveApplication(application: any): Promise<{ success: boolean; message: string }> {
   const adminApp = getAdminApp();
@@ -26,8 +27,10 @@ export async function approveApplication(application: any): Promise<{ success: b
       specialties: application.applicationData.specialties,
       pricePerSession: application.applicationData.pricePerSession,
       languages: application.applicationData.languages,
+      email: application.applicationData.email,
+      whatsapp: application.applicationData.whatsapp,
       verified: true,
-      published: true,
+      published: true, // Professionals are published by default on approval
       credentials: application.applicationData.credentials,
       bio: application.applicationData.bio,
     };
@@ -43,6 +46,8 @@ export async function approveApplication(application: any): Promise<{ success: b
     const applicationRef = doc(firestore, 'therapistApplications', application.id);
     await updateDoc(applicationRef, { status: 'approved' });
 
+    revalidatePath('/marketplace');
+
     return { success: true, message: 'Solicitud aprobada y perfil de terapeuta creado.' };
   } catch (error) {
     console.error("Error approving application: ", error);
@@ -54,6 +59,7 @@ export async function rejectApplication(applicationId: string): Promise<{ succes
   try {
     const applicationRef = doc(firestore, 'therapistApplications', applicationId);
     await updateDoc(applicationRef, { status: 'rejected' });
+    revalidatePath('/marketplace');
     return { success: true, message: 'Solicitud rechazada.' };
   } catch (error) {
     console.error("Error rejecting application: ", error);

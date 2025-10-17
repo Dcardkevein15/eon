@@ -23,7 +23,7 @@ interface ApplicationFormProps {
 
 type FileUploadState = 'idle' | 'uploading' | 'success' | 'error';
 
-const FileUploadButton = ({ id, onFileSelect, state }: { id: string, onFileSelect: (file: File) => void, state: FileUploadState }) => {
+const FileUploadButton = ({ id, onFileSelect, state, disabled }: { id: string, onFileSelect: (file: File) => void, state: FileUploadState, disabled: boolean }) => {
     const [fileName, setFileName] = useState('');
     const Icon = state === 'uploading' ? Loader2 : state === 'success' ? FileCheck : state === 'error' ? AlertTriangle : Upload;
     const iconColor = state === 'success' ? 'text-green-500' : state ==='error' ? 'text-red-500' : '';
@@ -37,8 +37,8 @@ const FileUploadButton = ({ id, onFileSelect, state }: { id: string, onFileSelec
     }
     return (
         <>
-            <input type="file" id={id} className="hidden" onChange={handleFileChange} />
-            <Button type="button" variant="outline" onClick={() => document.getElementById(id)?.click()} className="w-full justify-start text-left">
+            <input type="file" id={id} className="hidden" onChange={handleFileChange} disabled={disabled}/>
+            <Button type="button" variant="outline" onClick={() => document.getElementById(id)?.click()} className="w-full justify-start text-left" disabled={disabled}>
                 <Icon className={cn("mr-2 h-4 w-4", state === 'uploading' && "animate-spin", iconColor)} />
                 <span className="truncate flex-1">{fileName || 'Seleccionar archivo...'}</span>
             </Button>
@@ -61,11 +61,14 @@ export default function ApplicationForm({ user }: ApplicationFormProps) {
 
   const { register, handleSubmit, trigger, getValues, formState: { errors } } = useForm<TherapistApplicationData>({
     resolver: zodResolver(TherapistApplicationDataSchema),
+    defaultValues: {
+      email: user.email || '',
+    }
   });
 
   const nextStep = async () => {
     const fieldsToValidate = currentStep === 1 
-      ? ['name', 'credentials', 'bio'] 
+      ? ['name', 'email', 'whatsapp', 'credentials', 'bio'] 
       : ['specialties', 'languages', 'pricePerSession'];
     
     const isValid = await trigger(fieldsToValidate as any);
@@ -76,7 +79,11 @@ export default function ApplicationForm({ user }: ApplicationFormProps) {
 
   const prevStep = () => setCurrentStep(prev => prev - 1);
 
-  const uploadFile = async (file: File, path: string, stateSetter: React.Dispatch<React.SetStateAction<FileUploadState>>): Promise<string> => {
+  const uploadFile = async (file: File | null, path: string, stateSetter: React.Dispatch<React.SetStateAction<FileUploadState>>): Promise<string> => {
+    if (!file) {
+        stateSetter('error');
+        throw new Error('Archivo no seleccionado.');
+    }
     stateSetter('uploading');
     try {
         const fileRef = ref(storage, path);
@@ -92,28 +99,24 @@ export default function ApplicationForm({ user }: ApplicationFormProps) {
   };
 
   const onSubmit = async (data: TherapistApplicationData) => {
-    if (!identityFile || !licenseFile) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Debes subir ambos documentos.' });
-        return;
-    }
-    
     setIsSubmitting(true);
     try {
-        const identityDocumentUrl = await uploadFile(identityFile, `applications/${user.uid}/identity_doc`, setIdUploadState);
-        const professionalLicenseUrl = await uploadFile(licenseFile, `applications/${user.uid}/license_doc`, setLicenseUploadState);
+        const identityDocumentUrl = await uploadFile(identityFile, `applications/${user.uid}/identity_doc_${identityFile?.name}`, setIdUploadState);
+        const professionalLicenseUrl = await uploadFile(licenseFile, `applications/${user.uid}/license_doc_${licenseFile?.name}`, setLicenseUploadState);
         
         const applicationData = {
             ...data,
-            specialties: data.specialties.split(',').map(s => s.trim()).filter(Boolean),
-            languages: data.languages.split(',').map(l => l.trim()).filter(Boolean),
+            specialties: data.specialties.toString().split(',').map(s => s.trim()).filter(Boolean),
+            languages: data.languages.toString().split(',').map(l => l.trim()).filter(Boolean),
             identityDocumentUrl,
             professionalLicenseUrl,
+            photoUrl: user.photoURL,
         }
 
         await addDoc(collection(firestore, 'therapistApplications'), {
             userId: user.uid,
             displayName: user.displayName,
-            email: user.email,
+            email: user.email, // Use a consistent email from auth
             status: 'pending',
             submittedAt: serverTimestamp(),
             applicationData,
@@ -155,6 +158,18 @@ export default function ApplicationForm({ user }: ApplicationFormProps) {
                 <Input id="name" {...register('name')} />
                 {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
               </div>
+               <div className="grid sm:grid-cols-2 gap-4">
+                 <div>
+                    <Label htmlFor="email">Email de Contacto</Label>
+                    <Input id="email" {...register('email')} />
+                    {errors.email && <p className="text-sm text-destructive mt-1">{errors.email.message}</p>}
+                 </div>
+                 <div>
+                    <Label htmlFor="whatsapp">WhatsApp</Label>
+                    <Input id="whatsapp" {...register('whatsapp')} placeholder="+57 300 123 4567" />
+                    {errors.whatsapp && <p className="text-sm text-destructive mt-1">{errors.whatsapp.message}</p>}
+                 </div>
+               </div>
               <div>
                 <Label htmlFor="credentials">Credenciales</Label>
                 <Input id="credentials" {...register('credentials')} placeholder="Ej: Lic. en Psicología, Mat. 12345" />
@@ -199,11 +214,11 @@ export default function ApplicationForm({ user }: ApplicationFormProps) {
               <div className="space-y-4">
                  <div>
                     <Label>Documento de Identidad (Cédula o Pasaporte)</Label>
-                    <FileUploadButton id="identity-file" onFileSelect={setIdentityFile} state={idUploadState} />
+                    <FileUploadButton id="identity-file" onFileSelect={setIdentityFile} state={idUploadState} disabled={isSubmitting}/>
                  </div>
                  <div>
                     <Label>Licencia Profesional o Diploma</Label>
-                    <FileUploadButton id="license-file" onFileSelect={setLicenseFile} state={licenseUploadState} />
+                    <FileUploadButton id="license-file" onFileSelect={setLicenseFile} state={licenseUploadState} disabled={isSubmitting}/>
                  </div>
               </div>
             </div>

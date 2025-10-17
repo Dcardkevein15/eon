@@ -22,6 +22,7 @@ import { doc, updateDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
+import { revalidatePath } from 'next/cache';
 
 interface TherapistEditModalProps {
   therapist: Therapist | null;
@@ -41,6 +42,8 @@ const getInitialData = (therapist: Therapist | null) => {
       specialties: [],
       pricePerSession: 50,
       languages: [],
+      email: '',
+      whatsapp: '',
       verified: true,
       published: true,
       credentials: '',
@@ -137,6 +140,14 @@ export default function TherapistEditModal({
                     URL de la Foto
                   </Label>
                   <Input id="photoUrl" {...register('photoUrl')} className="col-span-3" />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="email" className="text-right">Email</Label>
+                    <Input id="email" {...register('email')} className="col-span-3" />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="whatsapp" className="text-right">WhatsApp</Label>
+                    <Input id="whatsapp" {...register('whatsapp')} className="col-span-3" />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="credentials" className="text-right">

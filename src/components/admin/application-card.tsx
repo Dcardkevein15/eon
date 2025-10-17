@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Check, Clock, X, FileText, Loader2, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Check, Clock, X, FileText, Loader2, AlertTriangle, ExternalLink, Mail, MessageCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { TherapistApplication } from '@/lib/types';
@@ -26,12 +26,14 @@ const statusConfig = {
 export default function ApplicationCard({ application }: ApplicationCardProps) {
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
   
   const { applicationData, status, submittedAt, displayName, email } = application;
   const { icon: StatusIcon, color: statusColor, label: statusLabel } = statusConfig[status];
 
   const handleApprove = async () => {
     setIsProcessing(true);
+    setActionType('approve');
     const result = await approveApplication(application);
     if (result.success) {
       toast({ title: 'Éxito', description: result.message });
@@ -39,10 +41,12 @@ export default function ApplicationCard({ application }: ApplicationCardProps) {
       toast({ variant: 'destructive', title: 'Error', description: result.message });
     }
     setIsProcessing(false);
+    setActionType(null);
   };
   
   const handleReject = async () => {
     setIsProcessing(true);
+    setActionType('reject');
     const result = await rejectApplication(application.id);
     if (result.success) {
       toast({ title: 'Éxito', description: result.message });
@@ -50,22 +54,26 @@ export default function ApplicationCard({ application }: ApplicationCardProps) {
       toast({ variant: 'destructive', title: 'Error', description: result.message });
     }
      setIsProcessing(false);
+     setActionType(null);
   };
   
   const formattedDate = submittedAt?.toDate ? formatDistanceToNow(submittedAt.toDate(), { addSuffix: true, locale: es }) : 'hace un momento';
 
   return (
-    <Card className="bg-card/50">
+    <Card className="bg-card/50 transition-all hover:shadow-lg hover:border-border">
       <CardHeader>
         <div className="flex justify-between items-start">
             <div className="flex items-center gap-4">
               <Avatar className="h-12 w-12">
-                <AvatarImage src={`https://i.pravatar.cc/150?u=${application.userId}`} />
+                <AvatarImage src={applicationData.photoUrl || `https://i.pravatar.cc/150?u=${application.userId}`} />
                 <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
               </Avatar>
               <div>
                 <CardTitle>{displayName}</CardTitle>
-                <CardDescription>{email}</CardDescription>
+                <CardDescription className='flex items-center gap-4 text-xs mt-1'>
+                    <span className='flex items-center gap-1.5'><Mail className="w-3 h-3"/>{applicationData.email}</span>
+                    <span className='flex items-center gap-1.5'><MessageCircle className="w-3 h-3"/>{applicationData.whatsapp}</span>
+                </CardDescription>
               </div>
             </div>
             <Badge variant={status === 'pending' ? 'secondary' : status === 'approved' ? 'default' : 'destructive'} className="flex items-center gap-1.5">
@@ -89,7 +97,7 @@ export default function ApplicationCard({ application }: ApplicationCardProps) {
                     <h4 className="font-semibold text-sm">Credenciales</h4>
                     <p className="text-sm text-muted-foreground">{applicationData.credentials}</p>
                 </div>
-                <div className="flex gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                         <h4 className="font-semibold text-sm">Especialidades</h4>
                         <div className="flex flex-wrap gap-1 mt-1">
@@ -102,10 +110,10 @@ export default function ApplicationCard({ application }: ApplicationCardProps) {
                             {applicationData.languages.map(l => <Badge key={l} variant="outline">{l}</Badge>)}
                         </div>
                     </div>
-                </div>
-                 <div>
-                    <h4 className="font-semibold text-sm">Precio por Sesión</h4>
-                    <p className="text-sm text-muted-foreground">${applicationData.pricePerSession}</p>
+                     <div>
+                        <h4 className="font-semibold text-sm">Precio por Sesión</h4>
+                        <p className="text-sm font-semibold text-foreground">${applicationData.pricePerSession}</p>
+                    </div>
                 </div>
                  <div>
                     <h4 className="font-semibold text-sm">Documentos</h4>
@@ -133,11 +141,11 @@ export default function ApplicationCard({ application }: ApplicationCardProps) {
       {status === 'pending' && (
         <CardFooter className="flex justify-end gap-2">
           <Button variant="destructive" onClick={handleReject} disabled={isProcessing}>
-            {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <X className="mr-2 h-4 w-4" />}
+            {isProcessing && actionType === 'reject' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <X className="mr-2 h-4 w-4" />}
             Rechazar
           </Button>
           <Button onClick={handleApprove} disabled={isProcessing}>
-             {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+             {isProcessing && actionType === 'approve' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
             Aprobar
           </Button>
         </CardFooter>
