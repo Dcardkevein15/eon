@@ -247,3 +247,44 @@ export const ClassifyIntentOutputSchema = z.object({
   intent: z.string(),
 });
 export type ClassifyIntentOutput = z.infer<typeof ClassifyIntentOutputSchema>;
+
+// --- Aether Simulation Types ---
+
+export const AetherAgentSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    archetype: z.string(),
+    primaryGoal: z.string(),
+    greatestFear: z.string(),
+    position: z.object({ x: z.number(), y: z.number(), z: z.number() }),
+    thought: z.string(),
+    lastAction: z.string().optional(),
+    status: z.enum(['active', 'inactive']),
+});
+export type AetherAgent = z.infer<typeof AetherAgentSchema>;
+
+export const AetherEventSchema = z.object({
+    tick: z.number(),
+    description: z.string(),
+});
+export type AetherEvent = z.infer<typeof AetherEventSchema>;
+
+export const AetherWorldStateSchema = z.object({
+    tick: z.number(),
+    agents: z.array(AetherAgentSchema),
+    eventLog: z.array(AetherEventSchema),
+    supervisorAnalysis: z.string().optional(),
+});
+export type AetherWorldState = z.infer<typeof AetherWorldStateSchema>;
+
+export const RunAgentTurnOutputSchema = z.object({
+    thought: z.string().describe("The agent's new internal thought."),
+    action: z.string().describe("The agent's next action."),
+});
+export type RunAgentTurnOutput = z.infer<typeof RunAgentTurnOutputSchema>;
+
+export const RunSupervisorTurnOutputSchema = z.object({
+    analysis: z.string().describe("The supervisor's analysis of the current world state."),
+    newEvent: AetherEventSchema.omit({ tick: true }).optional().describe("A new world event to introduce, if any."),
+});
+export type RunSupervisorTurnOutput = z.infer<typeof RunSupervisorTurnOutputSchema>;
