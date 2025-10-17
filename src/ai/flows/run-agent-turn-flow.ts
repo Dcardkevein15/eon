@@ -34,9 +34,7 @@ This is the current state of the world:
 - Current Tick: {{{worldState.tick}}}
 - Other agents:
 {{#each worldState.agents}}
-{{#if (ne this.id ../agent.id)}}
 - {{this.name}} (ID: {{this.id}}), Archetype: {{this.archetype}}, Last Action: {{this.lastAction}}
-{{/if}}
 {{/each}}
 - Recent world events:
 {{#each worldState.eventLog}}
@@ -48,7 +46,7 @@ Your action should be a short, verb-first phrase describing what you do. It can 
 Your thought should be a brief internal monologue reflecting your reasoning.
 
 Examples of actions:
-- "Approach @'s location"
+- "Approach @Jane's location"
 - "Share a resource with @Jane"
 - "Broadcast a message of unity"
 - "Move to a secluded area"
@@ -65,7 +63,17 @@ const runAgentTurnFlow = ai.defineFlow(
         outputSchema: RunAgentTurnOutputSchema,
     },
     async (input) => {
-        const { output } = await prompt(input);
+        // Filter out the current agent from the list passed to the prompt
+        const otherAgents = input.worldState.agents.filter(a => a.id !== input.agent.id);
+        const modifiedInput = {
+            ...input,
+            worldState: {
+                ...input.worldState,
+                agents: otherAgents,
+            },
+        };
+
+        const { output } = await prompt(modifiedInput);
         if (!output) {
             throw new Error(`AI failed to generate a turn for agent ${input.agent.name}.`);
         }
