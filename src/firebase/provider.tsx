@@ -15,6 +15,7 @@ import {
   updateProfile as firebaseUpdateProfile,
   type Auth,
   type User as FirebaseUser,
+  getIdTokenResult,
 } from 'firebase/auth';
 import { type Firestore } from 'firebase/firestore';
 import { type FirebaseStorage } from 'firebase/storage';
@@ -33,6 +34,7 @@ const FirebaseContext = createContext<FirebaseContextType | undefined>(undefined
 // Auth Context
 interface AuthContextType {
   user: FirebaseUser | null;
+  userRoles: string[];
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -50,11 +52,19 @@ export function AuthProvider({
   auth: Auth;
 }) {
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [userRoles, setUserRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
+      if (firebaseUser) {
+        const tokenResult = await getIdTokenResult(firebaseUser);
+        const roles = (tokenResult.claims.roles as string[]) || [];
+        setUserRoles(roles);
+      } else {
+        setUserRoles([]);
+      }
       setLoading(false);
     });
 
@@ -95,7 +105,7 @@ export function AuthProvider({
   }, [auth]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOut, updateProfile, auth }}>
+    <AuthContext.Provider value={{ user, userRoles, loading, signInWithGoogle, signOut, updateProfile, auth }}>
       {children}
     </AuthContext.Provider>
   );

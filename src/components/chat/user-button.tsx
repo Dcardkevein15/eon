@@ -22,7 +22,7 @@ import { useTheme } from 'next-themes';
 import Link from 'next/link';
 
 export default function UserButton() {
-  const { user, loading, signInWithGoogle, signOut, auth } = useAuth();
+  const { user, loading, signInWithGoogle, signOut, auth, userRoles } = useAuth();
   const storage = useStorage();
   const { toast } = useToast();
   const { setTheme, theme } = useTheme();
@@ -81,6 +81,10 @@ export default function UserButton() {
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
+  
+  const isProfessional = userRoles.includes('professional');
+  const isAdmin = userRoles.includes('admin');
+
 
   if (!isClient || loading) {
     return (
@@ -154,12 +158,14 @@ export default function UserButton() {
             )}
             <span>{isUploading ? 'Subiendo...' : 'Cambiar foto'}</span>
           </DropdownMenuItem>
-           <DropdownMenuItem asChild>
-            <Link href="/apply">
-              <Briefcase className="mr-2 h-4 w-4" />
-              <span>Conviértete en Profesional</span>
-            </Link>
-          </DropdownMenuItem>
+          {!isProfessional && !isAdmin && (
+             <DropdownMenuItem asChild>
+                <Link href="/apply">
+                  <Briefcase className="mr-2 h-4 w-4" />
+                  <span>Conviértete en Profesional</span>
+                </Link>
+              </DropdownMenuItem>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={signOut}>
             <LogOut className="mr-2 h-4 w-4" />

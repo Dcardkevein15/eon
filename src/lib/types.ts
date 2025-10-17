@@ -67,9 +67,16 @@ export type TherapistApplication = {
   email: string;
   status: 'pending' | 'approved' | 'rejected';
   submittedAt: Timestamp;
-  applicationData: TherapistApplicationData & {
+  applicationData: {
+    name: string;
+    credentials: string;
+    bio: string;
+    specialties: string[];
+    languages: string[];
+    pricePerSession: number;
     identityDocumentUrl: string;
     professionalLicenseUrl: string;
+    photoUrl?: string; // photo is optional on application
   };
 };
 

@@ -30,7 +30,7 @@ export default function TherapistFilters({
   onFilterChange,
 }: TherapistFiltersProps) {
   return (
-    <div className="p-4 space-y-6">
+    <div className="p-4 space-y-6 h-full">
       <div>
         <h3 className="text-lg font-semibold mb-3">Filtros</h3>
       </div>
@@ -83,7 +83,7 @@ export default function TherapistFilters({
           <div className="mt-2">
             <Slider
               min={0}
-              max={100}
+              max={200}
               step={5}
               value={filters.priceRange}
               onValueChange={(value) => onFilterChange({ priceRange: value })}

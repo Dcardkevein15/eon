@@ -1,21 +1,63 @@
 'use client';
 
-import { THERAPISTS_DATA } from '@/lib/placeholder-data';
 import Image from 'next/image';
 import { notFound, useParams } from 'next/navigation';
 import { Star, BadgeCheck, Languages, BrainCircuit, MessageSquare, CalendarPlus, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ProfileSection from '@/components/marketplace/profile-section';
 import Link from 'next/link';
+import { useAuth, useFirestore } from '@/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { useEffect, useState } from 'react';
+import type { Therapist } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card } from '@/components/ui/card';
 
 export default function TherapistProfilePage() {
   const params = useParams();
   const therapistId = params.therapistId as string;
+  const firestore = useFirestore();
 
-  // In a real app, you would fetch this data from your API/database
-  const therapist = THERAPISTS_DATA.find((t) => t.id === therapistId);
+  const [therapist, setTherapist] = useState<Therapist | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!firestore || !therapistId) return;
+
+    const fetchTherapist = async () => {
+      setLoading(true);
+      const therapistRef = doc(firestore, 'therapists', therapistId);
+      const docSnap = await getDoc(therapistRef);
+      if (docSnap.exists()) {
+        setTherapist({ id: docSnap.id, ...docSnap.data() } as Therapist);
+      } else {
+        // Will be caught by notFound() below
+        setTherapist(null);
+      }
+      setLoading(false);
+    };
+
+    fetchTherapist();
+  }, [firestore, therapistId]);
+
+  if (loading) {
+    return (
+      <div className="bg-background min-h-screen">
+        <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+           <Skeleton className="h-8 w-48 mb-6" />
+           <div className="grid grid-cols-1 gap-6">
+              <Skeleton className="h-64 w-full" />
+              <Skeleton className="h-48 w-full" />
+              <div className="grid md:grid-cols-2 gap-6">
+                 <Skeleton className="h-48 w-full" />
+                 <Skeleton className="h-48 w-full" />
+              </div>
+           </div>
+        </div>
+      </div>
+    )
+  }
 
   if (!therapist) {
     notFound();
@@ -34,8 +76,8 @@ export default function TherapistProfilePage() {
         </div>
 
         {/* Hero Section */}
-        <Card className="overflow-hidden mb-6">
-            <CardContent className="p-6">
+        <Card className="overflow-hidden mb-6 bg-card/50">
+            <div className="p-6">
                 <div className="flex flex-col sm:flex-row gap-6 items-start">
                     <div className="relative flex-shrink-0">
                         <Image
@@ -74,7 +116,7 @@ export default function TherapistProfilePage() {
                         </div>
                     </div>
                 </div>
-            </CardContent>
+            </div>
         </Card>
 
         {/* About Section */}
@@ -99,8 +141,6 @@ export default function TherapistProfilePage() {
                 </div>
             </ProfileSection>
         </div>
-
-        {/* TODO: Add sections for Services, Availability Calendar, and Reviews */}
 
       </div>
     </div>

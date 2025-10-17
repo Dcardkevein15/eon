@@ -50,11 +50,11 @@ export default function TherapistCard({ therapist, onEdit, isAdmin }: TherapistC
           <div>
             <h4 className="text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Especialidades</h4>
             <div className="flex flex-wrap gap-1 h-12 overflow-hidden">
-              {therapist.specialties.slice(0, 3).map((specialty) => (
+              {therapist.specialties.map((specialty) => (
                 <Badge key={specialty} variant="secondary" className="text-xs">
                   {specialty}
                 </Badge>
-              ))}
+              )).slice(0,3)}
             </div>
           </div>
           <Separator />

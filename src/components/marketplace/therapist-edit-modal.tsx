@@ -15,8 +15,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import type { Therapist } from '@/lib/types';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollArea } from '../ui/scroll-area';
+import { useFirestore } from '@/firebase';
+import { doc, updateDoc, setDoc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
 
 interface TherapistEditModalProps {
   therapist: Therapist | null;
@@ -25,14 +30,31 @@ interface TherapistEditModalProps {
   onSave: (data: Therapist) => void;
 }
 
-const toArray = (value: string | string[] | undefined): string[] => {
-  if (Array.isArray(value)) return value.map(s => s.trim()).filter(Boolean);
-  if (typeof value === 'string' && value.trim() !== '') {
-    return value.split(',').map(s => s.trim()).filter(Boolean);
-  }
-  return [];
-};
+const getInitialData = (therapist: Therapist | null) => {
+    const defaults = {
+      id: '',
+      userId: '',
+      name: '',
+      photoUrl: 'https://picsum.photos/seed/new-therapist/200/200',
+      rating: 0,
+      reviewsCount: 0,
+      specialties: [],
+      pricePerSession: 50,
+      languages: [],
+      verified: true,
+      published: true,
+      credentials: '',
+      bio: '',
+    };
 
+    if (!therapist) return defaults;
+    
+    return {
+        ...therapist,
+        specialties: Array.isArray(therapist.specialties) ? therapist.specialties.join(', ') : '',
+        languages: Array.isArray(therapist.languages) ? therapist.languages.join(', ') : '',
+    }
+}
 
 export default function TherapistEditModal({
   therapist,
@@ -40,53 +62,54 @@ export default function TherapistEditModal({
   onClose,
   onSave,
 }: TherapistEditModalProps) {
-  const { register, handleSubmit, reset, watch, setValue } = useForm<Therapist>({
-    defaultValues: therapist || {
-      id: '',
-      userId: '',
-      name: '',
-      photoUrl: '',
-      rating: 0,
-      reviewsCount: 0,
-      specialties: [],
-      pricePerSession: 0,
-      languages: [],
-      verified: false,
-      published: true,
-      credentials: '',
-      bio: '',
-    },
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  const [isSaving, setIsSaving] = useState(false);
+
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm({
+    defaultValues: getInitialData(therapist),
   });
 
   const isPublished = watch('published');
 
   useEffect(() => {
     if (isOpen) {
-      reset(therapist || {
-        id: '',
-        userId: '',
-        name: '',
-        photoUrl: '',
-        rating: 0,
-        reviewsCount: 0,
-        specialties: [],
-        pricePerSession: 0,
-        languages: [],
-        verified: false,
-        published: true,
-        credentials: '',
-        bio: '',
-      });
+      reset(getInitialData(therapist));
     }
   }, [therapist, isOpen, reset]);
 
-  const onSubmit = (data: any) => {
-    const processedData = {
+  const onSubmit = async (data: any) => {
+    setIsSaving(true);
+
+    const therapistId = data.id || uuidv4();
+
+    const processedData: Omit<Therapist, 'id'> = {
       ...data,
-      specialties: toArray(data.specialties),
-      languages: toArray(data.languages),
+      specialties: String(data.specialties).split(',').map(s => s.trim()).filter(Boolean),
+      languages: String(data.languages).split(',').map(l => l.trim()).filter(Boolean),
+      pricePerSession: Number(data.pricePerSession),
+      rating: data.id ? data.rating : 0, // Keep existing rating or default to 0
+      reviewsCount: data.id ? data.reviewsCount : 0,
+      userId: data.id ? data.userId : 'temp-userId', // Needs a real userId
     };
-    onSave(processedData);
+
+    try {
+        const therapistRef = doc(firestore, 'therapists', therapistId);
+        if (data.id) { // Existing therapist
+             await updateDoc(therapistRef, processedData);
+             toast({ title: "Éxito", description: "Perfil del terapeuta actualizado." });
+        } else { // New therapist
+            await setDoc(therapistRef, processedData);
+            toast({ title: "Éxito", description: "Nuevo terapeuta agregado." });
+        }
+        onSave({ ...processedData, id: therapistId });
+        onClose();
+    } catch(error) {
+        console.error("Error saving therapist:", error);
+        toast({ variant: "destructive", title: "Error", description: "No se pudo guardar el perfil." });
+    } finally {
+        setIsSaving(false);
+    }
   };
 
   return (
@@ -166,7 +189,10 @@ export default function TherapistEditModal({
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit">Guardar Cambios</Button>
+            <Button type="submit" disabled={isSaving}>
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Guardar Cambios
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
