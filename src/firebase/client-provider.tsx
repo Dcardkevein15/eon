@@ -6,7 +6,7 @@ import {
   getApp,
   type FirebaseOptions,
 } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, setPersistence, browserSessionPersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { useMemo, type ReactNode } from 'react';
@@ -24,7 +24,7 @@ const firebaseConfig: FirebaseOptions = {
 function initializeFirebase() {
   const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  auth.setPersistence({type: 'SESSION'});
+  setPersistence(auth, browserSessionPersistence);
   const firestore = getFirestore(app);
   const storage = getStorage(app);
   return { app, auth, firestore, storage };
