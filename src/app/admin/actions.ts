@@ -47,6 +47,7 @@ export async function approveApplication(application: any): Promise<{ success: b
     await updateDoc(applicationRef, { status: 'approved' });
 
     revalidatePath('/marketplace');
+    revalidatePath('/admin'); // Revalidate admin pages if they exist
 
     return { success: true, message: 'Solicitud aprobada y perfil de terapeuta creado.' };
   } catch (error) {
@@ -60,6 +61,7 @@ export async function rejectApplication(applicationId: string): Promise<{ succes
     const applicationRef = doc(firestore, 'therapistApplications', applicationId);
     await updateDoc(applicationRef, { status: 'rejected' });
     revalidatePath('/marketplace');
+    revalidatePath('/admin');
     return { success: true, message: 'Solicitud rechazada.' };
   } catch (error) {
     console.error("Error rejecting application: ", error);
