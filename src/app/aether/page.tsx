@@ -15,16 +15,34 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '@/firebase';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import ForceGraph2D from 'react-force-graph-2d';
 
+function AgentNode({ agent, onSelect }: { agent: AetherAgent, onSelect: (id: string) => void }) {
+    return (
+        <group position={[agent.position.x, agent.position.y, agent.position.z]}>
+            <Text
+                position={[0, 2, 0]}
+                fontSize={1.5}
+                color="white"
+                anchorX="center"
+                anchorY="middle"
+            >
+                {agent.name}
+            </Text>
+            <mesh onClick={() => onSelect(agent.id)}>
+                <sphereGeometry args={[1, 32, 32]} />
+                <meshStandardMaterial emissive="hsl(var(--primary))" emissiveIntensity={2} toneMapped={false} />
+            </mesh>
+        </group>
+    );
+}
 
 function AetherSimulation() {
   const [worldState, setWorldState] = useState<AetherWorldState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSimulating, setIsSimulating] = useState(false);
-  const [simulationSpeed, setSimulationSpeed] = useState(2000); // ms per tick
+  const [simulationSpeed, setSimulationSpeed] = useState(5000); // ms per tick
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
-  const [graphData, setGraphData] = useState<{ nodes: any[], links: any[] }>({ nodes: [], links: [] });
+  const [interactionLines, setInteractionLines] = useState<[AetherAgent, AetherAgent][]>([]);
 
   const handleInitialize = useCallback(async () => {
     setIsLoading(true);
@@ -42,47 +60,32 @@ function AetherSimulation() {
     handleInitialize();
   }, [handleInitialize]);
 
-  useEffect(() => {
-    if (worldState) {
-        const nodes = worldState.agents.map(agent => ({
-            id: agent.id,
-            name: agent.name,
-            val: 10,
-            ...agent,
-        }));
-        
-        const interactions = worldState.agents
-            .map(agent => {
-                if (agent.lastAction?.includes('@')) {
-                    const targetName = agent.lastAction.split('@')[1]?.trim();
-                    const targetAgent = worldState.agents.find(a => a.name === targetName);
-                    if (targetAgent) {
-                        return { source: agent.id, target: targetAgent.id };
-                    }
-                }
-                return null;
-            })
-            .filter(Boolean);
-
-        setGraphData({ nodes, links: interactions as any[] });
-    }
-}, [worldState]);
-
-
   const runSimulationCycle = useCallback(async () => {
     if (!worldState) return;
 
     let newWorldState = { ...worldState, agents: [...worldState.agents], tick: worldState.tick + 1 };
-    
+    let newInteractionLines: [AetherAgent, AetherAgent][] = [];
+
     // Agent turns
     for (let i = 0; i < newWorldState.agents.length; i++) {
       const agent = newWorldState.agents[i];
       const { thought, action } = await runAgentTurn({ agent, worldState: newWorldState });
       newWorldState.agents[i] = { ...agent, thought, lastAction: action };
+      
+      // Visualize interactions
+      if(action.includes('@')) {
+        const targetName = action.split('@')[1]?.trim();
+        const targetAgent = newWorldState.agents.find(a => a.name === targetName);
+        if(targetAgent) {
+            newInteractionLines.push([agent, targetAgent]);
+        }
+      }
     }
     
-    // Supervisor turn
-    if (newWorldState.tick % 5 === 0) {
+    setInteractionLines(newInteractionLines);
+
+    // Supervisor turn (every 5 ticks)
+    if (newWorldState.tick > 0 && newWorldState.tick % 5 === 0) {
       const supervisorResult = await runSupervisorTurn({ worldState: newWorldState });
       newWorldState.supervisorAnalysis = supervisorResult.analysis;
       if (supervisorResult.newEvent) {
@@ -116,31 +119,27 @@ function AetherSimulation() {
   return (
     <div className="h-full w-full flex flex-col md:flex-row bg-black text-white">
       <main className="flex-1 relative bg-black">
-        <ForceGraph2D
-            graphData={graphData}
-            nodeLabel="name"
-            nodeVal="val"
-            nodeColor={node => node.id === selectedAgentId ? 'hsl(var(--primary))' : '#999'}
-            linkColor={() => 'rgba(255,255,255,0.2)'}
-            linkDirectionalParticles={2}
-            linkDirectionalParticleWidth={1.5}
-            linkDirectionalParticleColor={() => 'hsl(var(--accent))'}
-            backgroundColor="transparent"
-            onNodeClick={(node) => {
-                if (node.id) {
-                    setSelectedAgentId(node.id as string);
-                }
-            }}
-            nodeCanvasObject={(node, ctx, globalScale) => {
-              const label = node.name as string;
-              const fontSize = 12/globalScale;
-              ctx.font = `${fontSize}px Sans-Serif`;
-              ctx.textAlign = 'center';
-              ctx.textBaseline = 'middle';
-              ctx.fillStyle = 'white';
-              ctx.fillText(label, node.x as number, (node.y as number) + 10);
-            }}
-          />
+        <Canvas camera={{ position: [0, 0, 80], fov: 75 }}>
+          <ambientLight intensity={0.2} />
+          <pointLight position={[10, 10, 10]} intensity={1} />
+          <Stars radius={200} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
+          
+          <Suspense fallback={null}>
+            {worldState?.agents.map((agent) => (
+                <AgentNode key={agent.id} agent={agent} onSelect={setSelectedAgentId} />
+            ))}
+            {interactionLines.map(([source, target], i) => (
+                 <Line
+                    key={i}
+                    points={[[source.position.x, source.position.y, source.position.z], [target.position.x, target.position.y, target.position.z]]}
+                    color="hsl(var(--accent))"
+                    lineWidth={0.5}
+                 />
+            ))}
+          </Suspense>
+
+          <OrbitControls enableZoom={true} enablePan={true} />
+        </Canvas>
         <div className="absolute top-4 left-4 flex gap-2 items-center">
             <h1 className="text-2xl font-bold tracking-widest uppercase bg-clip-text text-transparent bg-gradient-to-br from-chart-5 via-chart-1 to-chart-2">AETHER</h1>
             <Badge variant="outline" className="bg-black/50 backdrop-blur-sm">Tick: {worldState?.tick}</Badge>
@@ -149,7 +148,7 @@ function AetherSimulation() {
             <Button variant="ghost" size="icon" onClick={() => setIsSimulating(!isSimulating)}>
                 {isSimulating ? <Pause/> : <Play/>}
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setSimulationSpeed(prev => Math.max(500, prev / 1.5))}>
+            <Button variant="ghost" size="icon" onClick={() => setSimulationSpeed(prev => Math.max(1000, prev / 1.5))}>
                 <FastForward/>
             </Button>
             <Separator orientation="vertical" className="h-6" />
@@ -174,6 +173,11 @@ function AetherSimulation() {
                 </Card>
 
                 {selectedAgent ? (
+                    <AnimatePresence>
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                    >
                     <Card className="bg-gray-900/50 border-gray-700">
                         <CardHeader>
                             <CardTitle className="text-lg">{selectedAgent.name}</CardTitle>
@@ -184,6 +188,8 @@ function AetherSimulation() {
                             <p><strong className="text-primary">Pensamiento:</strong> <span className="italic">"{selectedAgent.thought}"</span></p>
                         </CardContent>
                     </Card>
+                    </motion.div>
+                    </AnimatePresence>
                 ) : (
                     <div className="text-center py-8 text-muted-foreground">Selecciona un agente para ver sus detalles.</div>
                 )}
