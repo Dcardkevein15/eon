@@ -19,7 +19,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function MarketplacePage() {
   const { user, userRoles, loading: authLoading } = useAuth();
   const firestore = useFirestore();
-  const isAdmin = userRoles.includes('admin');
+  const isAdmin = userRoles?.includes('admin') ?? false;
 
   const [filters, setFilters] = useState({
     specialty: '',
