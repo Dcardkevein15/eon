@@ -12,13 +12,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
-import { LogIn, LogOut, User, Camera, Loader2, Moon, Sun } from 'lucide-react';
+import { LogIn, LogOut, User, Camera, Loader2, Moon, Sun, Briefcase } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { useStorage } from '@/firebase/storage';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { updateProfile } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useTheme } from 'next-themes';
+import Link from 'next/link';
 
 export default function UserButton() {
   const { user, loading, signInWithGoogle, signOut, auth } = useAuth();
@@ -152,6 +153,12 @@ export default function UserButton() {
               <Camera className="mr-2 h-4 w-4" />
             )}
             <span>{isUploading ? 'Subiendo...' : 'Cambiar foto'}</span>
+          </DropdownMenuItem>
+           <DropdownMenuItem asChild>
+            <Link href="/apply">
+              <Briefcase className="mr-2 h-4 w-4" />
+              <span>Conviértete en Profesional</span>
+            </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={signOut}>

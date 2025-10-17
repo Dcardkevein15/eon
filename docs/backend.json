@@ -6,24 +6,16 @@
       "description": "A user of the application.",
       "type": "object",
       "properties": {
-        "uid": {
-          "type": "string",
-          "description": "The user's unique ID."
+        "uid": { "type": "string", "description": "The user's unique ID." },
+        "displayName": { "type": "string", "description": "The user's display name." },
+        "email": { "type": "string", "format": "email", "description": "The user's email address." },
+        "photoURL": { "type": "string", "format": "uri", "description": "The URL of the user's profile picture." },
+        "roles": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "User roles (e.g., 'admin', 'professional')."
         },
-        "displayName": {
-          "type": "string",
-          "description": "The user's display name."
-        },
-        "email": {
-          "type": "string",
-          "format": "email",
-          "description": "The user's email address."
-        },
-        "photoURL": {
-          "type": "string",
-          "format": "uri",
-          "description": "The URL of the user's profile picture."
-        }
+        "therapistId": { "type": "string", "description": "The ID of the associated therapist profile, if any." }
       },
       "required": ["uid"]
     },
@@ -32,30 +24,12 @@
       "description": "A chat session, containing metadata about the conversation.",
       "type": "object",
       "properties": {
-        "title": {
-          "type": "string",
-          "description": "The title of the chat."
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The timestamp when the chat was created."
-        },
-        "userId": {
-          "type": "string",
-          "description": "The ID of the user who owns the chat."
-        },
-        "path": {
-          "type": "string",
-          "description": "The path to the chat."
-        },
-        "latestMessageAt": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "anchorRole": {
-            "type": "string"
-        }
+        "title": { "type": "string", "description": "The title of the chat." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "userId": { "type": "string" },
+        "path": { "type": "string" },
+        "latestMessageAt": { "type": "string", "format": "date-time" },
+        "anchorRole": { "type": "string" }
       },
       "required": ["title", "createdAt", "userId", "path"]
     },
@@ -64,77 +38,62 @@
       "description": "A single message within a chat.",
       "type": "object",
       "properties": {
-        "role": {
-          "type": "string",
-          "enum": ["user", "assistant"],
-          "description": "The role of the message sender."
-        },
-        "content": {
-          "type": "string",
-          "description": "The content of the message."
-        },
-        "timestamp": {
-          "$ref": "https://firebase.google.com/docs/reference/js/firebase.firestore.Timestamp"
-        },
-        "imageUrl": {
-          "type": "string",
-          "format": "uri",
-          "description": "The URL of an image attached to the message, if any."
-        }
+        "role": { "type": "string", "enum": ["user", "assistant"] },
+        "content": { "type": "string" },
+        "timestamp": { "$ref": "https://firebase.google.com/docs/reference/js/firebase.firestore.Timestamp" },
+        "imageUrl": { "type": "string", "format": "uri" }
       },
       "required": ["role", "content", "timestamp"]
     },
-    "promptSuggestion": {
-      "title": "Prompt Suggestion",
-      "description": "A suggestion for a conversation starter.",
-      "type": "object",
-      "properties": {
-        "text": {
-          "type": "string",
-          "description": "The suggested prompt text."
-        },
-        "category": {
-          "type": "string",
-          "description": "The category of the suggestion (e.g., ansiedad, estrés)."
-        }
-      },
-      "required": ["text", "category"]
-    },
     "therapist": {
       "title": "Therapist",
-      "description": "A verified therapist on the platform.",
+      "description": "A public profile of a verified therapist on the platform.",
       "type": "object",
       "properties": {
-        "id": { "type": "string", "description": "Unique identifier for the therapist." },
-        "name": { "type": "string", "description": "Therapist's full name." },
-        "photoUrl": { "type": "string", "format": "uri", "description": "URL of the therapist's profile picture." },
-        "rating": { "type": "number", "description": "Average user rating (1-5)." },
-        "reviewsCount": { "type": "number", "description": "Total number of reviews." },
-        "specialties": { "type": "array", "items": { "type": "string" }, "description": "List of therapeutic specialties." },
-        "pricePerSession": { "type": "number", "description": "Price for a standard session." },
-        "languages": { "type": "array", "items": { "type": "string" }, "description": "Languages spoken by the therapist." },
-        "verified": { "type": "boolean", "description": "Whether the therapist's credentials have been verified." },
-        "credentials": { "type": "string", "description": "Summary of credentials (e.g., license number, university)." },
-        "bio": { "type": "string", "description": "A short biography of the therapist." }
+        "id": { "type": "string" },
+        "userId": { "type": "string", "description": "The ID of the user account associated with this profile." },
+        "name": { "type": "string" },
+        "photoUrl": { "type": "string", "format": "uri" },
+        "rating": { "type": "number" },
+        "reviewsCount": { "type": "number" },
+        "specialties": { "type": "array", "items": { "type": "string" } },
+        "pricePerSession": { "type": "number" },
+        "languages": { "type": "array", "items": { "type": "string" } },
+        "verified": { "type": "boolean" },
+        "published": { "type": "boolean", "description": "If the profile is visible in the marketplace." },
+        "credentials": { "type": "string" },
+        "bio": { "type": "string" }
       },
-      "required": ["id", "name", "photoUrl", "specialties", "pricePerSession", "languages", "verified", "credentials", "bio"]
+      "required": ["id", "userId", "name", "photoUrl", "specialties", "pricePerSession", "languages", "credentials", "bio"]
     },
-    "chatbotState": {
-      "title": "Chatbot State",
-      "description": "Represents the chatbot's internal state, its 'psychological blueprint', which evolves over time.",
-      "type": "object",
-      "properties": {
-        "blueprint": {
-          "type": "object",
-          "description": "The chatbot's self-analysis and understanding of the user and conversation dynamics."
+    "therapistApplication": {
+        "title": "Therapist Application",
+        "description": "An application submitted by a user to become a therapist.",
+        "type": "object",
+        "properties": {
+            "userId": { "type": "string" },
+            "displayName": { "type": "string" },
+            "email": { "type": "string" },
+            "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+            "submittedAt": { "type": "string", "format": "date-time" },
+            "applicationData": { "$ref": "#/entities/therapistApplicationData" }
         },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The timestamp of the last update to the state."
+        "required": ["userId", "status", "submittedAt", "applicationData"]
+    },
+    "therapistApplicationData": {
+        "title": "Therapist Application Data",
+        "description": "Detailed information and files submitted in a therapist application.",
+        "type": "object",
+        "properties": {
+            "name": { "type": "string" },
+            "credentials": { "type": "string" },
+            "bio": { "type": "string" },
+            "specialties": { "type": "array", "items": { "type": "string" } },
+            "languages": { "type": "array", "items": { "type": "string" } },
+            "pricePerSession": { "type": "number" },
+            "identityDocumentUrl": { "type": "string", "format": "uri" },
+            "professionalLicenseUrl": { "type": "string", "format": "uri" }
         }
-      },
-      "required": ["blueprint", "updatedAt"]
     },
     "userProfile": {
       "title": "User Profile",
@@ -149,26 +108,10 @@
         "defenseMechanisms": { "type": "array", "items": { "type": "string" } },
         "emotionalJourney": {
           "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "date": { "type": "string" },
-              "sentiment": { "type": "number" },
-              "summary": { "type": "string" },
-              "keyEvents": { "type": "array", "items": { "type": "string" } }
-            }
-          }
+          "items": { "type": "object", "properties": { "date": { "type": "string" }, "sentiment": { "type": "number" }, "summary": { "type": "string" }, "keyEvents": { "type": "array", "items": { "type": "string" } } } }
         },
         "emotionalConstellation": { "$ref": "#/entities/emotionalConstellation" },
-        "coreArchetype": {
-          "type": "object",
-          "properties": {
-            "title": { "type": "string" },
-            "description": { "type": "string" },
-            "strengths": { "type": "string" },
-            "challenges": { "type": "string" }
-          }
-        },
+        "coreArchetype": { "type": "object", "properties": { "title": { "type": "string" }, "description": { "type": "string" }, "strengths": { "type": "string" }, "challenges": { "type": "string" } } },
         "coreConflict": { "type": "string" },
         "habitLoop": { "$ref": "#/entities/habitLoop" }
       }
@@ -177,190 +120,41 @@
       "title": "Emotional Constellation",
       "description": "A graph-based representation of a user's emotional and thematic landscape.",
       "type": "object",
-      "properties": {
-        "nodes": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": { "type": "string", "description": "The unique identifier for the node (a key theme)." },
-              "val": { "type": "number", "description": "The recurrence or weight of the theme (e.g., number of mentions)." }
-            },
-            "required": ["id", "val"]
-          }
-        },
-        "links": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "source": { "type": "string", "description": "The ID of the source node." },
-              "target": { "type": "string", "description": "The ID of the target node." },
-              "sentiment": { "type": "number", "description": "A value from -1 (negative) to 1 (positive) representing the sentiment of the relationship." }
-            },
-            "required": ["source", "target", "sentiment"]
-          }
-        }
-      },
-      "required": ["nodes", "links"]
+      "properties": { "nodes": { "type": "array", "items": { "type": "object", "properties": { "id": { "type": "string" }, "val": { "type": "number" } }, "required": ["id", "val"] } }, "links": { "type": "array", "items": { "type": "object", "properties": { "source": { "type": "string" }, "target": { "type": "string" }, "sentiment": { "type": "number" } }, "required": ["source", "target", "sentiment"] } } }, "required": ["nodes", "links"]
     },
-    "habitLoop": {
-        "title": "Habit Loop",
-        "description": "Analysis of a recurring behavioral loop.",
-        "type": "object",
-        "properties": {
-            "trigger": { "type": "string" },
-            "thought": { "type": "string" },
-            "action": { "type": "string" },
-            "result": { "type": "string" }
-        }
-    },
-    "simulationScenario": {
-      "title": "Simulation Scenario",
-      "description": "A predefined scenario for the Emotional Gym.",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "title": { "type": "string" },
-        "description": { "type": "string" },
-        "category": { "type": "string" },
-        "personaPrompt": { "type": "string", "description": "The system prompt for the AI persona." }
-      },
-      "required": ["id", "title", "description", "category", "personaPrompt"]
-    },
-    "simulationSession": {
-      "title": "Simulation Session",
-      "description": "A record of a user's practice session in the Emotional Gym.",
-      "type": "object",
-      "properties": {
-        "userId": { "type": "string" },
-        "scenarioId": { "type": "string" },
-        "scenarioTitle": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "completedAt": { "type": "string", "format": "date-time" },
-        "feedback": { "type": "string", "description": "AI-generated feedback on the user's performance." },
-        "path": { "type": "string" }
-      },
-      "required": ["userId", "scenarioId", "scenarioTitle", "createdAt", "path"]
-    },
-    "dreamInterpretation": {
-      "title": "Dream Interpretation",
-      "description": "An AI-generated interpretation of a user's dream, linked to their psychological profile.",
-      "type": "object",
-      "properties": {
-        "userId": { "type": "string" },
-        "dreamDescription": { "type": "string" },
-        "interpretation": {
-          "type": "object",
-          "properties": {
-             "dreamTitle": { "type": "string" },
-             "dominantFeeling": { "type": "string" },
-             "coreArchetype": { "type": "string" },
-             "symbolAnalysis": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/entities/symbolAnalysis"
-                }
-             },
-             "narrativeInterpretation": { "type": "string" },
-             "reflectiveQuestion": { "type": "string" }
-          }
-        },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["userId", "dreamDescription", "interpretation", "createdAt"]
-    },
-    "symbolAnalysis": {
-        "title": "Symbol Analysis",
-        "description": "Analysis of a single symbol within a dream.",
-        "type": "object",
-        "properties": {
-            "symbol": { "type": "string" },
-            "universalMeaning": { "type": "string" },
-            "personalMeaning": { "type": "string" },
-            "icon": { "type": "string" }
-        }
-    }
+    "habitLoop": { "title": "Habit Loop", "description": "Analysis of a recurring behavioral loop.", "type": "object", "properties": { "trigger": { "type": "string" }, "thought": { "type": "string" }, "action": { "type": "string" }, "result": { "type": "string" } } },
+    "simulationScenario": { "title": "Simulation Scenario", "description": "A predefined scenario for the Emotional Gym.", "type": "object", "properties": { "id": { "type": "string" }, "title": { "type": "string" }, "description": { "type": "string" }, "category": { "type": "string" }, "personaPrompt": { "type": "string" } }, "required": ["id", "title", "description", "category", "personaPrompt"] },
+    "simulationSession": { "title": "Simulation Session", "description": "A record of a user's practice session in the Emotional Gym.", "type": "object", "properties": { "userId": { "type": "string" }, "scenarioId": { "type": "string" }, "scenarioTitle": { "type": "string" }, "createdAt": { "type": "string", "format": "date-time" }, "completedAt": { "type": "string", "format": "date-time" }, "feedback": { "type": "string" }, "path": { "type": "string" } }, "required": ["userId", "scenarioId", "scenarioTitle", "createdAt", "path"] },
+    "dreamInterpretation": { "title": "Dream Interpretation", "description": "An AI-generated interpretation of a user's dream.", "type": "object", "properties": { "userId": { "type": "string" }, "dreamDescription": { "type": "string" }, "interpretation": { "type": "object", "properties": { "dreamTitle": { "type": "string" }, "dominantFeeling": { "type": "string" }, "coreArchetype": { "type": "string" }, "symbolAnalysis": { "type": "array", "items": { "$ref": "#/entities/symbolAnalysis" } }, "narrativeInterpretation": { "type": "string" }, "reflectiveQuestion": { "type": "string" } } }, "createdAt": { "type": "string", "format": "date-time" } }, "required": ["userId", "dreamDescription", "interpretation", "createdAt"] },
+    "symbolAnalysis": { "title": "Symbol Analysis", "description": "Analysis of a single symbol within a dream.", "type": "object", "properties": { "symbol": { "type": "string" }, "universalMeaning": { "type": "string" }, "personalMeaning": { "type": "string" }, "icon": { "type": "string" } } }
   },
   "auth": {
-    "providers": ["anonymous", "google.com"]
+    "providers": ["google.com"]
   },
   "firestore": {
-    "/users/{userId}": {
-      "schema": {
-        "$ref": "#/entities/user"
-      },
-      "description": "User profile information.",
-      "rules": "auth.uid == userId"
-    },
-    "/users/{userId}/chats/{chatId}": {
-      "schema": {
-        "$ref": "#/entities/chat"
-      },
-      "description": "Chat session metadata for a user.",
-      "rules": "auth.uid == userId"
-    },
-    "/users/{userId}/chats/{chatId}/messages/{messageId}": {
-      "schema": {
-        "$ref": "#/entities/message"
-      },
-      "description": "Individual messages within a chat session.",
-      "rules": "auth.uid == userId"
-    },
-    "/promptSuggestions": {
-      "schema": {
-        "$ref": "#/entities/promptSuggestion"
-      },
-      "description": "A pool of suggestions for starting a conversation."
-    },
+    "/users/{userId}": { "schema": { "$ref": "#/entities/user" }, "rules": "auth.uid == userId" },
+    "/users/{userId}/chats/{chatId}": { "schema": { "$ref": "#/entities/chat" }, "rules": "auth.uid == userId" },
+    "/users/{userId}/chats/{chatId}/messages/{messageId}": { "schema": { "$ref": "#/entities/message" }, "rules": "auth.uid == userId" },
+    "/users/{userId}/chatbotState/main": { "schema": { "$ref": "#/entities/chatbotState" }, "rules": "auth.uid == userId" },
+    "/users/{userId}/profile/main": { "schema": { "$ref": "#/entities/userProfile" }, "rules": "auth.uid == userId" },
+    "/users/{userId}/gymSessions/{sessionId}": { "schema": { "$ref": "#/entities/simulationSession" }, "rules": "auth.uid == userId" },
+    "/users/{userId}/gymSessions/{sessionId}/messages/{messageId}": { "schema": { "$ref": "#/entities/message" }, "rules": "auth.uid == userId" },
+    "/users/{userId}/dreams/{dreamId}": { "schema": { "$ref": "#/entities/dreamInterpretation" }, "rules": "auth.uid == userId" },
+    
     "/therapists/{therapistId}": {
-      "schema": {
-        "$ref": "#/entities/therapist"
-      },
-      "description": "Stores profiles of verified therapists."
+        "schema": { "$ref": "#/entities/therapist" },
+        "rules": {
+            "read": "true",
+            "write": "resource.data.userId == auth.uid || get(/databases/$(database)/documents/users/$(auth.uid)).data.roles.hasAny(['admin'])"
+        }
     },
-    "/users/{userId}/chatbotState/{stateId}": {
-        "schema": {
-            "$ref": "#/entities/chatbotState"
-        },
-        "description": "Stores the evolving internal state and 'consciousness' of the chatbot for a specific user.",
-        "rules": "auth.uid == userId"
-    },
-    "/users/{userId}/profile/main": {
-        "schema": {
-            "$ref": "#/entities/userProfile"
-        },
-        "description": "Stores the main, comprehensive AI-generated psychological profile for a user.",
-        "rules": "auth.uid == userId"
-    },
-    "/simulationScenarios": {
-      "schema": {
-        "$ref": "#/entities/simulationScenario"
-      },
-      "description": "A collection of predefined simulation scenarios for the Emotional Gym."
-    },
-    "/users/{userId}/gymSessions/{sessionId}": {
-      "schema": {
-        "$ref": "#/entities/simulationSession"
-      },
-      "description": "Metadata for a user's simulation session.",
-      "rules": "auth.uid == userId"
-    },
-    "/users/{userId}/gymSessions/{sessionId}/messages/{messageId}": {
-      "schema": {
-        "$ref": "#/entities/message"
-      },
-      "description": "Individual messages within a simulation session.",
-      "rules": "auth.uid == userId"
-    },
-    "/users/{userId}/dreams/{dreamId}": {
-      "schema": {
-        "$ref": "#/entities/dreamInterpretation"
-      },
-      "description": "Stores a user's saved dream interpretations.",
-      "rules": "auth.uid == userId"
+    "/therapistApplications/{applicationId}": {
+        "schema": { "$ref": "#/entities/therapistApplication" },
+        "rules": {
+            "read": "resource.data.userId == auth.uid || get(/databases/$(database)/documents/users/$(auth.uid)).data.roles.hasAny(['admin'])",
+            "create": "request.resource.data.userId == auth.uid",
+            "update": "get(/databases/$(database)/documents/users/$(auth.uid)).data.roles.hasAny(['admin'])"
+        }
     }
   }
 }
-
-    

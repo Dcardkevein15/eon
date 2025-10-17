@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import type { Therapist } from '@/lib/types';
 import { useEffect } from 'react';
@@ -26,7 +25,6 @@ interface TherapistEditModalProps {
   onSave: (data: Therapist) => void;
 }
 
-// Helper to safely convert a value to an array of strings
 const toArray = (value: string | string[] | undefined): string[] => {
   if (Array.isArray(value)) return value.map(s => s.trim()).filter(Boolean);
   if (typeof value === 'string' && value.trim() !== '') {
@@ -42,9 +40,10 @@ export default function TherapistEditModal({
   onClose,
   onSave,
 }: TherapistEditModalProps) {
-  const { register, handleSubmit, reset, watch } = useForm<Therapist>({
+  const { register, handleSubmit, reset, watch, setValue } = useForm<Therapist>({
     defaultValues: therapist || {
       id: '',
+      userId: '',
       name: '',
       photoUrl: '',
       rating: 0,
@@ -53,17 +52,19 @@ export default function TherapistEditModal({
       pricePerSession: 0,
       languages: [],
       verified: false,
+      published: true,
       credentials: '',
       bio: '',
     },
   });
 
-  const isVerified = watch('verified');
+  const isPublished = watch('published');
 
   useEffect(() => {
     if (isOpen) {
       reset(therapist || {
         id: '',
+        userId: '',
         name: '',
         photoUrl: '',
         rating: 0,
@@ -72,6 +73,7 @@ export default function TherapistEditModal({
         pricePerSession: 0,
         languages: [],
         verified: false,
+        published: true,
         credentials: '',
         bio: '',
       });
@@ -79,7 +81,6 @@ export default function TherapistEditModal({
   }, [therapist, isOpen, reset]);
 
   const onSubmit = (data: any) => {
-    // Convert comma-separated strings back to arrays before saving
     const processedData = {
       ...data,
       specialties: toArray(data.specialties),
@@ -102,7 +103,6 @@ export default function TherapistEditModal({
         <form onSubmit={handleSubmit(onSubmit)}>
           <ScrollArea className="max-h-[60vh] p-1">
             <div className="grid gap-4 py-4 px-5">
-                {/* Basic Info */}
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="name" className="text-right">
                     Nombre
@@ -122,7 +122,6 @@ export default function TherapistEditModal({
                   <Input id="credentials" {...register('credentials')} className="col-span-3" />
                 </div>
                 
-                {/* Details */}
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="specialties" className="text-right">
                     Especialidades
@@ -150,29 +149,12 @@ export default function TherapistEditModal({
                   <Input id="pricePerSession" type="number" {...register('pricePerSession', { valueAsNumber: true })} className="col-span-3" />
                 </div>
 
-                {/* Admin-only Fields */}
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label className="text-right">Verificado (KYC)</Label>
-                    <div className="col-span-3 flex items-center space-x-2">
-                        <Checkbox id="verified" checked={isVerified} disabled />
-                        <label htmlFor="verified" className="text-sm font-medium leading-none text-muted-foreground">
-                            El estado de verificación es de solo lectura.
-                        </label>
-                    </div>
-                </div>
-                {/* In a real app, you'd have a file upload component for KYC */}
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="kyc" className="text-right">
-                    Docs. KYC
-                  </Label>
-                  <Input id="kyc" type="file" className="col-span-3" />
-                </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="publish" className="text-right">
                     Publicar Perfil
                   </Label>
                    <div className="col-span-3 flex items-center space-x-2">
-                      <Switch id="publish" />
+                      <Switch id="publish" checked={isPublished} onCheckedChange={(checked) => setValue('published', checked)} />
                       <label htmlFor="publish" className="text-sm font-medium leading-none">
                         Hacer visible el perfil en el marketplace.
                       </label>

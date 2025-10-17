@@ -24,6 +24,7 @@ const firebaseConfig: FirebaseOptions = {
 function initializeFirebase() {
   const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
   const auth = getAuth(app);
+  auth.setPersistence({type: 'SESSION'});
   const firestore = getFirestore(app);
   const storage = getStorage(app);
   return { app, auth, firestore, storage };

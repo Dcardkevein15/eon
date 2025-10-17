@@ -3,7 +3,10 @@ import { Timestamp } from 'firebase/firestore';
 import { z } from 'zod';
 
 
-export type User = import('firebase/auth').User;
+export type User = import('firebase/auth').User & {
+  roles?: string[];
+  therapistId?: string;
+};
 
 export type Message = {
   id: string;
@@ -30,6 +33,7 @@ export type PromptSuggestion = {
 
 export type Therapist = {
   id: string;
+  userId: string;
   name: string;
   photoUrl: string;
   rating: number;
@@ -38,8 +42,35 @@ export type Therapist = {
   pricePerSession: number;
   languages: string[];
   verified: boolean;
+  published: boolean;
   credentials: string;
   bio: string;
+};
+
+// --- Therapist Application ---
+export const TherapistApplicationDataSchema = z.object({
+  name: z.string().min(3, "El nombre es requerido."),
+  credentials: z.string().min(10, "Las credenciales son requeridas."),
+  bio: z.string().min(50, "La biografía debe tener al menos 50 caracteres."),
+  specialties: z.string().min(1, "Ingresa al menos una especialidad."),
+  languages: z.string().min(1, "Ingresa al menos un idioma."),
+  pricePerSession: z.coerce.number().min(0, "El precio no puede ser negativo."),
+  identityDocument: z.any(),
+  professionalLicense: z.any(),
+});
+export type TherapistApplicationData = z.infer<typeof TherapistApplicationDataSchema>;
+
+export type TherapistApplication = {
+  id: string;
+  userId: string;
+  displayName: string;
+  email: string;
+  status: 'pending' | 'approved' | 'rejected';
+  submittedAt: Timestamp;
+  applicationData: TherapistApplicationData & {
+    identityDocumentUrl: string;
+    professionalLicenseUrl: string;
+  };
 };
 
 // Schema and Type for Breakdown Exercise

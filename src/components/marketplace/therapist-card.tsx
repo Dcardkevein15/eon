@@ -71,7 +71,7 @@ export default function TherapistCard({ therapist, onEdit, isAdmin }: TherapistC
         </div>
       </CardContent>
 
-      <CardFooter className="p-4 pt-0 flex flex-col sm:flex-row gap-2">
+      <CardFooter className="p-4 pt-0 grid grid-cols-1 sm:grid-cols-2 gap-2">
         <Button asChild className="w-full">
           <Link href={`/marketplace/${therapist.id}`}>Ver Perfil</Link>
         </Button>

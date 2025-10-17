@@ -12,7 +12,7 @@ interface ProfileSectionProps {
 
 export default function ProfileSection({ title, icon, children, className }: ProfileSectionProps) {
     return (
-        <Card className={`mb-6 ${className}`}>
+        <Card className={`mb-6 bg-card/50 border-border/50 ${className}`}>
             <CardHeader>
                 <CardTitle className="flex items-center gap-3 text-xl">
                     {icon}
@@ -25,5 +25,3 @@ export default function ProfileSection({ title, icon, children, className }: Pro
         </Card>
     );
 }
-
-    
