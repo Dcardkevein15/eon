@@ -145,17 +145,19 @@
         "schema": { "$ref": "#/entities/therapist" },
         "rules": {
             "read": "true",
-            "write": "resource.data.userId == auth.uid || get(/databases/$(database)/documents/users/$(auth.uid)).data.roles.hasAny(['admin'])"
+            "write": "request.auth.token.roles.hasAny(['admin'])"
         }
     },
     "/therapistApplications/{applicationId}": {
         "schema": { "$ref": "#/entities/therapistApplication" },
         "rules": {
-            "get": "resource.data.userId == auth.uid || get(/databases/$(database)/documents/users/$(auth.uid)).data.roles.hasAny(['admin'])",
-            "list": "get(/databases/$(database)/documents/users/$(auth.uid)).data.roles.hasAny(['admin'])",
-            "create": "request.resource.data.userId == auth.uid",
-            "update": "get(/databases/$(database)/documents/users/$(auth.uid)).data.roles.hasAny(['admin'])"
+            "get": "resource.data.userId == request.auth.uid || request.auth.token.roles.hasAny(['admin'])",
+            "list": "request.auth.token.roles.hasAny(['admin'])",
+            "create": "request.resource.data.userId == request.auth.uid",
+            "update": "request.auth.token.roles.hasAny(['admin'])"
         }
     }
   }
 }
+
+    
