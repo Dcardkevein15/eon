@@ -12,3 +12,4 @@ import '@/ai/flows/interpret-dream.ts';
 import '@/ai/flows/analyze-sentiment.ts';
 import '@/ai/flows/get-tactical-advice.ts';
 import '@/ai/flows/classify-intent.ts';
+import '@/ai/flows/aether-flows.ts';
