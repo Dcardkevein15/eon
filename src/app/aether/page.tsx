@@ -228,6 +228,11 @@ export default function AetherPage() {
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPanelOpen, setIsPanelOpen] = useState(true);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const selectedAgent = worldState?.agents.find(a => a.id === selectedAgentId) || null;
 
@@ -249,7 +254,7 @@ export default function AetherPage() {
       <div className="flex-1 flex overflow-hidden">
         <main className="flex-1 relative bg-black">
             <div className="absolute inset-0 z-0">
-              {worldState && (
+              {isClient && worldState && (
                 <div key={worldState.tick} className="w-full h-full">
                   <AetherSimulationCanvas 
                       worldState={worldState} 
