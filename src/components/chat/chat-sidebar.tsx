@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Plus, Trash2, History, Briefcase, UserCircle, Dumbbell, Star, BrainCircuit } from 'lucide-react';
+import { Plus, Trash2, History, Briefcase, UserCircle, Dumbbell, Star } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -81,7 +81,6 @@ function ChatSidebar({
     { href: "/profile", icon: UserCircle, label: "Perfil Psicológico" },
     { href: "/marketplace", icon: Briefcase, label: "Marketplace" },
     { href: "/dreams", icon: Star, label: "Portal de Sueños" },
-    { href: "/aether", icon: BrainCircuit, label: "Aether" },
   ];
 
   return (
