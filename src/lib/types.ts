@@ -1,4 +1,5 @@
 
+
 import { Timestamp } from 'firebase/firestore';
 import { z } from 'zod';
 
@@ -200,7 +201,7 @@ export const DreamInterpretationContentSchema = z.object({
 
 
 export type DreamInterpretation = z.infer<typeof DreamInterpretationContentSchema>;
-export type SymbolAnalysis = z-infer<typeof SymbolAnalysisSchema>;
+export type SymbolAnalysis = z.infer<typeof SymbolAnalysisSchema>;
 
 // This type is now for local storage, not Firestore.
 export type DreamInterpretationDoc = {
@@ -241,12 +242,12 @@ export type GetTacticalAdviceOutput = z.infer<typeof GetTacticalAdviceOutputSche
 export const ClassifyIntentInputSchema = z.object({
   text: z.string(),
 });
-export type ClassifyIntentInput = z-infer<typeof ClassifyIntentInputSchema>;
+export type ClassifyIntentInput = z.infer<typeof ClassifyIntentInputSchema>;
 
 export const ClassifyIntentOutputSchema = z.object({
   intent: z.string(),
 });
-export type ClassifyIntentOutput = z-infer<typeof ClassifyIntentOutputSchema>;
+export type ClassifyIntentOutput = z.infer<typeof ClassifyIntentOutputSchema>;
 
 
 // --- Aether Types ---
