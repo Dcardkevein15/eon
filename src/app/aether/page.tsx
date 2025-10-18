@@ -13,20 +13,19 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { initializeSimulation, runAgentTurn, runSupervisorTurn } from '@/ai/flows/aether-flows';
 import dynamic from 'next/dynamic';
 
-const AetherSimulationCanvas = dynamic(() => import('@/components/aether/aether-simulation'), {
+const AetherSimulationCanvas = dynamic(() => import('@/components/aether/aether-simulation-canvas'), {
   ssr: false,
   loading: () => (
-      <div className="flex h-full w-full items-center justify-center text-center text-white">
-        <div>
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="mt-4 text-lg">Invocando el universo...</p>
-        </div>
+    <div className="absolute inset-0 flex items-center justify-center bg-black text-white">
+      <div>
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="mt-4 text-lg">Invocando el universo...</p>
       </div>
-  )
+    </div>
+  ),
 });
 
-
-const AetherSimulation = () => {
+const AetherController = () => {
     const { user } = useAuth();
     const [worldState, setWorldState] = useState<AetherWorldState | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -36,39 +35,48 @@ const AetherSimulation = () => {
     const simulationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
     const runSimulationTick = useCallback(async () => {
-      if (!worldState) return;
-  
-      let currentState = { ...worldState };
-      const agentIndex = currentState.tick % currentState.agents.length;
-  
-      try {
-        if (agentIndex < currentState.agents.length) {
-          const agent = currentState.agents[agentIndex];
-          const agentResult = await runAgentTurn({ agent, worldState: currentState });
-          currentState = agentResult;
-        }
+      setWorldState(currentState => {
+        if (!currentState) return null;
+    
+        (async () => {
+          let updatedState = { ...currentState };
+          const agentIndex = updatedState.tick % updatedState.agents.length;
+    
+          try {
+            if (agentIndex < updatedState.agents.length) {
+              const agent = updatedState.agents[agentIndex];
+              const agentResult = await runAgentTurn({ agent, worldState: updatedState });
+              updatedState = agentResult;
+            }
+            
+            if (updatedState.tick > 0 && updatedState.tick % updatedState.agents.length === 0) {
+              const supervisorResult = await runSupervisorTurn({ worldState: updatedState });
+              updatedState = supervisorResult;
+            }
+            
+            updatedState.tick += 1;
+            setWorldState(updatedState);
+      
+          } catch (e: any) {
+            console.error("Error during simulation tick:", e);
+            setError(`Error en el tick ${updatedState.tick}: ${e.message}`);
+            setIsSimulating(false);
+          }
+        })();
         
-        if (currentState.tick > 0 && currentState.tick % currentState.agents.length === 0) {
-          const supervisorResult = await runSupervisorTurn({ worldState: currentState });
-          currentState = supervisorResult;
-        }
-        
-        currentState.tick += 1;
-        setWorldState(currentState);
-  
-      } catch (e: any) {
-        console.error("Error during simulation tick:", e);
-        setError(`Error en el tick ${currentState.tick}: ${e.message}`);
-        setIsSimulating(false);
-      }
-    }, [worldState]);
+        return currentState; 
+      });
+    }, []);
+    
   
     const initSimulation = useCallback(async (force = false) => {
-      if (!user || (worldState && !force)) return;
+      if (!user) return;
+      if (worldState && !force) return;
 
       setWorldState(null);
       setError(null);
       setIsSimulating(false);
+      setSelectedAgent(null);
 
       try {
           const initialState = await initializeSimulation({
@@ -104,17 +112,8 @@ const AetherSimulation = () => {
     const handleSpeedChange = () => setTickSpeed(prev => prev === 3000 ? 1500 : prev === 1500 ? 500 : 3000);
     const getSpeedLabel = () => tickSpeed === 3000 ? '1x' : tickSpeed === 1500 ? '2x' : '4x';
   
-    useEffect(() => {
-        if (worldState?.selectedAgentId) {
-            const agent = worldState.agents.find(a => a.id === worldState.selectedAgentId);
-            setSelectedAgent(agent || null);
-        } else {
-            setSelectedAgent(null);
-        }
-    }, [worldState]);
-
     const handleSelectAgent = (agent: AetherAgent) => {
-        setWorldState(prev => prev ? { ...prev, selectedAgentId: agent.id } : null);
+      setSelectedAgent(agent);
     };
 
     if (error) {
@@ -242,5 +241,5 @@ export default function AetherPage() {
     );
   }
 
-  return <AetherSimulation />;
+  return <AetherController />;
 }

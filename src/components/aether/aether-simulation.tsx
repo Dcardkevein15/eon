@@ -9,13 +9,14 @@ import * as THREE from 'three';
 // =================================================================
 // 3D Components
 // =================================================================
-const AgentNode: React.FC<{ agent: AetherAgent, onClick: (agent: AetherAgent) => void }> = ({ agent, onClick }) => {
+const AgentNode: React.FC<{ agent: AetherAgent, onClick: (agent: AetherAgent) => void, isSelected: boolean }> = ({ agent, onClick, isSelected }) => {
   const ref = useRef<THREE.Mesh>(null!);
 
   useFrame((state) => {
     if (ref.current) {
       const pulse = Math.sin(state.clock.elapsedTime * 2 + agent.position.x) * 0.1;
-      ref.current.scale.set(1 + pulse, 1 + pulse, 1 + pulse);
+      const scale = isSelected ? 1.5 : 1;
+      ref.current.scale.set(scale + pulse, scale + pulse, scale + pulse);
     }
   });
 
@@ -23,20 +24,22 @@ const AgentNode: React.FC<{ agent: AetherAgent, onClick: (agent: AetherAgent) =>
     <group position={[agent.position.x, agent.position.y, agent.position.z]} onClick={(e) => { e.stopPropagation(); onClick(agent); }}>
       <mesh ref={ref}>
         <octahedronGeometry args={[0.5]} />
-        <meshStandardMaterial color="hsl(var(--primary))" emissive="hsl(var(--primary))" emissiveIntensity={0.5} transparent opacity={0.8} />
+        <meshStandardMaterial color={isSelected ? "hsl(var(--accent))" : "hsl(var(--primary))"} emissive={isSelected ? "hsl(var(--accent))" : "hsl(var(--primary))"} emissiveIntensity={0.5} transparent opacity={0.8} />
       </mesh>
       <Text position={[0, 0.8, 0]} fontSize={0.2} color="white" anchorX="center" anchorY="middle">
         {agent.name}
       </Text>
-      <Text position={[0, -0.8, 0]} fontSize={0.15} color="hsl(var(--accent))" anchorX="center" anchorY="middle" maxWidth={2}>
-        {agent.thought}
-      </Text>
+      {isSelected && (
+        <Text position={[0, -0.8, 0]} fontSize={0.15} color="hsl(var(--accent))" anchorX="center" anchorY="middle" maxWidth={2}>
+          {agent.thought}
+        </Text>
+      )}
     </group>
   );
 };
 
 const InteractionLine: React.FC<{ from: AetherAgent, to: AetherAgent | undefined }> = ({ from, to }) => {
-  if (!to) return null;
+  if (!to || !from || !to.position || !from.position) return null;
   const startVec = new THREE.Vector3(from.position.x, from.position.y, from.position.z);
   const endVec = new THREE.Vector3(to.position.x, to.position.y, to.position.z);
 
@@ -49,13 +52,20 @@ interface AetherSimulationCanvasProps {
     onSelectAgent: (agent: AetherAgent) => void;
 }
 
-const AetherSimulationCanvas: React.FC<AetherSimulationCanvasProps> = ({ worldState, onSelectAgent }) => {
+const AetherSimulation: React.FC<AetherSimulationCanvasProps> = ({ worldState, onSelectAgent }) => {
     if (!worldState) {
-        return null; // Don't render canvas if there's no state
+        return null;
+    }
+
+    const lastEvent = worldState.eventLog[worldState.eventLog.length - 1];
+    const actingAgent = worldState.agents.find(a => lastEvent?.description.startsWith(`${a.name} `));
+    let targetAgent;
+    if (actingAgent && lastEvent) {
+      const actionParts = lastEvent.description.split(' ');
+      const targetName = actionParts[actionParts.length-1];
+      targetAgent = worldState.agents.find(a => a.name === targetName);
     }
     
-    const interactionTargetAgent = worldState.agents.find(a => worldState.eventLog[worldState.eventLog.length -1]?.description.includes(a.name));
-
     return (
         <Canvas camera={{ position: [0, 0, 15], fov: 50 }}>
           <ambientLight intensity={0.5} />
@@ -64,16 +74,21 @@ const AetherSimulationCanvas: React.FC<AetherSimulationCanvasProps> = ({ worldSt
           <Cloud position={[0, 0, -20]} speed={0.2} opacity={0.3} />
           
           {worldState.agents.map(agent => (
-            <AgentNode key={agent.id} agent={agent} onClick={onSelectAgent} />
+            <AgentNode 
+              key={agent.id} 
+              agent={agent} 
+              onClick={onSelectAgent}
+              isSelected={worldState.selectedAgentId === agent.id}
+            />
           ))}
   
-          {worldState.agents.map(agent => (
-             agent.lastAction.startsWith("Approaching") && <InteractionLine key={`${agent.id}-line`} from={agent} to={interactionTargetAgent} />
-          ))}
+          {actingAgent && targetAgent && actingAgent.lastAction.includes(targetAgent.name) && (
+            <InteractionLine key={`${actingAgent.id}-line`} from={actingAgent} to={targetAgent} />
+          )}
   
           <OrbitControls enableZoom={true} enablePan={true} />
         </Canvas>
     );
 };
 
-export default AetherSimulationCanvas;
+export default AetherSimulation;
