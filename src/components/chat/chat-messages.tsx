@@ -146,7 +146,10 @@ const FullscreenThinkingIndicator = () => {
                                 const mainPathIndex = mainPathIndices.indexOf(i);
                                 const pathDelay = act1_node_appearance + act2_exploration;
                                 const revealDelay = pathDelay + mainPathIndex * 1;
-                                const textX = node.x + node.size + 5;
+                                
+                                const isRightSide = node.x > dimensions.width / 2;
+                                const textAnchor = isRightSide ? 'end' : 'start';
+                                const textX = isRightSide ? node.x - node.size - 5 : node.x + node.size + 5;
                                 const textY = node.y;
 
                                 return (
@@ -215,7 +218,7 @@ const FullscreenThinkingIndicator = () => {
                                                 />
                                             </>
                                         )}
-                                        <text x={textX} y={textY} textAnchor="start" dy=".3em" fontSize="14" fill="hsl(var(--chart-5))" fontWeight="600" style={{pointerEvents: 'none', textShadow: '0 0 5px hsl(var(--background))'}}>
+                                        <text x={textX} y={textY} textAnchor={textAnchor} dy=".3em" fontSize="14" fill="hsl(var(--chart-5))" fontWeight="600" style={{pointerEvents: 'none', textShadow: '0 0 5px hsl(var(--background))'}}>
                                             {node.text}
                                         </text>
                                     </motion.g>
