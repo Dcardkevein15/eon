@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useRef, useState, useLayoutEffect } from 'react';
@@ -47,7 +48,7 @@ const FullscreenThinkingIndicator = () => {
     ];
     
     const useRandomNodes = (numNodes: number, width: number, height: number) => {
-        const [nodes, setNodes] = useState<{ x: number; y: number; text: string; size: number; }[]>([]);
+        const [nodes, setNodes] = useState<{ x: number; y: number; text: string; size: number; textYOffset: number; }[]>([]);
 
         useEffect(() => {
             if (width === 0 || height === 0) return;
@@ -57,7 +58,8 @@ const FullscreenThinkingIndicator = () => {
                 x: Math.random() * (width * 0.8) + (width * 0.1),
                 y: Math.random() * (height * 0.8) + (height * 0.1),
                 text: shuffledConcepts[i % shuffledConcepts.length],
-                size: Math.random() * 15 + 20
+                size: Math.random() * 15 + 20,
+                textYOffset: (Math.random() - 0.5) * 15 // Random vertical offset for text
             }));
             setNodes(newNodes);
             
@@ -150,7 +152,7 @@ const FullscreenThinkingIndicator = () => {
                                 const isRightSide = node.x > dimensions.width / 2;
                                 const textAnchor = isRightSide ? 'end' : 'start';
                                 const textX = isRightSide ? node.x - node.size - 5 : node.x + node.size + 5;
-                                const textY = node.y;
+                                const textY = node.y + node.textYOffset;
 
                                 return (
                                     <motion.g
