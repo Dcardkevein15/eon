@@ -249,10 +249,14 @@ export default function AetherPage() {
       <div className="flex-1 flex overflow-hidden">
         <main className="flex-1 relative bg-black">
             <div className="absolute inset-0 z-0">
-              <AetherSimulationCanvas 
-                  worldState={worldState} 
-                  onSelectAgent={setSelectedAgentId} 
-              />
+              {worldState && (
+                <div key={worldState.tick} className="w-full h-full">
+                  <AetherSimulationCanvas 
+                      worldState={worldState} 
+                      onSelectAgent={setSelectedAgentId} 
+                  />
+                </div>
+              )}
             </div>
             <div className="absolute top-0 left-0 h-full w-full pointer-events-none">
                  <div className="h-full w-full pointer-events-auto">
