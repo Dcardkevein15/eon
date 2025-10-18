@@ -279,5 +279,6 @@ export const AetherWorldStateSchema = z.object({
     agents: z.array(AetherAgentSchema),
     eventLog: z.array(AetherEventSchema),
     supervisorAnalysis: z.string(),
+    selectedAgentId: z.string().optional(), // Used for UI communication
 });
 export type AetherWorldState = z.infer<typeof AetherWorldStateSchema>;
