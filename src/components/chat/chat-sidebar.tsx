@@ -81,6 +81,7 @@ function ChatSidebar({
     { href: "/profile", icon: UserCircle, label: "Perfil Psicológico" },
     { href: "/marketplace", icon: Briefcase, label: "Marketplace" },
     { href: "/dreams", icon: Star, label: "Portal de Sueños" },
+    { href: "/aether", icon: Bot, label: "Aether" },
   ];
 
   return (

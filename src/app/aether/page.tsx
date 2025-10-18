@@ -20,18 +20,33 @@ function AgentNode({ agent, onSelect }: { agent: AetherAgent, onSelect: (id: str
     return (
         <group position={[agent.position.x, agent.position.y, agent.position.z]}>
             <Text
-                position={[0, 2, 0]}
+                position={[0, 3, 0]}
                 fontSize={1.5}
                 color="white"
                 anchorX="center"
                 anchorY="middle"
+                outlineWidth={0.1}
+                outlineColor="black"
             >
                 {agent.name}
             </Text>
-            <mesh onClick={() => onSelect(agent.id)}>
-                <sphereGeometry args={[1, 32, 32]} />
-                <meshStandardMaterial emissive="hsl(var(--primary))" emissiveIntensity={2} toneMapped={false} />
-            </mesh>
+             <Text
+                position={[0, -2.5, 0]}
+                fontSize={1}
+                color="hsl(var(--primary))"
+                anchorX="center"
+                anchorY="middle"
+            >
+                {agent.archetype}
+            </Text>
+            <motion.mesh 
+                onClick={() => onSelect(agent.id)}
+                whileHover={{ scale: 1.2 }}
+                transition={{ type: "spring", stiffness: 400, damping: 10 }}
+            >
+                <octahedronGeometry args={[1.5, 0]} />
+                <meshStandardMaterial emissive="hsl(var(--primary))" emissiveIntensity={1.5} toneMapped={false} wireframe={false} />
+            </motion.mesh>
         </group>
     );
 }
@@ -74,7 +89,7 @@ function AetherSimulation() {
       
       // Visualize interactions
       if(action.includes('@')) {
-        const targetName = action.split('@')[1]?.trim();
+        const targetName = action.split('@')[1]?.trim().split(' ')[0];
         const targetAgent = newWorldState.agents.find(a => a.name === targetName);
         if(targetAgent) {
             newInteractionLines.push([agent, targetAgent]);

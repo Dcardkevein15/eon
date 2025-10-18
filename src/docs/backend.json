@@ -126,7 +126,10 @@
     "simulationScenario": { "title": "Simulation Scenario", "description": "A predefined scenario for the Emotional Gym.", "type": "object", "properties": { "id": { "type": "string" }, "title": { "type": "string" }, "description": { "type": "string" }, "category": { "type": "string" }, "personaPrompt": { "type": "string" } }, "required": ["id", "title", "description", "category", "personaPrompt"] },
     "simulationSession": { "title": "Simulation Session", "description": "A record of a user's practice session in the Emotional Gym.", "type": "object", "properties": { "userId": { "type": "string" }, "scenarioId": { "type": "string" }, "scenarioTitle": { "type": "string" }, "createdAt": { "type": "string", "format": "date-time" }, "completedAt": { "type": "string", "format": "date-time" }, "feedback": { "type": "string" }, "path": { "type": "string" } }, "required": ["userId", "scenarioId", "scenarioTitle", "createdAt", "path"] },
     "dreamInterpretation": { "title": "Dream Interpretation", "description": "An AI-generated interpretation of a user's dream.", "type": "object", "properties": { "userId": { "type": "string" }, "dreamDescription": { "type": "string" }, "interpretation": { "type": "object", "properties": { "dreamTitle": { "type": "string" }, "dominantFeeling": { "type": "string" }, "coreArchetype": { "type": "string" }, "symbolAnalysis": { "type": "array", "items": { "$ref": "#/entities/symbolAnalysis" } }, "narrativeInterpretation": { "type": "string" }, "reflectiveQuestion": { "type": "string" } } }, "createdAt": { "type": "string", "format": "date-time" } }, "required": ["userId", "dreamDescription", "interpretation", "createdAt"] },
-    "symbolAnalysis": { "title": "Symbol Analysis", "description": "Analysis of a single symbol within a dream.", "type": "object", "properties": { "symbol": { "type": "string" }, "universalMeaning": { "type": "string" }, "personalMeaning": { "type": "string" }, "icon": { "type": "string" } } }
+    "symbolAnalysis": { "title": "Symbol Analysis", "description": "Analysis of a single symbol within a dream.", "type": "object", "properties": { "symbol": { "type": "string" }, "universalMeaning": { "type": "string" }, "personalMeaning": { "type": "string" }, "icon": { "type": "string" } } },
+    "aetherWorldState": { "title": "Aether World State", "properties": { "tick": { "type": "number" }, "agents": { "type": "array", "items": { "$ref": "#/entities/aetherAgent" } }, "eventLog": { "type": "array", "items": { "$ref": "#/entities/aetherEvent" } }, "supervisorAnalysis": { "type": "string" } } },
+    "aetherAgent": { "title": "Aether Agent", "properties": { "id": { "type": "string" }, "name": { "type": "string" }, "archetype": { "type": "string" }, "primaryGoal": { "type": "string" }, "greatestFear": { "type": "string" }, "position": { "type": "object", "properties": { "x": { "type": "number" }, "y": { "type": "number" }, "z": { "type": "number" } } }, "status": { "type": "string" }, "thought": { "type": "string" }, "lastAction": { "type": "string" } } },
+    "aetherEvent": { "title": "Aether Event", "properties": { "tick": { "type": "number" }, "description": { "type": "string" } } }
   },
   "auth": {
     "providers": ["google.com"]
@@ -159,3 +162,4 @@
     }
   }
 }
+
