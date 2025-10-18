@@ -13,7 +13,7 @@ import type { AetherWorldState, AetherAgent, AetherEvent } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 
-// Dynamically import the 3D canvas component with SSR turned off. This is the fix.
+// Dynamically import the 3D canvas component with SSR turned off. This is the definitive fix.
 const AetherSimulationCanvas = dynamic(
   () => import('@/components/aether/aether-simulation-canvas'),
   { 
@@ -23,26 +23,32 @@ const AetherSimulationCanvas = dynamic(
 );
 
 
-// Controller Component (Safe for Server/Client)
-function AetherController({ onStateUpdate, onLoadingChange }: { onStateUpdate: (state: AetherWorldState) => void, onLoadingChange: (loading: boolean) => void }) {
+// Controller Component (Safe for Server/Client, NO 3D rendering here)
+function AetherController({ 
+    onStateUpdate, 
+    onLoadingChange,
+    initialConcept
+}: { 
+    onStateUpdate: (state: AetherWorldState | null) => void, 
+    onLoadingChange: (loading: boolean) => void,
+    initialConcept: string
+}) {
   const { user } = useAuth();
-  const [worldState, setWorldState] = useState<AetherWorldState | null>(null);
+  const [localWorldState, setLocalWorldState] = useState<AetherWorldState | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [userConcept, setUserConcept] = useState('La Sombra del Miedo al Fracaso');
+  const [userConcept, setUserConcept] = useState(initialConcept);
   
   const tickIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     onLoadingChange(isLoading);
   }, [isLoading, onLoadingChange]);
-
+  
   useEffect(() => {
-    if (worldState) {
-      onStateUpdate(worldState);
-    }
-  }, [worldState, onStateUpdate]);
+    onStateUpdate(localWorldState);
+  }, [localWorldState, onStateUpdate]);
 
 
   const handleInitialize = useCallback(async () => {
@@ -54,19 +60,20 @@ function AetherController({ onStateUpdate, onLoadingChange }: { onStateUpdate: (
     setError(null);
     try {
       const initialState = await initializeAether({ userConcept });
-      setWorldState(initialState);
+      setLocalWorldState(initialState);
     } catch (e) {
       console.error(e);
       setError("Error al inicializar la simulación.");
+      setLocalWorldState(null); // Ensure state is cleared on error
     } finally {
       setIsLoading(false);
     }
   }, [user, userConcept]);
 
   const runSimulationTick = useCallback(async () => {
-    if (!worldState) return;
+    if (!localWorldState) return;
 
-    let currentState = worldState;
+    let currentState = localWorldState;
 
     // 1. Run each agent's turn
     const agentPromises = currentState.agents.map(async (agent) => {
@@ -97,9 +104,9 @@ function AetherController({ onStateUpdate, onLoadingChange }: { onStateUpdate: (
       supervisorAnalysis: supervisorResult.supervisorAnalysis,
     };
 
-    setWorldState(nextState);
+    setLocalWorldState(nextState);
 
-  }, [worldState]);
+  }, [localWorldState]);
 
   useEffect(() => {
     if (isRunning) {
@@ -116,7 +123,7 @@ function AetherController({ onStateUpdate, onLoadingChange }: { onStateUpdate: (
     };
   }, [isRunning, runSimulationTick]);
 
-  if (!worldState) {
+  if (!localWorldState) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-4">
         <BrainCircuit className="w-16 h-16 text-primary mb-4" />
@@ -163,7 +170,7 @@ function AetherController({ onStateUpdate, onLoadingChange }: { onStateUpdate: (
         </div>
       </div>
        <div className="flex-1 text-center p-4 text-sm text-muted-foreground">
-          Tick: <span className="font-bold text-foreground">{worldState.tick}</span> | {worldState.supervisorAnalysis}
+          Tick: <span className="font-bold text-foreground">{localWorldState.tick}</span> | {localWorldState.supervisorAnalysis}
       </div>
     </div>
   );
@@ -215,7 +222,7 @@ function AgentInfoPanel({ agent, worldState }: { agent: AetherAgent | null, worl
     )
 }
 
-// Main Page Component
+// Main Page Component - Manages layout and state passing
 export default function AetherPage() {
   const [worldState, setWorldState] = useState<AetherWorldState | null>(null);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
@@ -241,14 +248,20 @@ export default function AetherPage() {
 
       <div className="flex-1 flex overflow-hidden">
         <main className="flex-1 relative bg-black">
-            <Suspense fallback={<div className="absolute inset-0 flex items-center justify-center bg-black"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
-                <AetherSimulationCanvas 
-                    worldState={worldState} 
-                    onSelectAgent={setSelectedAgentId} 
-                />
-            </Suspense>
+            <div className="absolute inset-0 z-0">
+              <AetherSimulationCanvas 
+                  worldState={worldState} 
+                  onSelectAgent={setSelectedAgentId} 
+              />
+            </div>
             <div className="absolute top-0 left-0 h-full w-full pointer-events-none">
-                 <AetherController onStateUpdate={setWorldState} onLoadingChange={setIsLoading} />
+                 <div className="h-full w-full pointer-events-auto">
+                    <AetherController 
+                      onStateUpdate={setWorldState} 
+                      onLoadingChange={setIsLoading}
+                      initialConcept="La Sombra del Miedo al Fracaso"
+                    />
+                 </div>
             </div>
         </main>
         
