@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -7,7 +8,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { AetherWorldStateSchema, AetherAgentSchema, type AetherWorldState } from '@/lib/types';
+import { AetherWorldStateSchema, AetherAgentSchema, type AetherWorldState, type AetherAgent } from '@/lib/types';
 
 
 // =================================================================
@@ -62,7 +63,7 @@ const RunAgentTurnInputSchema = z.object({
   agent: AetherAgentSchema,
   worldState: AetherWorldStateSchema,
 });
-type RunAgentTurnInput = z-infer<typeof RunAgentTurnInputSchema>;
+type RunAgentTurnInput = z.infer<typeof RunAgentTurnInputSchema>;
 
 
 const AgentTurnOutputSchema = z.object({
