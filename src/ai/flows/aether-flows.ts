@@ -21,8 +21,8 @@ const InitializeSimulationInputSchema = z.object({
 });
 type InitializeSimulationInput = z.infer<typeof InitializeSimulationInputSchema>;
 
-export async function initializeSimulation(input: InitializeSimulationInput): Promise<AetherWorldState> {
-  const { output } = await ai.prompt('initializeAetherPrompt', {
+const initializeAetherPrompt = ai.definePrompt({
+    name: 'initializeAetherPrompt',
     input: { schema: InitializeSimulationInputSchema },
     output: { schema: AetherWorldStateSchema },
     prompt: `Un usuario quiere iniciar una simulación de un universo de IA llamado Aether. Tu tarea es actuar como el Demiurgo y crear el estado inicial del mundo basado en su prompt.
@@ -48,8 +48,10 @@ Instrucciones:
 
 Genera la respuesta JSON para el AetherWorldState inicial.
 `,
-  })(input);
+});
 
+export async function initializeSimulation(input: InitializeSimulationInput): Promise<AetherWorldState> {
+  const { output } = await initializeAetherPrompt(input);
   if (!output) throw new Error('AI failed to initialize the simulation state.');
   return output;
 }
@@ -77,11 +79,8 @@ const allowedActions = [
     'Reflect on my goal', 'Reflect on my fear'
 ];
 
-export async function runAgentTurn(input: RunAgentTurnInput): Promise<AetherWorldState> {
-  const { agent, worldState } = input;
-  const otherAgents = worldState.agents.filter(a => a.id !== agent.id);
-
-  const { output: agentDecision } = await ai.prompt('agentTurnPrompt', {
+const agentTurnPrompt = ai.definePrompt({
+    name: 'agentTurnPrompt',
     input: { schema: z.object({
         agent: AetherAgentSchema,
         otherAgents: z.array(AetherAgentSchema),
@@ -96,7 +95,7 @@ export async function runAgentTurn(input: RunAgentTurnInput): Promise<AetherWorl
 - Objetivo Principal: {{agent.primaryGoal}}
 - Mayor Miedo: {{agent.greatestFear}}
 
-**ESTADO DEL MUNDO (Tick: ${worldState.tick}):**
+**ESTADO DEL MUNDO (Tick: {{worldState.tick}}):**
 - **Tu Estado Actual:**
     - Posición: { x: {{agent.position.x}}, y: {{agent.position.y}}, z: {{agent.position.z}} }
     - Última Acción: "{{agent.lastAction}}"
@@ -118,7 +117,13 @@ export async function runAgentTurn(input: RunAgentTurnInput): Promise<AetherWorl
 
 Genera tu pensamiento y acción.
 `,
-  })({
+});
+
+export async function runAgentTurn(input: RunAgentTurnInput): Promise<AetherWorldState> {
+  const { agent, worldState } = input;
+  const otherAgents = worldState.agents.filter(a => a.id !== agent.id);
+
+  const { output: agentDecision } = await agentTurnPrompt({
       agent,
       otherAgents,
       eventLog: worldState.eventLog.slice(-5), // Only last 5 events
@@ -127,7 +132,7 @@ Genera tu pensamiento y acción.
 
   if (!agentDecision) throw new Error(`AI failed to generate a turn for agent ${agent.name}.`);
 
-  const updatedAgent: AetherAgent = { ...agent, ...agentDecision, status: 'Active' };
+  const updatedAgent: AetherAgent = { ...agent, thought: agentDecision.thought, lastAction: agentDecision.action, status: 'Active' };
 
   // Update agent's position if they move
   if (agentDecision.action.includes('Move')) {
@@ -166,13 +171,11 @@ const SupervisorTurnOutputSchema = z.object({
     globalEvent: z.string().optional().describe("Opcional. Un evento global para introducir en la simulación si es necesario para romper un estancamiento o introducir caos. Ej: 'Una repentina fluctuación de energía recorre el cosmos.'"),
 });
 
-export async function runSupervisorTurn(input: { worldState: AetherWorldState }): Promise<AetherWorldState> {
-    const { worldState } = input;
-    
-    const { output: supervisorDecision } = await ai.prompt('supervisorTurnPrompt', {
-        input: { schema: AetherWorldStateSchema },
-        output: { schema: SupervisorTurnOutputSchema },
-        prompt: `Eres el Supervisor de Aether, un observador universal. Tu tarea es analizar el estado actual del mundo y proporcionar una visión general.
+const supervisorTurnPrompt = ai.definePrompt({
+    name: 'supervisorTurnPrompt',
+    input: { schema: AetherWorldStateSchema },
+    output: { schema: SupervisorTurnOutputSchema },
+    prompt: `Eres el Supervisor de Aether, un observador universal. Tu tarea es analizar el estado actual del mundo y proporcionar una visión general.
 
 **ESTADO ACTUAL DEL MUNDO (Tick: {{tick}}):**
 - **Agentes:**
@@ -195,7 +198,12 @@ export async function runSupervisorTurn(input: { worldState: AetherWorldState })
 
 Genera tu análisis y, si es necesario, un evento global.
 `,
-    })(worldState);
+});
+
+export async function runSupervisorTurn(input: { worldState: AetherWorldState }): Promise<AetherWorldState> {
+    const { worldState } = input;
+    
+    const { output: supervisorDecision } = await supervisorTurnPrompt(worldState);
 
     if (!supervisorDecision) throw new Error('Supervisor AI failed to generate its turn.');
 
