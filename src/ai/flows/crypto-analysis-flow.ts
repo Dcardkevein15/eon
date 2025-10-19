@@ -14,10 +14,16 @@ import {
   SynthesizerInputSchema,
   SynthesizerOutputSchema,
   type CryptoDebateTurn,
-  type CryptoAnalysisOutput,
   type TradingSignal,
 } from '@/lib/types';
 
+const getIdentityDescription = (analystName: 'Apex' | 'Helios'): string => {
+  if (analystName === 'Apex') {
+    return "Tu identidad: Eres 'Apex', un analista técnico obsesionado con los datos. Te basas en gráficos, indicadores (RSI, MACD, Medias Móviles), volumen y patrones de velas. Descartas el ruido de las noticias. Eres escéptico y directo.";
+  } else {
+    return "Tu identidad: Eres 'Helios', un analista fundamental visionario. Te enfocas en la tecnología subyacente, el equipo del proyecto, las noticias (tokenomics), la regulación y el sentimiento en redes sociales. Crees que el valor a largo plazo supera las fluctuaciones a corto plazo.";
+  }
+};
 
 // Prompts de los Agentes
 const analystPrompt = ai.definePrompt({
@@ -25,11 +31,7 @@ const analystPrompt = ai.definePrompt({
   input: { schema: AnalystTurnInputSchema },
   output: { schema: AnalystTurnOutputSchema },
   prompt: `Eres {{{analystName}}}, un analista experto en criptomonedas.
-  {{#if (analystName === "Apex")}}
-  Tu identidad: Eres 'Apex', un analista técnico obsesionado con los datos. Te basas en gráficos, indicadores (RSI, MACD, Medias Móviles), volumen y patrones de velas. Descartas el ruido de las noticias. Eres escéptico y directo.
-  {{else}}
-  Tu identidad: Eres 'Helios', un analista fundamental visionario. Te enfocas en la tecnología subyacente, el equipo del proyecto, las noticias (tokenomics), la regulación y el sentimiento en redes sociales. Crees que el valor a largo plazo supera las fluctuaciones a corto plazo.
-  {{/if}}
+  {{{identityDescription}}}
 
   Estás en un debate en vivo con tu contraparte. Vuestro objetivo combinado es generar las señales de trading más rentables para hoy.
 
@@ -68,7 +70,12 @@ export async function* runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInp
 
       for (let i = 0; i < MAX_TURNS; i++) {
         // Turno de Apex (Técnico)
-        const apexInput = { analystName: 'Apex' as const, debateHistory, previousAlphaState: input.previousAlphaState };
+        const apexInput = { 
+            analystName: 'Apex' as const, 
+            debateHistory, 
+            previousAlphaState: input.previousAlphaState,
+            identityDescription: getIdentityDescription('Apex')
+        };
         const { output: apexOutput } = await analystPrompt(apexInput);
         if (!apexOutput?.argument) throw new Error("Apex failed to respond.");
         const apexTurn: CryptoDebateTurn = { analyst: 'Apex', argument: apexOutput.argument };
@@ -79,7 +86,12 @@ export async function* runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInp
         yield { type: 'synthesisChunk', chunk: '.' };
 
         // Turno de Helios (Fundamental)
-        const heliosInput = { analystName: 'Helios' as const, debateHistory, previousAlphaState: input.previousAlphaState };
+        const heliosInput = { 
+            analystName: 'Helios' as const, 
+            debateHistory, 
+            previousAlphaState: input.previousAlphaState,
+            identityDescription: getIdentityDescription('Helios')
+        };
         const { output: heliosOutput } = await analystPrompt(heliosInput);
         if (!heliosOutput?.argument) throw new Error("Helios failed to respond.");
         const heliosTurn: CryptoDebateTurn = { analyst: 'Helios', argument: heliosOutput.argument };
