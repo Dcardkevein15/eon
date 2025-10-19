@@ -14,7 +14,6 @@ import {
   SynthesizerInputSchema,
   SynthesizerOutputSchema,
   type CryptoDebateTurn,
-  type TradingSignal,
 } from '@/lib/types';
 
 const getIdentityDescription = (analystName: 'Apex' | 'Helios'): string => {
@@ -104,9 +103,8 @@ export async function* runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInp
 
       // Turno del Sintetizador
       const synthesizerInput = { fullDebate: debateHistory };
-      const { stream, response } = await synthesizerPrompt.stream(synthesizerInput);
+      const { stream, response } = synthesizerPrompt.stream(synthesizerInput);
 
-      let finalResult: SynthesizerOutput | null = null;
       let fullSynthesis = '';
       
       for await (const chunk of stream) {
@@ -117,15 +115,10 @@ export async function* runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInp
              fullSynthesis = chunk.output.synthesis;
            }
         }
-        if (chunk.output) {
-          finalResult = chunk.output;
-        }
       }
       
       const synthesizerResult = await response;
       if (!synthesizerResult.output?.signals) throw new Error("Synthesizer failed to generate signals.");
 
       yield { type: 'finalSignals', signals: synthesizerResult.output.signals };
-      
-      return synthesizerResult.output;
 }
