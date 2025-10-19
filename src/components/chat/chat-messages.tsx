@@ -47,20 +47,35 @@ const FullscreenThinkingIndicator = () => {
         "Causa", "Efecto", "Metáfora", "Abstracción", "Detalle", "Síntesis"
     ];
     
-    const useRandomNodes = (numNodes: number, width: number, height: number) => {
+    const useStructuredNodes = (numNodes: number, width: number, height: number) => {
         const [nodes, setNodes] = useState<{ x: number; y: number; text: string; size: number; textYOffset: number; }[]>([]);
 
         useEffect(() => {
             if (width === 0 || height === 0) return;
 
             const shuffledConcepts = [...concepts].sort(() => 0.5 - Math.random());
-            const newNodes = Array.from({ length: numNodes }).map((_, i) => ({
-                x: Math.random() * (width * 0.8) + (width * 0.1),
-                y: Math.random() * (height * 0.8) + (height * 0.1),
-                text: shuffledConcepts[i % shuffledConcepts.length],
-                size: Math.random() * 15 + 20,
-                textYOffset: (Math.random() - 0.5) * 15 // Random vertical offset for text
-            }));
+            
+            const gridCols = Math.ceil(Math.sqrt(numNodes));
+            const gridRows = Math.ceil(numNodes / gridCols);
+            const cellWidth = width / gridCols;
+            const cellHeight = height / gridRows;
+
+            const newNodes = Array.from({ length: numNodes }).map((_, i) => {
+                const row = Math.floor(i / gridCols);
+                const col = i % gridCols;
+
+                const x = col * cellWidth + cellWidth / 2 + (Math.random() - 0.5) * (cellWidth * 0.3);
+                const y = row * cellHeight + cellHeight / 2 + (Math.random() - 0.5) * (cellHeight * 0.3);
+
+                return {
+                    x,
+                    y,
+                    text: shuffledConcepts[i % shuffledConcepts.length],
+                    size: Math.random() * 15 + 20,
+                    textYOffset: (Math.random() - 0.5) * 15,
+                }
+            });
+
             setNodes(newNodes);
             
             const pathIndices = [...Array(newNodes.length).keys()].sort(() => 0.5 - Math.random()).slice(0, 5);
@@ -72,14 +87,17 @@ const FullscreenThinkingIndicator = () => {
         return nodes;
     };
     
-    const nodes = useRandomNodes(9, dimensions.width, dimensions.height);
+    const nodes = useStructuredNodes(9, dimensions.width, dimensions.height);
 
     const links = [];
-    for (let i = 0; i < nodes.length; i++) {
-        for (let j = i + 1; j < nodes.length; j++) {
-            links.push({ source: nodes[i], target: nodes[j] });
-        }
+    if(nodes.length > 1) {
+      for (let i = 0; i < nodes.length; i++) {
+          for (let j = i + 1; j < nodes.length; j++) {
+              links.push({ source: nodes[i], target: nodes[j] });
+          }
+      }
     }
+
 
     const mainPathLinks = [];
     if(nodes.length > 0 && mainPathIndices.length > 0) {
