@@ -249,7 +249,55 @@ export const ClassifyIntentOutputSchema = z.object({
 });
 export type ClassifyIntentOutput = z.infer<typeof ClassifyIntentOutputSchema>;
 
+// --- Aether Simulation Types ---
+export const AetherAgentSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  archetype: z.string(),
+  primaryGoal: z.string(),
+  greatestFear: z.string(),
+  position: z.object({ x: z.number(), y: z.number(), z: z.number() }),
+  status: z.string(),
+  thought: z.string(),
+  lastAction: z.string(),
+});
+export type AetherAgent = z.infer<typeof AetherAgentSchema>;
+
+export const AetherEventSchema = z.object({
+  tick: z.number(),
+  description: z.string(),
+});
+export type AetherEvent = z.infer<typeof AetherEventSchema>;
+
+export const AetherWorldStateSchema = z.object({
+  tick: z.number(),
+  eventLog: z.array(AetherEventSchema),
+  supervisorAnalysis: z.string(),
+  agents: z.array(AetherAgentSchema),
+});
+export type AetherWorldState = z.infer<typeof AetherWorldStateSchema>;
+
 // --- Trading Analysis Types ---
+export const CryptoAnalysisInputSchema = z.object({
+  previousAlphaState: z.string().optional().describe('El resumen del resultado del análisis anterior para mantener una memoria contextual.'),
+});
+export type CryptoAnalysisInput = z.infer<typeof CryptoAnalysisInputSchema>;
+
+export const CryptoAnalysisOutputSchema = z.object({
+  debate: z.array(z.object({
+    analyst: z.enum(['Apex', 'Helios']),
+    argument: z.string(),
+  })),
+  synthesis: z.string(),
+  signals: z.array(z.object({
+    crypto: z.string(),
+    action: z.enum(['COMPRAR', 'VENDER', 'MANTENER']),
+    price: z.number(),
+    reasoning: z.string(),
+  })),
+});
+export type CryptoAnalysisOutput = z.infer<typeof CryptoAnalysisOutputSchema>;
+
 export type CryptoDebateTurn = {
   analyst: 'Apex' | 'Helios';
   argument: string;
@@ -261,3 +309,32 @@ export type TradingSignal = {
   price: number;
   reasoning: string;
 };
+
+// --- Schemas for AI Flows ---
+export const AnalystTurnInputSchema = z.object({
+  analystName: z.enum(['Apex', 'Helios']),
+  debateHistory: z.string(),
+  previousAlphaState: z.string().optional(),
+});
+export type AnalystTurnInput = z.infer<typeof AnalystTurnInputSchema>;
+
+export const AnalystTurnOutputSchema = z.object({
+  argument: z.string().describe("El siguiente argumento o refutación en el debate, terminando con una pregunta directa al otro analista."),
+});
+export type AnalystTurnOutput = z.infer<typeof AnalystTurnOutputSchema>;
+
+export const SynthesizerInputSchema = z.object({
+  fullDebate: z.string(),
+});
+export type SynthesizerInput = z.infer<typeof SynthesizerInputSchema>;
+
+export const SynthesizerOutputSchema = z.object({
+  synthesis: z.string().describe("Un resumen conciso del debate, destacando los puntos de acuerdo, desacuerdo y las conclusiones emergentes."),
+  signals: z.array(z.object({
+    crypto: z.string().describe("Símbolo de la criptomoneda (ej. BTC, ETH)."),
+    action: z.enum(['COMPRAR', 'VENDER', 'MANTENER']).describe("La acción de trading recomendada."),
+    price: z.number().describe("El precio de ejecución sugerido en USD."),
+    reasoning: z.string().describe("Una justificación breve y clara para la señal."),
+  })).describe("Una lista de las 3 señales de trading más fuertes del día."),
+});
+export type SynthesizerOutput = z.infer<typeof SynthesizerOutputSchema>;

@@ -6,53 +6,17 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'zod';
-import { type CryptoDebateTurn, type TradingSignal } from '@/lib/types';
-
-// Esquemas de Entrada y Salida del Flujo Principal
-export const CryptoAnalysisInputSchema = z.object({
-  previousAlphaState: z.string().optional().describe('El resumen del resultado del análisis anterior para mantener una memoria contextual.'),
-});
-type CryptoAnalysisInput = z.infer<typeof CryptoAnalysisInputSchema>;
-
-export const CryptoAnalysisOutputSchema = z.object({
-  debate: z.array(z.object({
-    analyst: z.enum(['Apex', 'Helios']),
-    argument: z.string(),
-  })),
-  synthesis: z.string(),
-  signals: z.array(z.object({
-    crypto: z.string(),
-    action: z.enum(['COMPRAR', 'VENDER', 'MANTENER']),
-    price: z.number(),
-    reasoning: z.string(),
-  })),
-});
-type CryptoAnalysisOutput = z.infer<typeof CryptoAnalysisOutputSchema>;
-
-// Esquema para el turno de un analista
-const AnalystTurnInputSchema = z.object({
-  analystName: z.enum(['Apex', 'Helios']),
-  debateHistory: z.string(),
-  previousAlphaState: z.string().optional(),
-});
-const AnalystTurnOutputSchema = z.object({
-  argument: z.string().describe("El siguiente argumento o refutación en el debate, terminando con una pregunta directa al otro analista."),
-});
-
-// Esquema para la síntesis
-const SynthesizerInputSchema = z.object({
-  fullDebate: z.string(),
-});
-const SynthesizerOutputSchema = z.object({
-  synthesis: z.string().describe("Un resumen conciso del debate, destacando los puntos de acuerdo, desacuerdo y las conclusiones emergentes."),
-  signals: z.array(z.object({
-    crypto: z.string().describe("Símbolo de la criptomoneda (ej. BTC, ETH)."),
-    action: z.enum(['COMPRAR', 'VENDER', 'MANTENER']).describe("La acción de trading recomendada."),
-    price: z.number().describe("El precio de ejecución sugerido en USD."),
-    reasoning: z.string().describe("Una justificación breve y clara para la señal."),
-  })).describe("Una lista de las 3 señales de trading más fuertes del día."),
-});
+import { z, Flow } from 'zod';
+import {
+  CryptoAnalysisInputSchema,
+  CryptoAnalysisOutputSchema,
+  AnalystTurnInputSchema,
+  AnalystTurnOutputSchema,
+  SynthesizerInputSchema,
+  SynthesizerOutputSchema,
+  type CryptoDebateTurn,
+  type CryptoAnalysisOutput,
+} from '@/lib/types';
 
 
 // Prompts de los Agentes
@@ -97,13 +61,7 @@ const synthesizerPrompt = ai.definePrompt({
 
 
 // Flujo Principal de Orquestación
-export const runCryptoAnalysis = ai.defineFlow(
-  {
-    name: 'runCryptoAnalysisFlow',
-    inputSchema: CryptoAnalysisInputSchema,
-    outputSchema: z.any(), // Se usará un stream para la salida
-  },
-  async (input) => {
+export async function runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInputSchema>) {
     
     return new Flow(async function* (flow) {
       let debateHistory = '';
@@ -150,5 +108,4 @@ export const runCryptoAnalysis = ai.defineFlow(
       
       return synthesizerResult.output;
     });
-  }
-);
+}
