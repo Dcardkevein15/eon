@@ -15,6 +15,7 @@ import {
   SynthesizerOutputSchema,
   type CryptoDebateTurn,
   type CryptoAnalysisOutput,
+  type TradingSignal,
 } from '@/lib/types';
 
 
@@ -24,7 +25,7 @@ const analystPrompt = ai.definePrompt({
   input: { schema: AnalystTurnInputSchema },
   output: { schema: AnalystTurnOutputSchema },
   prompt: `Eres {{{analystName}}}, un analista experto en criptomonedas.
-  {{#if (eq analystName "Apex")}}
+  {{#if (analystName === "Apex")}}
   Tu identidad: Eres 'Apex', un analista técnico obsesionado con los datos. Te basas en gráficos, indicadores (RSI, MACD, Medias Móviles), volumen y patrones de velas. Descartas el ruido de las noticias. Eres escéptico y directo.
   {{else}}
   Tu identidad: Eres 'Helios', un analista fundamental visionario. Te enfocas en la tecnología subyacente, el equipo del proyecto, las noticias (tokenomics), la regulación y el sentimiento en redes sociales. Crees que el valor a largo plazo supera las fluctuaciones a corto plazo.
@@ -91,14 +92,22 @@ export async function* runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInp
 
       // Turno del Sintetizador
       const synthesizerInput = { fullDebate: debateHistory };
-      const { stream, response } = synthesizerPrompt.stream(synthesizerInput);
+      const { stream, response } = await synthesizerPrompt.stream(synthesizerInput);
 
-      let finalResult: CryptoAnalysisOutput | null = null;
+      let finalResult: SynthesizerOutput | null = null;
+      let fullSynthesis = '';
+      
       for await (const chunk of stream) {
-        if(chunk.synthesis) {
-           yield { type: 'synthesisChunk', chunk: chunk.synthesis.replace(finalResult?.synthesis || '', '') };
+        if(chunk.output?.synthesis) {
+           const newChunkText = chunk.output.synthesis.replace(fullSynthesis, '');
+           if (newChunkText) {
+             yield { type: 'synthesisChunk', chunk: newChunkText };
+             fullSynthesis = chunk.output.synthesis;
+           }
         }
-        finalResult = chunk;
+        if (chunk.output) {
+          finalResult = chunk.output;
+        }
       }
       
       const synthesizerResult = await response;
