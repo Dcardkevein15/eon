@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Message } from '@/lib/types';
 import ChatMessage from './chat-message';
 import { motion, AnimatePresence } from 'framer-motion';
+import { usePathname } from 'next/navigation';
 
 
 const FullscreenThinkingIndicator = () => {
@@ -321,6 +322,11 @@ const FullscreenThinkingIndicator = () => {
 export default function ChatMessages({ messages, isResponding }: { messages: Message[]; isResponding: boolean; }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const isAtBottomRef = useRef(true);
+  const pathname = usePathname();
+
+  // Condition to show the fullscreen animation only on the main chat pages
+  const isMainChat = pathname === '/' || pathname.startsWith('/c/');
+
 
   const handleScroll = () => {
     const viewport = viewportRef.current;
@@ -347,7 +353,7 @@ export default function ChatMessages({ messages, isResponding }: { messages: Mes
         </div>
       </ScrollArea>
       <AnimatePresence>
-        {isResponding && messages.length > 0 && <FullscreenThinkingIndicator />}
+        {isResponding && messages.length > 0 && isMainChat && <FullscreenThinkingIndicator />}
       </AnimatePresence>
     </div>
   );
