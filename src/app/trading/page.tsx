@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
@@ -7,16 +6,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, Play, BrainCircuit, Bot, Sparkles, ChevronLeft, History } from 'lucide-react';
-import type { TradingSignal, CryptoDebateTurn, TradingAnalysisRecord, FullCryptoAnalysis } from '@/lib/types';
+import type { TradingSignal, CryptoDebateTurn, TradingAnalysisRecord, FullCryptoAnalysis, MarketChartData } from '@/lib/types';
 import { runCryptoAnalysis } from '@/ai/flows/crypto-analysis-flow';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { v4 as uuidv4 } from 'uuid';
 import { useTypingEffect } from '@/hooks/use-typing-effect';
+import { ResponsiveContainer, LineChart, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Line, Bar, ComposedChart, Legend } from 'recharts';
 
 const AnalystAvatar = ({ name }: { name: string }) => {
     const isApex = name === 'Apex';
@@ -63,6 +63,85 @@ function useLocalStorage<T>(key: string, initialValue: T) {
   return [storedValue, setValue, loading] as const;
 }
 
+const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="p-2 bg-background/80 border rounded-lg shadow-xl text-xs">
+          <p className="font-bold">{format(new Date(label), "d MMM, HH:mm", { locale: es })}</p>
+          {payload.map((pld: any, index: number) => (
+            <p key={index} style={{ color: pld.color }}>
+              {`${pld.name}: ${pld.value.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}`}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+};
+
+const calculateSMA = (data: any[], period: number) => {
+    const sma = [];
+    for (let i = period - 1; i < data.length; i++) {
+        const sum = data.slice(i - period + 1, i + 1).reduce((acc, val) => acc + val.price, 0);
+        sma.push({ time: data[i].time, SMA: sum / period });
+    }
+    return sma;
+};
+
+const MarketChart = ({ data }: { data: MarketChartData }) => {
+    if (!data || data.prices.length === 0) {
+        return <div className="h-full flex items-center justify-center text-muted-foreground">Esperando datos del mercado...</div>;
+    }
+
+    const chartData = data.prices.map((pricePoint, index) => ({
+        time: pricePoint[0],
+        price: pricePoint[1],
+        volume: data.volumes[index] ? data.volumes[index][1] : 0,
+    }));
+    
+    const smaData = calculateSMA(chartData, 3);
+    
+    const combinedData = chartData.map(d => {
+        const smaPoint = smaData.find(s => s.time === d.time);
+        return { ...d, SMA: smaPoint ? smaPoint.SMA : null };
+    });
+
+    const yAxisDomain = [
+        Math.min(...chartData.map(d => d.price)) * 0.98,
+        Math.max(...chartData.map(d => d.price)) * 1.02,
+    ];
+
+    return (
+        <ResponsiveContainer width="100%" height={400}>
+            <ComposedChart data={combinedData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)"/>
+                <XAxis 
+                    dataKey="time" 
+                    tickFormatter={(time) => format(new Date(time), 'd MMM')}
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                />
+                <YAxis 
+                    yAxisId="left" 
+                    domain={yAxisDomain}
+                    tickFormatter={(price) => `$${(price / 1000).toFixed(0)}k`}
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                />
+                 <YAxis 
+                    yAxisId="right" 
+                    orientation="right"
+                    tickFormatter={(volume) => `${(volume / 1_000_000_000).toFixed(1)}B`}
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+                <Bar yAxisId="right" dataKey="volume" fill="hsl(var(--secondary))" name="Volumen" barSize={20} />
+                <Line yAxisId="left" type="monotone" dataKey="price" stroke="hsl(var(--primary))" name="Precio" dot={false} strokeWidth={2} />
+                <Line yAxisId="left" type="monotone" dataKey="SMA" stroke="hsl(var(--accent))" name="SMA (3 días)" dot={false} strokeWidth={2} strokeDasharray="5 5" />
+            </ComposedChart>
+        </ResponsiveContainer>
+    );
+};
+
 
 export default function TradingAnalysisPage() {
     const [isLoading, setIsLoading] = useState(false);
@@ -72,15 +151,14 @@ export default function TradingAnalysisPage() {
     const [signals, setSignals] = useState<TradingSignal[]>([]);
     const [alphaState, setAlphaState] = useState<string>('Sin análisis previo. Empezando desde cero.');
     const [analysisHistory, setAnalysisHistory, isHistoryLoading] = useLocalStorage<TradingAnalysisRecord[]>('trading-analysis-history', []);
+    const [marketData, setMarketData] = useState<MarketChartData | null>(null);
     
     // State to differentiate between live generation and viewing history
     const [isViewingHistory, setIsViewingHistory] = useState(false);
 
     // States for typing effect (only for live generation)
-    const [realDebate, setRealDebate] = useState<CryptoDebateTurn[]>([]);
-    const [realSynthesis, setRealSynthesis] = useState<string>('');
-    const displayedDebate = useTypingEffect(realDebate.map(t => `${t.analyst}: ${t.argument}`).join('\n\n'), 30);
-    const displayedSynthesis = useTypingEffect(realSynthesis, 30);
+    const displayedDebate = useTypingEffect(debate.map(t => `${t.analyst}: ${t.argument}`).join('\n\n'), 30);
+    const displayedSynthesis = useTypingEffect(synthesis, 30);
 
 
     const debateEndRef = useRef<HTMLDivElement>(null);
@@ -98,22 +176,16 @@ export default function TradingAnalysisPage() {
         setDebate([]);
         setSynthesis('');
         setSignals([]);
-
-        // Reset real data for typing effect
-        setRealDebate([]);
-        setRealSynthesis('');
+        setMarketData(null);
         
         try {
             const result: FullCryptoAnalysis = await runCryptoAnalysis({ previousAlphaState: alphaState });
             
-            // Set real data to trigger typing effect
-            setRealDebate(result.debate);
-            setRealSynthesis(result.synthesis);
-
-            // Set final data directly for non-animated display if needed, but we rely on typing effect here
+            // Set final data directly
             setDebate(result.debate);
             setSynthesis(result.synthesis);
             setSignals(result.signals);
+            setMarketData(result.marketData || null);
 
             const newAlphaState = `El último análisis generó ${result.signals.length} señales. La principal fue ${result.signals[0]?.action} ${result.signals[0]?.crypto} a ${result.signals[0]?.price}. Conclusión general: ${result.synthesis.substring(0, 100)}...`;
             setAlphaState(newAlphaState);
@@ -139,18 +211,8 @@ export default function TradingAnalysisPage() {
         setDebate(record.debate);
         setSynthesis(record.synthesis);
         setSignals(record.signals);
-        
-        // Stop any ongoing typing effect
-        setRealDebate([]); 
-        setRealSynthesis('');
+        setMarketData(record.marketData || null);
     };
-
-    const debateTurns = useTypingEffect(
-      debate.map(turn => `${turn.analyst}: ${turn.argument}`).join('\n\n'),
-      20
-    );
-
-    const synthesisText = useTypingEffect(synthesis, 20);
 
     return (
         <div className="flex h-screen bg-background text-foreground">
@@ -212,7 +274,7 @@ export default function TradingAnalysisPage() {
                     {error && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}
                     <div className="max-w-7xl mx-auto grid lg:grid-cols-3 gap-6 h-full">
                         {/* Main Debate Area */}
-                        <div className="lg:col-span-2 h-full flex flex-col">
+                        <div className="lg:col-span-2 h-full flex flex-col gap-6">
                             <Card className="flex-1 flex flex-col bg-card/50">
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2"><BrainCircuit className="w-5 h-5 text-primary"/> Debate de Analistas IA</CardTitle>
@@ -244,6 +306,14 @@ export default function TradingAnalysisPage() {
                                             <div ref={debateEndRef} />
                                         </div>
                                     </ScrollArea>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Gráfico de Mercado (BTC/USD - 7 Días)</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <MarketChart data={marketData!} />
                                 </CardContent>
                             </Card>
                         </div>
