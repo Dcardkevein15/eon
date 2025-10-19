@@ -321,17 +321,10 @@ export const SynthesizerOutputSchema = z.object({
 export type SynthesizerOutput = z.infer<typeof SynthesizerOutputSchema>;
 
 
-export const MarketChartDataSchema = z.object({
-    prices: z.array(z.tuple([z.number(), z.number()])).describe('Array de tuplas [timestamp, price]'),
-    volumes: z.array(z.tuple([z.number(), z.number()])).describe('Array de tuplas [timestamp, volume]'),
-});
-export type MarketChartData = z.infer<typeof MarketChartDataSchema>;
-
 export const FullCryptoAnalysisSchema = z.object({
     debate: z.array(CryptoDebateTurnSchema),
     synthesis: z.string(),
     signals: z.array(TradingSignalSchema),
-    marketData: MarketChartDataSchema.nullable(),
 });
 export type FullCryptoAnalysis = z.infer<typeof FullCryptoAnalysisSchema>;
 
