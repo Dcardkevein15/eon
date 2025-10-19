@@ -6,10 +6,9 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z, Flow } from 'zod';
+import { z } from 'zod';
 import {
   CryptoAnalysisInputSchema,
-  CryptoAnalysisOutputSchema,
   AnalystTurnInputSchema,
   AnalystTurnOutputSchema,
   SynthesizerInputSchema,
@@ -61,9 +60,8 @@ const synthesizerPrompt = ai.definePrompt({
 
 
 // Flujo Principal de Orquestación
-export async function runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInputSchema>) {
+export async function* runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInputSchema>) {
     
-    return new Flow(async function* (flow) {
       let debateHistory = '';
       const MAX_TURNS = 3; // 3 turnos para cada analista
 
@@ -76,7 +74,8 @@ export async function runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInpu
         debateHistory += `Apex: ${apexOutput.argument}\n\n`;
         yield { type: 'debateTurn', turn: apexTurn };
         
-        flow.stream({ type: 'synthesisChunk', chunk: '.' });
+        // Simula el "tipeo" del sintetizador
+        yield { type: 'synthesisChunk', chunk: '.' };
 
         // Turno de Helios (Fundamental)
         const heliosInput = { analystName: 'Helios' as const, debateHistory, previousAlphaState: input.previousAlphaState };
@@ -86,7 +85,8 @@ export async function runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInpu
         debateHistory += `Helios: ${heliosOutput.argument}\n\n`;
         yield { type: 'debateTurn', turn: heliosTurn };
         
-        flow.stream({ type: 'synthesisChunk', chunk: '.' });
+        // Simula el "tipeo" del sintetizador
+        yield { type: 'synthesisChunk', chunk: '.' };
       }
 
       // Turno del Sintetizador
@@ -107,5 +107,4 @@ export async function runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInpu
       yield { type: 'finalSignals', signals: synthesizerResult.output.signals };
       
       return synthesizerResult.output;
-    });
 }
