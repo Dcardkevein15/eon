@@ -69,7 +69,7 @@ export async function runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInpu
     
       let debateHistory: CryptoDebateTurn[] = [];
       let debateHistoryString = '';
-      const MAX_TURNS = 3;
+      const MAX_TURNS = 1; // REDUCIDO DE 3 A 1 PARA EVITAR TIMEOUTS
 
       for (let i = 0; i < MAX_TURNS; i++) {
         // Turno de Apex (Técnico)
