@@ -6,6 +6,7 @@
  */
 
 import { ai } from '@/ai/genkit';
+import { z } from 'zod';
 import {
   CryptoAnalysisInputSchema,
   AnalystTurnInputSchema,
@@ -13,17 +14,49 @@ import {
   SynthesizerInputSchema,
   SynthesizerOutputSchema,
   type CryptoDebateTurn,
-  type TradingSignal,
   type FullCryptoAnalysis,
   FullCryptoAnalysisSchema,
 } from '@/lib/types';
-import type { z } from 'zod';
+
+
+// 1. Definir la herramienta para obtener precios
+const get_crypto_price = ai.defineTool(
+  {
+    name: 'get_crypto_price',
+    description: 'Obtiene el precio actual en USD de una criptomoneda específica.',
+    inputSchema: z.object({
+      crypto_id: z.string().describe("El ID de la criptomoneda según CoinGecko (ej: 'bitcoin', 'ethereum')."),
+    }),
+    outputSchema: z.object({
+        price: z.number().describe("El precio actual en USD.")
+    }),
+  },
+  async ({ crypto_id }) => {
+    try {
+      const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${crypto_id}&vs_currencies=usd`);
+      if (!response.ok) {
+        throw new Error(`Error al contactar la API de precios: ${response.statusText}`);
+      }
+      const data = await response.json();
+      const price = data[crypto_id]?.usd;
+      if (price === undefined) {
+        throw new Error(`No se pudo encontrar el precio para ${crypto_id}.`);
+      }
+      return { price };
+    } catch (error) {
+      console.error('Error en la herramienta get_crypto_price:', error);
+      // Devolver un objeto con un precio de error o manejarlo como prefieras
+      return { price: -1 }; 
+    }
+  }
+);
+
 
 const getIdentityDescription = (analystName: 'Apex' | 'Helios'): string => {
   if (analystName === 'Apex') {
-    return "Tu identidad: Eres 'Apex', un analista técnico obsesionado con los datos. Te basas en gráficos, indicadores (RSI, MACD, Medias Móviles), volumen y patrones de velas. Descartas el ruido de las noticias. Eres escéptico y directo.";
+    return "Tu identidad: Eres 'Apex', un analista técnico obsesionado con los datos. Te basas en gráficos, indicadores (RSI, MACD, Medias Móviles), volumen y patrones de velas. Descartas el ruido de las noticias. Eres escéptico y directo. DEBES usar la herramienta `get_crypto_price` para obtener precios actualizados.";
   } else {
-    return "Tu identidad: Eres 'Helios', un analista fundamental visionario. Te enfocas en la tecnología subyacente, el equipo del proyecto, las noticias (tokenomics), la regulación y el sentimiento en redes sociales. Crees que el valor a largo plazo supera las fluctuaciones a corto plazo.";
+    return "Tu identidad: Eres 'Helios', un analista fundamental visionario. Te enfocas en la tecnología subyacente, el equipo del proyecto, las noticias (tokenomics), la regulación y el sentimiento en redes sociales. Crees que el valor a largo plazo supera las fluctuaciones a corto plazo. DEBES usar la herramienta `get_crypto_price` para fundamentar tu análisis.";
   }
 };
 
@@ -32,10 +65,13 @@ const analystPrompt = ai.definePrompt({
   name: 'analystPrompt',
   input: { schema: AnalystTurnInputSchema },
   output: { schema: AnalystTurnOutputSchema },
+  tools: [get_crypto_price], // <--- Herramienta disponible para el analista
   prompt: `Eres {{{analystName}}}, un analista experto en criptomonedas.
   {{{identityDescription}}}
 
   Estás en un debate en vivo con tu contraparte. Vuestro objetivo combinado es generar las señales de trading más rentables para hoy.
+  
+  **IMPORTANTE**: Para tu análisis, DEBES obtener los precios actuales de las criptomonedas relevantes (como 'bitcoin' y 'ethereum') utilizando la herramienta \`get_crypto_price\` que tienes disponible. Basa tus argumentos en estos datos reales.
 
   Memoria del Último Análisis (Alpha State): {{{previousAlphaState}}}
   
@@ -43,8 +79,8 @@ const analystPrompt = ai.definePrompt({
   {{{debateHistory}}}
 
   Tu tarea:
-  1. Analiza el último argumento de tu contraparte.
-  2. Formula tu siguiente argumento o refutación desde TU perspectiva única (Técnica o Fundamental).
+  1. Llama a la herramienta \`get_crypto_price\` para obtener el precio actual de 'bitcoin' y 'ethereum'.
+  2. Formula tu siguiente argumento o refutación desde TU perspectiva única, utilizando los precios reales que obtuviste.
   3. Sé conciso pero impactante.
   4. Termina SIEMPRE con una pregunta directa y desafiante para el otro analista.`,
 });
@@ -53,14 +89,14 @@ const synthesizerPrompt = ai.definePrompt({
   name: 'synthesizerPrompt',
   input: { schema: SynthesizerInputSchema },
   output: { schema: SynthesizerOutputSchema },
-  prompt: `Eres 'The Synthesizer', un estratega de trading de IA de élite. Has observado el siguiente debate entre Apex (analista técnico) y Helios (analista fundamental).
+  prompt: `Eres 'The Synthesizer', un estratega de trading de IA de élite. Has observado el siguiente debate entre Apex (analista técnico) y Helios (analista fundamental), quienes han usado datos de precios en tiempo real.
 
   Debate completo:
   {{{fullDebate}}}
 
   Tu tarea es doble:
   1.  **Síntesis:** Escribe un resumen estratégico del debate. ¿Cuáles fueron los puntos clave de conflicto y acuerdo? ¿Qué catalizadores o riesgos son más importantes? ¿Cuál es el sentimiento general del mercado que se desprende de la discusión?
-  2.  **Señales Accionables:** Basado en la síntesis, genera las 3 señales de trading más potentes y con mayor probabilidad de éxito para el día de hoy. Para cada señal, especifica la criptomoneda, la acción (COMPRAR, VENDER, MANTENER), un precio de ejecución preciso en USD y una breve justificación. Prioriza la claridad y la accionabilidad.`,
+  2.  **Señales Accionables:** Basado en la síntesis y los precios reales discutidos, genera las 3 señales de trading más potentes y con mayor probabilidad de éxito para el día de hoy. Para cada señal, especifica la criptomoneda, la acción (COMPRAR, VENDER, MANTENER), un precio de ejecución preciso en USD y una breve justificación. Prioriza la claridad y la accionabilidad.`,
 });
 
 
@@ -69,14 +105,14 @@ export async function runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInpu
     
       let debateHistory: CryptoDebateTurn[] = [];
       let debateHistoryString = '';
-      const MAX_TURNS = 1; // REDUCIDO DE 3 A 1 PARA EVITAR TIMEOUTS
+      const MAX_TURNS = 1; // 1 turno = 1 argumento de Apex y 1 de Helios
 
       for (let i = 0; i < MAX_TURNS; i++) {
         // Turno de Apex (Técnico)
         const apexInput = { 
             analystName: 'Apex' as const, 
             debateHistory: debateHistoryString, 
-            previousAlphaState: input.previousAlphaState,
+            previousAlphaState: input.previousAlphaState || 'Sin estado previo.',
             identityDescription: getIdentityDescription('Apex')
         };
         const { output: apexOutput } = await analystPrompt(apexInput);
@@ -90,7 +126,7 @@ export async function runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInpu
         const heliosInput = { 
             analystName: 'Helios' as const, 
             debateHistory: debateHistoryString,
-            previousAlphaState: input.previousAlphaState,
+            previousAlphaState: input.previousAlphaState || 'Sin estado previo.',
             identityDescription: getIdentityDescription('Helios')
         };
         const { output: heliosOutput } = await analystPrompt(heliosInput);
