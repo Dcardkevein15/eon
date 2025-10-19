@@ -46,7 +46,7 @@ export default function TradingAnalysisPage() {
         setSignals([]);
 
         try {
-            const stream = await runCryptoAnalysis({ previousAlphaState: alphaState });
+            const stream = runCryptoAnalysis({ previousAlphaState: alphaState });
             
             for await (const chunk of stream) {
                 if (chunk.type === 'debateTurn') {
@@ -154,8 +154,8 @@ export default function TradingAnalysisPage() {
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {signals.map(signal => (
-                                                    <TableRow key={signal.crypto}>
+                                                {signals.map((signal, index) => (
+                                                    <TableRow key={`${signal.crypto}-${index}`}>
                                                         <TableCell className="font-medium">{signal.crypto}</TableCell>
                                                         <TableCell className={signal.action === 'COMPRAR' ? 'text-green-400' : 'text-red-400'}>{signal.action}</TableCell>
                                                         <TableCell className="text-right font-mono">${signal.price.toFixed(2)}</TableCell>
