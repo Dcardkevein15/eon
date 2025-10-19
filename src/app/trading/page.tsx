@@ -157,7 +157,6 @@ export default function TradingAnalysisPage() {
     const [isViewingHistory, setIsViewingHistory] = useState(false);
 
     // States for typing effect (only for live generation)
-    const displayedDebate = useTypingEffect(debate.map(t => `${t.analyst}: ${t.argument}`).join('\n\n'), 30);
     const displayedSynthesis = useTypingEffect(synthesis, 30);
 
 
@@ -165,7 +164,7 @@ export default function TradingAnalysisPage() {
 
     useEffect(() => {
         debateEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [displayedDebate]);
+    }, [debate]);
 
     const handleStartAnalysis = useCallback(async () => {
         setIsLoading(true);
@@ -298,7 +297,7 @@ export default function TradingAnalysisPage() {
                                                     <AnalystAvatar name={turn.analyst}/>
                                                     <div className={`p-3 rounded-lg max-w-xl ${turn.analyst === 'Apex' ? 'bg-blue-900/40 rounded-bl-none' : 'bg-amber-900/40 rounded-br-none'}`}>
                                                         <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none">
-                                                            {isViewingHistory ? turn.argument : displayedDebate.split(`${turn.analyst}: `)[index+1] || ''}
+                                                            {turn.argument}
                                                         </ReactMarkdown>
                                                     </div>
                                                 </div>
