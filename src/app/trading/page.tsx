@@ -73,7 +73,10 @@ export default function TradingAnalysisPage() {
     const [alphaState, setAlphaState] = useState<string>('Sin análisis previo. Empezando desde cero.');
     const [analysisHistory, setAnalysisHistory, isHistoryLoading] = useLocalStorage<TradingAnalysisRecord[]>('trading-analysis-history', []);
     
-    // States for typing effect
+    // State to differentiate between live generation and viewing history
+    const [isViewingHistory, setIsViewingHistory] = useState(false);
+
+    // States for typing effect (only for live generation)
     const [realDebate, setRealDebate] = useState<CryptoDebateTurn[]>([]);
     const [realSynthesis, setRealSynthesis] = useState<string>('');
     const displayedDebate = useTypingEffect(realDebate.map(t => `${t.analyst}: ${t.argument}`).join('\n\n'), 30);
@@ -89,9 +92,14 @@ export default function TradingAnalysisPage() {
     const handleStartAnalysis = useCallback(async () => {
         setIsLoading(true);
         setError(null);
+        setIsViewingHistory(false); // Switch to live generation mode
+
+        // Reset display states
         setDebate([]);
         setSynthesis('');
         setSignals([]);
+
+        // Reset real data for typing effect
         setRealDebate([]);
         setRealSynthesis('');
         
@@ -102,7 +110,7 @@ export default function TradingAnalysisPage() {
             setRealDebate(result.debate);
             setRealSynthesis(result.synthesis);
 
-            // Set final data directly
+            // Set final data directly for non-animated display if needed, but we rely on typing effect here
             setDebate(result.debate);
             setSynthesis(result.synthesis);
             setSignals(result.signals);
@@ -127,12 +135,14 @@ export default function TradingAnalysisPage() {
     }, [alphaState, setAnalysisHistory]);
     
     const loadHistoryRecord = (record: TradingAnalysisRecord) => {
+        setIsViewingHistory(true); // Switch to history viewing mode
         setDebate(record.debate);
         setSynthesis(record.synthesis);
         setSignals(record.signals);
-        // Clear typing effect states when loading from history
-        setRealDebate(record.debate);
-        setRealSynthesis(record.synthesis);
+        
+        // Stop any ongoing typing effect
+        setRealDebate([]); 
+        setRealSynthesis('');
     };
 
     const debateTurns = useTypingEffect(
@@ -225,7 +235,9 @@ export default function TradingAnalysisPage() {
                                                 <div key={index} className={`flex flex-col gap-2 ${turn.analyst === 'Apex' ? 'items-start' : 'items-end'}`}>
                                                     <AnalystAvatar name={turn.analyst}/>
                                                     <div className={`p-3 rounded-lg max-w-xl ${turn.analyst === 'Apex' ? 'bg-blue-900/40 rounded-bl-none' : 'bg-amber-900/40 rounded-br-none'}`}>
-                                                        <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none">{turn.argument}</ReactMarkdown>
+                                                        <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none">
+                                                            {isViewingHistory ? turn.argument : displayedDebate.split(`${turn.analyst}: `)[index+1] || ''}
+                                                        </ReactMarkdown>
                                                     </div>
                                                 </div>
                                             ))}
@@ -246,7 +258,7 @@ export default function TradingAnalysisPage() {
                                 <CardContent className="flex-1 overflow-hidden relative">
                                     <ScrollArea className="h-full">
                                         <div className="prose prose-sm dark:prose-invert max-w-none pr-4">
-                                            <ReactMarkdown>{synthesisText}</ReactMarkdown>
+                                            <ReactMarkdown>{isViewingHistory ? synthesis : displayedSynthesis}</ReactMarkdown>
                                             {isLoading && synthesis.length === 0 && <span className="animate-pulse">.</span>}
                                         </div>
                                     </ScrollArea>
