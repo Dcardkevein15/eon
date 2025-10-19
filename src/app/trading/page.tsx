@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, Play, BrainCircuit, Bot, Sparkles, ChevronLeft, History } from 'lucide-react';
-import type { TradingSignal, CryptoDebateTurn, TradingAnalysisRecord } from '@/lib/types';
+import type { TradingSignal, CryptoDebateTurn, TradingAnalysisRecord, FullCryptoAnalysis } from '@/lib/types';
 import { runCryptoAnalysis } from '@/ai/flows/crypto-analysis-flow';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
@@ -16,6 +16,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { v4 as uuidv4 } from 'uuid';
+import { useTypingEffect } from '@/hooks/use-typing-effect';
 
 const AnalystAvatar = ({ name }: { name: string }) => {
     const isApex = name === 'Apex';
@@ -71,11 +72,19 @@ export default function TradingAnalysisPage() {
     const [signals, setSignals] = useState<TradingSignal[]>([]);
     const [alphaState, setAlphaState] = useState<string>('Sin análisis previo. Empezando desde cero.');
     const [analysisHistory, setAnalysisHistory, isHistoryLoading] = useLocalStorage<TradingAnalysisRecord[]>('trading-analysis-history', []);
+    
+    // States for typing effect
+    const [realDebate, setRealDebate] = useState<CryptoDebateTurn[]>([]);
+    const [realSynthesis, setRealSynthesis] = useState<string>('');
+    const displayedDebate = useTypingEffect(realDebate.map(t => `${t.analyst}: ${t.argument}`).join('\n\n'), 30);
+    const displayedSynthesis = useTypingEffect(realSynthesis, 30);
+
+
     const debateEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         debateEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [debate]);
+    }, [displayedDebate]);
 
     const handleStartAnalysis = useCallback(async () => {
         setIsLoading(true);
@@ -83,39 +92,31 @@ export default function TradingAnalysisPage() {
         setDebate([]);
         setSynthesis('');
         setSignals([]);
-
-        const currentDebate: CryptoDebateTurn[] = [];
-        let currentSynthesis = '';
-        let currentSignals: TradingSignal[] = [];
-
+        setRealDebate([]);
+        setRealSynthesis('');
+        
         try {
-            const stream = runCryptoAnalysis({ previousAlphaState: alphaState });
+            const result: FullCryptoAnalysis = await runCryptoAnalysis({ previousAlphaState: alphaState });
             
-            for await (const chunk of stream) {
-                if (chunk.type === 'debateTurn') {
-                    setDebate(prev => [...prev, chunk.turn]);
-                    currentDebate.push(chunk.turn);
-                } else if (chunk.type === 'synthesisChunk') {
-                    setSynthesis(prev => prev + chunk.chunk);
-                    currentSynthesis += chunk.chunk;
-                } else if (chunk.type === 'finalSignals') {
-                    setSignals(chunk.signals);
-                    currentSignals = chunk.signals;
-                    const newAlphaState = `El último análisis generó ${chunk.signals.length} señales. La principal fue ${chunk.signals[0]?.action} ${chunk.signals[0]?.crypto} a ${chunk.signals[0]?.price}. Conclusión general: ${synthesis}`;
-                    setAlphaState(newAlphaState);
-                }
-            }
+            // Set real data to trigger typing effect
+            setRealDebate(result.debate);
+            setRealSynthesis(result.synthesis);
+
+            // Set final data directly
+            setDebate(result.debate);
+            setSynthesis(result.synthesis);
+            setSignals(result.signals);
+
+            const newAlphaState = `El último análisis generó ${result.signals.length} señales. La principal fue ${result.signals[0]?.action} ${result.signals[0]?.crypto} a ${result.signals[0]?.price}. Conclusión general: ${result.synthesis.substring(0, 100)}...`;
+            setAlphaState(newAlphaState);
             
             // Save to history after completion
             const newRecord: TradingAnalysisRecord = {
                 id: uuidv4(),
                 timestamp: new Date().toISOString(),
-                debate: currentDebate,
-                synthesis: currentSynthesis,
-                signals: currentSignals,
+                ...result,
             };
-            setAnalysisHistory(prev => [newRecord, ...prev]);
-
+            setAnalysisHistory(prev => [newRecord, ...prev].slice(0, 20)); // Keep last 20 records
 
         } catch (e: any) {
             console.error(e);
@@ -123,13 +124,23 @@ export default function TradingAnalysisPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [alphaState, synthesis, setAnalysisHistory]);
+    }, [alphaState, setAnalysisHistory]);
     
     const loadHistoryRecord = (record: TradingAnalysisRecord) => {
         setDebate(record.debate);
         setSynthesis(record.synthesis);
         setSignals(record.signals);
+        // Clear typing effect states when loading from history
+        setRealDebate(record.debate);
+        setRealSynthesis(record.synthesis);
     };
+
+    const debateTurns = useTypingEffect(
+      debate.map(turn => `${turn.analyst}: ${turn.argument}`).join('\n\n'),
+      20
+    );
+
+    const synthesisText = useTypingEffect(synthesis, 20);
 
     return (
         <div className="flex h-screen bg-background text-foreground">
@@ -205,6 +216,11 @@ export default function TradingAnalysisPage() {
                                                     <p>El debate aparecerá aquí cuando inicie el análisis.</p>
                                                 </div>
                                             )}
+                                             {isLoading && debate.length === 0 && (
+                                                <div className="flex items-center justify-center h-full">
+                                                    <Loader2 className="w-8 h-8 animate-spin text-primary"/>
+                                                </div>
+                                            )}
                                             {debate.map((turn, index) => (
                                                 <div key={index} className={`flex flex-col gap-2 ${turn.analyst === 'Apex' ? 'items-start' : 'items-end'}`}>
                                                     <AnalystAvatar name={turn.analyst}/>
@@ -213,7 +229,6 @@ export default function TradingAnalysisPage() {
                                                     </div>
                                                 </div>
                                             ))}
-                                            {isLoading && debate.length > 0 && <Loader2 className="w-6 h-6 animate-spin mx-auto mt-4" />}
                                             <div ref={debateEndRef} />
                                         </div>
                                     </ScrollArea>
@@ -231,8 +246,8 @@ export default function TradingAnalysisPage() {
                                 <CardContent className="flex-1 overflow-hidden relative">
                                     <ScrollArea className="h-full">
                                         <div className="prose prose-sm dark:prose-invert max-w-none pr-4">
-                                            <ReactMarkdown>{synthesis}</ReactMarkdown>
-                                            {isLoading && debate.length > 0 && !signals.length && <span className="animate-pulse">...</span>}
+                                            <ReactMarkdown>{synthesisText}</ReactMarkdown>
+                                            {isLoading && synthesis.length === 0 && <span className="animate-pulse">.</span>}
                                         </div>
                                     </ScrollArea>
                                 </CardContent>

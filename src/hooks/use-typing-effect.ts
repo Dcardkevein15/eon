@@ -4,23 +4,21 @@ import { useState, useEffect } from 'react';
 
 export const useTypingEffect = (text: string, duration: number = 50): string => {
     const [displayedText, setDisplayedText] = useState('');
-    const [currentIndex, setCurrentIndex] = useState(0);
-
+    
     useEffect(() => {
-        setDisplayedText('');
-        setCurrentIndex(0);
-    }, [text]);
+        setDisplayedText(''); // Reset when text changes
+        let i = 0;
+        const intervalId = setInterval(() => {
+            if (i < text.length) {
+                setDisplayedText(prev => prev + text.charAt(i));
+                i++;
+            } else {
+                clearInterval(intervalId);
+            }
+        }, duration);
 
-    useEffect(() => {
-        if (currentIndex < text.length) {
-            const timeout = setTimeout(() => {
-                setDisplayedText(prev => prev + text[currentIndex]);
-                setCurrentIndex(prev => prev + 1);
-            }, duration);
-
-            return () => clearTimeout(timeout);
-        }
-    }, [currentIndex, duration, text]);
+        return () => clearInterval(intervalId);
+    }, [text, duration]);
 
     return displayedText;
 };

@@ -6,7 +6,6 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'zod';
 import {
   CryptoAnalysisInputSchema,
   AnalystTurnInputSchema,
@@ -14,7 +13,11 @@ import {
   SynthesizerInputSchema,
   SynthesizerOutputSchema,
   type CryptoDebateTurn,
+  type TradingSignal,
+  type FullCryptoAnalysis,
+  FullCryptoAnalysisSchema,
 } from '@/lib/types';
+import type { z } from 'zod';
 
 const getIdentityDescription = (analystName: 'Apex' | 'Helios'): string => {
   if (analystName === 'Apex') {
@@ -62,63 +65,56 @@ const synthesizerPrompt = ai.definePrompt({
 
 
 // Flujo Principal de Orquestación
-export async function* runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInputSchema>) {
+export async function runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInputSchema>): Promise<FullCryptoAnalysis> {
     
-      let debateHistory = '';
-      const MAX_TURNS = 3; // 3 turnos para cada analista
+      let debateHistory: CryptoDebateTurn[] = [];
+      let debateHistoryString = '';
+      const MAX_TURNS = 3;
 
       for (let i = 0; i < MAX_TURNS; i++) {
         // Turno de Apex (Técnico)
         const apexInput = { 
             analystName: 'Apex' as const, 
-            debateHistory, 
+            debateHistory: debateHistoryString, 
             previousAlphaState: input.previousAlphaState,
             identityDescription: getIdentityDescription('Apex')
         };
         const { output: apexOutput } = await analystPrompt(apexInput);
         if (!apexOutput?.argument) throw new Error("Apex failed to respond.");
-        const apexTurn: CryptoDebateTurn = { analyst: 'Apex', argument: apexOutput.argument };
-        debateHistory += `Apex: ${apexOutput.argument}\n\n`;
-        yield { type: 'debateTurn', turn: apexTurn };
         
-        // Simula el "tipeo" del sintetizador
-        yield { type: 'synthesisChunk', chunk: '.' };
-
+        const apexTurn: CryptoDebateTurn = { analyst: 'Apex', argument: apexOutput.argument };
+        debateHistory.push(apexTurn);
+        debateHistoryString += `Apex: ${apexOutput.argument}\n\n`;
+        
         // Turno de Helios (Fundamental)
         const heliosInput = { 
             analystName: 'Helios' as const, 
-            debateHistory, 
+            debateHistory: debateHistoryString,
             previousAlphaState: input.previousAlphaState,
             identityDescription: getIdentityDescription('Helios')
         };
         const { output: heliosOutput } = await analystPrompt(heliosInput);
         if (!heliosOutput?.argument) throw new Error("Helios failed to respond.");
+
         const heliosTurn: CryptoDebateTurn = { analyst: 'Helios', argument: heliosOutput.argument };
-        debateHistory += `Helios: ${heliosOutput.argument}\n\n`;
-        yield { type: 'debateTurn', turn: heliosTurn };
-        
-        // Simula el "tipeo" del sintetizador
-        yield { type: 'synthesisChunk', chunk: '.' };
+        debateHistory.push(heliosTurn);
+        debateHistoryString += `Helios: ${heliosOutput.argument}\n\n`;
       }
 
       // Turno del Sintetizador
-      const synthesizerInput = { fullDebate: debateHistory };
-      const { stream, response } = synthesizerPrompt.stream(synthesizerInput);
+      const synthesizerInput = { fullDebate: debateHistoryString };
+      const { output: synthesizerResult } = await synthesizerPrompt(synthesizerInput);
 
-      let fullSynthesis = '';
-      
-      for await (const chunk of stream) {
-        if(chunk.output?.synthesis) {
-           const newChunkText = chunk.output.synthesis.replace(fullSynthesis, '');
-           if (newChunkText) {
-             yield { type: 'synthesisChunk', chunk: newChunkText };
-             fullSynthesis = chunk.output.synthesis;
-           }
-        }
+      if (!synthesizerResult || !synthesizerResult.synthesis || !synthesizerResult.signals) {
+        throw new Error("Synthesizer failed to generate a complete analysis.");
       }
       
-      const synthesizerResult = await response;
-      if (!synthesizerResult.output?.signals) throw new Error("Synthesizer failed to generate signals.");
+      const finalResult: FullCryptoAnalysis = {
+        debate: debateHistory,
+        synthesis: synthesizerResult.synthesis,
+        signals: synthesizerResult.signals
+      };
 
-      yield { type: 'finalSignals', signals: synthesizerResult.output.signals };
+      // Validate with Zod before returning
+      return FullCryptoAnalysisSchema.parse(finalResult);
 }

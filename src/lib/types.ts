@@ -283,6 +283,13 @@ export const CryptoAnalysisInputSchema = z.object({
 });
 export type CryptoAnalysisInput = z.infer<typeof CryptoAnalysisInputSchema>;
 
+export const CryptoDebateTurnSchema = z.object({
+    analyst: z.enum(['Apex', 'Helios']),
+    argument: z.string(),
+});
+export type CryptoDebateTurn = z.infer<typeof CryptoDebateTurnSchema>;
+
+
 export const AnalystTurnInputSchema = z.object({
   analystName: z.enum(['Apex', 'Helios']),
   identityDescription: z.string(),
@@ -316,15 +323,14 @@ export const SynthesizerOutputSchema = z.object({
 export type SynthesizerOutput = z.infer<typeof SynthesizerOutputSchema>;
 
 
-export type CryptoDebateTurn = {
-  analyst: 'Apex' | 'Helios';
-  argument: string;
-};
+export const FullCryptoAnalysisSchema = z.object({
+    debate: z.array(CryptoDebateTurnSchema),
+    synthesis: z.string(),
+    signals: z.array(TradingSignalSchema),
+});
+export type FullCryptoAnalysis = z.infer<typeof FullCryptoAnalysisSchema>;
 
-export type TradingAnalysisRecord = {
+export type TradingAnalysisRecord = FullCryptoAnalysis & {
     id: string;
     timestamp: string;
-    debate: CryptoDebateTurn[];
-    synthesis: string;
-    signals: TradingSignal[];
 }
