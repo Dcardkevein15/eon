@@ -283,36 +283,9 @@ export const CryptoAnalysisInputSchema = z.object({
 });
 export type CryptoAnalysisInput = z.infer<typeof CryptoAnalysisInputSchema>;
 
-export const CryptoAnalysisOutputSchema = z.object({
-  debate: z.array(z.object({
-    analyst: z.enum(['Apex', 'Helios']),
-    argument: z.string(),
-  })),
-  synthesis: z.string(),
-  signals: z.array(z.object({
-    crypto: z.string(),
-    action: z.enum(['COMPRAR', 'VENDER', 'MANTENER']),
-    price: z.number(),
-    reasoning: z.string(),
-  })),
-});
-export type CryptoAnalysisOutput = z.infer<typeof CryptoAnalysisOutputSchema>;
-
-export type CryptoDebateTurn = {
-  analyst: 'Apex' | 'Helios';
-  argument: string;
-};
-
-export type TradingSignal = {
-  crypto: string;
-  action: 'COMPRAR' | 'VENDER' | 'MANTENER';
-  price: number;
-  reasoning: string;
-};
-
-// --- Schemas for AI Flows ---
 export const AnalystTurnInputSchema = z.object({
   analystName: z.enum(['Apex', 'Helios']),
+  identityDescription: z.string(),
   debateHistory: z.string(),
   previousAlphaState: z.string().optional(),
 });
@@ -328,13 +301,30 @@ export const SynthesizerInputSchema = z.object({
 });
 export type SynthesizerInput = z.infer<typeof SynthesizerInputSchema>;
 
-export const SynthesizerOutputSchema = z.object({
-  synthesis: z.string().describe("Un resumen conciso del debate, destacando los puntos de acuerdo, desacuerdo y las conclusiones emergentes."),
-  signals: z.array(z.object({
+export const TradingSignalSchema = z.object({
     crypto: z.string().describe("Símbolo de la criptomoneda (ej. BTC, ETH)."),
     action: z.enum(['COMPRAR', 'VENDER', 'MANTENER']).describe("La acción de trading recomendada."),
     price: z.number().describe("El precio de ejecución sugerido en USD."),
     reasoning: z.string().describe("Una justificación breve y clara para la señal."),
-  })).describe("Una lista de las 3 señales de trading más fuertes del día."),
+});
+export type TradingSignal = z.infer<typeof TradingSignalSchema>;
+
+export const SynthesizerOutputSchema = z.object({
+  synthesis: z.string().describe("Un resumen conciso del debate, destacando los puntos de acuerdo, desacuerdo y las conclusiones emergentes."),
+  signals: z.array(TradingSignalSchema).describe("Una lista de las 3 señales de trading más fuertes del día."),
 });
 export type SynthesizerOutput = z.infer<typeof SynthesizerOutputSchema>;
+
+
+export type CryptoDebateTurn = {
+  analyst: 'Apex' | 'Helios';
+  argument: string;
+};
+
+export type TradingAnalysisRecord = {
+    id: string;
+    timestamp: string;
+    debate: CryptoDebateTurn[];
+    synthesis: string;
+    signals: TradingSignal[];
+}
