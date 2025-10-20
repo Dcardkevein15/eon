@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, Play, BrainCircuit, Bot, Sparkles, ChevronLeft, History } from 'lucide-react';
-import type { TradingSignal, CryptoDebateTurn, TradingAnalysisRecord, FullCryptoAnalysis } from '@/lib/types';
-import { runCryptoAnalysis } from '@/ai/flows/crypto-analysis-flow';
+import type { TradingSignal, CryptoDebateTurn, TradingAnalysisRecord, FullCryptoAnalysis, Coin } from '@/lib/types';
+import { runCryptoAnalysis, getCoinList } from '@/ai/flows/crypto-analysis-flow';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -16,6 +16,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { v4 as uuidv4 } from 'uuid';
 import TechnicalIndicatorCharts from '@/components/trading/technical-indicator-charts';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const AnalystAvatar = ({ name }: { name: string }) => {
     const isApex = name === 'Apex';
@@ -29,7 +30,6 @@ const AnalystAvatar = ({ name }: { name: string }) => {
     )
 }
 
-// Custom hook for managing state in localStorage
 function useLocalStorage<T>(key: string, initialValue: T) {
   const [storedValue, setStoredValue] = useState<T>(initialValue);
   const [loading, setLoading] = useState(true);
@@ -62,6 +62,12 @@ function useLocalStorage<T>(key: string, initialValue: T) {
   return [storedValue, setValue, loading] as const;
 }
 
+const timeRanges = [
+    { label: '7 Días', value: 7 },
+    { label: '30 Días', value: 30 },
+    { label: '90 Días', value: 90 },
+    { label: '1 Año', value: 365 },
+];
 
 export default function TradingAnalysisPage() {
     const [isLoading, setIsLoading] = useState(false);
@@ -70,8 +76,23 @@ export default function TradingAnalysisPage() {
     const [alphaState, setAlphaState] = useState<string>('Sin análisis previo. Empezando desde cero.');
     const [analysisHistory, setAnalysisHistory, isHistoryLoading] = useLocalStorage<TradingAnalysisRecord[]>('trading-analysis-history', []);
     
-    // State to differentiate between live generation and viewing history
     const [isViewingHistory, setIsViewingHistory] = useState(false);
+    const [coins, setCoins] = useState<Coin[]>([]);
+    const [selectedCoinId, setSelectedCoinId] = useState('bitcoin');
+    const [selectedDays, setSelectedDays] = useState(30);
+
+    useEffect(() => {
+        const fetchCoins = async () => {
+            try {
+                const coinList = await getCoinList();
+                setCoins(coinList);
+            } catch (e) {
+                console.error("Failed to fetch coin list", e);
+                setError("No se pudo cargar la lista de criptomonedas.");
+            }
+        };
+        fetchCoins();
+    }, []);
 
     const handleStartAnalysis = useCallback(async () => {
         setIsLoading(true);
@@ -80,11 +101,15 @@ export default function TradingAnalysisPage() {
         setIsViewingHistory(false);
         
         try {
-            const result: FullCryptoAnalysis = await runCryptoAnalysis({ previousAlphaState: alphaState });
+            const result: FullCryptoAnalysis = await runCryptoAnalysis({
+                crypto_id: selectedCoinId,
+                days: selectedDays,
+                previousAlphaState: alphaState
+            });
             
             setAnalysisResult(result);
 
-            const newAlphaState = `El último análisis generó ${result.signals.length} señales. La principal fue ${result.signals[0]?.action} ${result.signals[0]?.crypto} a ${result.signals[0]?.price}. Conclusión general: ${result.synthesis.substring(0, 100)}...`;
+            const newAlphaState = `El último análisis generó ${result.signals.length} señales para ${result.signals[0]?.crypto}. La principal fue ${result.signals[0]?.action} a ${result.signals[0]?.price}. Conclusión general: ${result.synthesis.substring(0, 100)}...`;
             setAlphaState(newAlphaState);
             
             const newRecord: TradingAnalysisRecord = {
@@ -92,7 +117,7 @@ export default function TradingAnalysisPage() {
                 timestamp: new Date().toISOString(),
                 ...result,
             };
-            setAnalysisHistory(prev => [newRecord, ...prev].slice(0, 20)); // Keep last 20 records
+            setAnalysisHistory(prev => [newRecord, ...prev].slice(0, 20));
 
         } catch (e: any) {
             console.error(e);
@@ -100,18 +125,22 @@ export default function TradingAnalysisPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [alphaState, setAnalysisHistory]);
+    }, [selectedCoinId, selectedDays, alphaState, setAnalysisHistory]);
     
     const loadHistoryRecord = (record: TradingAnalysisRecord) => {
-        setIsViewingHistory(true); // Switch to history viewing mode
+        setIsViewingHistory(true);
         setAnalysisResult(record);
+        const coin = coins.find(c => c.name.toLowerCase() === record.signals[0]?.crypto.toLowerCase());
+        if(coin) setSelectedCoinId(coin.id);
     };
+    
+    const selectedCoin = useMemo(() => coins.find(c => c.id === selectedCoinId), [coins, selectedCoinId]);
 
     return (
         <div className="flex h-screen bg-background text-foreground">
              <main className="flex-1 flex flex-col overflow-hidden">
                 <div className="sticky top-0 bg-background/80 backdrop-blur-sm border-b p-4 z-10">
-                    <div className="flex items-center justify-between gap-2 max-w-7xl mx-auto">
+                    <div className="flex flex-wrap items-center justify-between gap-4 max-w-7xl mx-auto">
                         <div className='flex items-center gap-2'>
                              <Button asChild variant="ghost" size="icon" className="-ml-2 text-muted-foreground hover:bg-accent/10 hover:text-foreground">
                                 <Link href="/">
@@ -120,7 +149,27 @@ export default function TradingAnalysisPage() {
                             </Button>
                             <h1 className="text-xl font-bold tracking-tight">Análisis Pro de Trading</h1>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <Select value={selectedCoinId} onValueChange={setSelectedCoinId} disabled={coins.length === 0}>
+                                <SelectTrigger className="w-[150px]">
+                                    <SelectValue placeholder="Seleccionar Cripto" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {coins.map(coin => (
+                                        <SelectItem key={coin.id} value={coin.id}>{coin.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                             <Select value={String(selectedDays)} onValueChange={(v) => setSelectedDays(Number(v))}>
+                                <SelectTrigger className="w-[120px]">
+                                    <SelectValue placeholder="Temporalidad" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {timeRanges.map(range => (
+                                        <SelectItem key={range.value} value={String(range.value)}>{range.label}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                             <Sheet>
                                 <SheetTrigger asChild>
                                      <Button variant="outline" disabled={isHistoryLoading}>
@@ -144,7 +193,7 @@ export default function TradingAnalysisPage() {
                                                             </CardDescription>
                                                         </CardHeader>
                                                         <CardContent>
-                                                            <p className="text-xs text-muted-foreground">{record.signals.length} señales generadas.</p>
+                                                            <p className="text-xs text-muted-foreground">{record.signals.length} señales para {record.signals[0]?.crypto}.</p>
                                                         </CardContent>
                                                     </Card>
                                                 ))}
@@ -168,7 +217,7 @@ export default function TradingAnalysisPage() {
                     
                     {!analysisResult && !isLoading && (
                         <div className="flex items-center justify-center h-full text-center text-muted-foreground">
-                            <p>Presiona "Iniciar Análisis" para comenzar.</p>
+                            <p>Selecciona una criptomoneda y presiona "Iniciar Análisis" para comenzar.</p>
                         </div>
                     )}
 
@@ -180,11 +229,10 @@ export default function TradingAnalysisPage() {
 
                     {analysisResult && (
                     <div className="max-w-7xl mx-auto grid lg:grid-cols-3 gap-6 h-full">
-                        {/* Main Debate Area */}
                         <div className="lg:col-span-2 h-full flex flex-col gap-6">
                             <Card className="flex-1 flex flex-col bg-card/50">
                                 <CardHeader>
-                                    <CardTitle className="flex items-center gap-2"><BrainCircuit className="w-5 h-5 text-primary"/> Debate de Analistas IA</CardTitle>
+                                    <CardTitle className="flex items-center gap-2"><BrainCircuit className="w-5 h-5 text-primary"/> Debate de Analistas IA sobre {selectedCoin?.name || ''}</CardTitle>
                                     <CardDescription>Apex (Técnico) y Helios (Fundamental) discuten en tiempo real.</CardDescription>
                                 </CardHeader>
                                 <CardContent className="flex-1 overflow-hidden relative">
@@ -212,7 +260,6 @@ export default function TradingAnalysisPage() {
                             )}
                         </div>
                         
-                        {/* Synthesis and Signals */}
                         <div className="h-full flex flex-col gap-6">
                            <Card className="flex-1 flex flex-col bg-card/50">
                                 <CardHeader>
@@ -235,7 +282,6 @@ export default function TradingAnalysisPage() {
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
-                                                <TableHead>Cripto</TableHead>
                                                 <TableHead>Acción</TableHead>
                                                 <TableHead>Precio</TableHead>
                                             </TableRow>
@@ -243,13 +289,21 @@ export default function TradingAnalysisPage() {
                                         <TableBody>
                                             {analysisResult.signals.map((signal, index) => (
                                                 <TableRow key={`${signal.crypto}-${index}`}>
-                                                    <TableCell className="font-medium">{signal.crypto}</TableCell>
-                                                    <TableCell className={signal.action === 'COMPRAR' ? 'text-green-400' : 'text-red-400'}>{signal.action}</TableCell>
+                                                    <TableCell className={signal.action === 'COMPRAR' ? 'text-green-400 font-bold' : signal.action === 'VENDER' ? 'text-red-400 font-bold' : 'text-amber-400 font-bold'}>
+                                                        {signal.action} {signal.crypto}
+                                                    </TableCell>
                                                     <TableCell className="font-mono">${signal.price.toFixed(2)}</TableCell>
                                                 </TableRow>
                                             ))}
                                         </TableBody>
                                     </Table>
+                                     <div className="prose prose-xs dark:prose-invert max-w-none mt-4 text-muted-foreground space-y-2">
+                                        {analysisResult.signals.map((signal, index) => (
+                                             <p key={`reason-${index}`}>
+                                                <span className="font-bold">{signal.action}:</span> {signal.reasoning}
+                                            </p>
+                                        ))}
+                                    </div>
                                 </CardContent>
                             </Card>
                         </div>

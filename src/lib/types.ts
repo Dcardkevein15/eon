@@ -276,7 +276,16 @@ export const AetherWorldStateSchema = z.object({
 export type AetherWorldState = z.infer<typeof AetherWorldStateSchema>;
 
 // --- Trading Analysis Types ---
+export const CoinSchema = z.object({
+    id: z.string(),
+    symbol: z.string(),
+    name: z.string(),
+});
+export type Coin = z.infer<typeof CoinSchema>;
+
 export const CryptoAnalysisInputSchema = z.object({
+  crypto_id: z.string().describe("El ID de la criptomoneda según CoinGecko (ej: 'bitcoin', 'ethereum')."),
+  days: z.number().describe("El número de días para el análisis histórico."),
   previousAlphaState: z.string().optional().describe('El resumen del resultado del análisis anterior para mantener una memoria contextual.'),
 });
 export type CryptoAnalysisInput = z.infer<typeof CryptoAnalysisInputSchema>;
@@ -290,6 +299,8 @@ export type CryptoDebateTurn = z.infer<typeof CryptoDebateTurnSchema>;
 
 export const AnalystTurnInputSchema = z.object({
   analystName: z.enum(['Apex', 'Helios']),
+  cryptoName: z.string(),
+  days: z.number(),
   identityDescription: z.string(),
   debateHistory: z.string(),
   previousAlphaState: z.string().optional(),
@@ -302,6 +313,7 @@ export const AnalystTurnOutputSchema = z.object({
 export type AnalystTurnOutput = z.infer<typeof AnalystTurnOutputSchema>;
 
 export const SynthesizerInputSchema = z.object({
+  cryptoName: z.string(),
   apexArgument: z.string(),
   heliosArgument: z.string(),
   indicators: z.string().describe('Un resumen JSON de los indicadores técnicos calculados (RSI, MACD, etc.).'),
@@ -309,7 +321,7 @@ export const SynthesizerInputSchema = z.object({
 export type SynthesizerInput = z.infer<typeof SynthesizerInputSchema>;
 
 export const TradingSignalSchema = z.object({
-    crypto: z.string().describe("Símbolo de la criptomoneda (ej. Bitcoin)."),
+    crypto: z.string().describe("Nombre de la criptomoneda (ej. Bitcoin)."),
     action: z.enum(['COMPRAR', 'VENDER', 'MANTENER']).describe("La acción de trading recomendada."),
     price: z.number().describe("El precio de ejecución sugerido en USD."),
     reasoning: z.string().describe("Una justificación breve y clara para la señal, basada en el análisis técnico y fundamental."),
