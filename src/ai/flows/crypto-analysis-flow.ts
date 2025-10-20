@@ -38,10 +38,7 @@ const get_crypto_price = ai.defineTool(
   },
   async ({ crypto_id }) => {
     try {
-      const apiKey = process.env.COINGECKO_API_KEY;
-      if (!apiKey) throw new Error("La clave de API de CoinGecko no está configurada.");
-      
-      const url = `https://api.coingecko.com/api/v3/simple/price?ids=${crypto_id}&vs_currencies=usd&x_cg_demo_api_key=${apiKey}`;
+      const url = `https://api.coingecko.com/api/v3/simple/price?ids=${crypto_id}&vs_currencies=usd`;
       const response = await fetch(url);
 
       if (!response.ok) {
