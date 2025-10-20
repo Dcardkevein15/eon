@@ -1,7 +1,7 @@
 'use server';
 /**
  * @fileOverview Flujo de análisis de criptomonedas.
- * Obtiene datos de mercado, calcula indicadores, simula un debate entre
+ * Recibe datos de mercado, calcula indicadores, simula un debate entre
  * dos analistas de IA (técnico y fundamental) y un tercer agente sintetiza
  * sus conclusiones en señales de trading.
  */
@@ -20,35 +20,6 @@ import {
   CoinSchema
 } from '@/lib/types';
 import { SMA, MACD, RSI, BollingerBands } from 'technicalindicators';
-
-// --- Función de obtención de datos ---
-// Se mantiene como una función interna, no una herramienta.
-async function fetchMarketData(crypto_id: string, days: number): Promise<z.infer<typeof MarketDataSchema>> {
-    try {
-        const interval = days < 2 ? 'hourly' : 'daily';
-        const url = `https://api.coingecko.com/api/v3/coins/${crypto_id}/market_chart?vs_currency=usd&days=${days}&interval=${interval}`;
-        
-        // Incluir la cabecera User-Agent es crucial para evitar bloqueos.
-        const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-
-        if (!response.ok) {
-            // Lanzar un error claro si la respuesta no es exitosa.
-            throw new Error(`Error al contactar la API de gráficos de mercado: ${response.statusText}`);
-        }
-        const data = await response.json();
-        if (!data.prices || !data.total_volumes) {
-            throw new Error(`Datos incompletos recibidos de la API para ${crypto_id}`);
-        }
-        return {
-            prices: data.prices.map(([timestamp, value]: [number, number]) => ({ timestamp, value })),
-            volumes: data.total_volumes.map(([timestamp, value]: [number, number]) => ({ timestamp, value }))
-        };
-    } catch (error) {
-        console.error('Error en fetchMarketData:', error);
-        // Envolver el error para dar más contexto.
-        throw new Error(`Fallo al obtener datos de mercado para ${crypto_id}: ${(error as Error).message}`);
-    }
-}
 
 // --- Herramientas ---
 
@@ -221,8 +192,12 @@ function calculateIndicators(prices: { timestamp: number; value: number }[], vol
 export async function runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInputSchema>): Promise<FullCryptoAnalysis> {
       const cryptoName = input.crypto_id.charAt(0).toUpperCase() + input.crypto_id.slice(1);
       
-      // 1. Obtener datos de mercado directamente. Esta es la única llamada de red externa.
-      const marketData = await fetchMarketData(input.crypto_id, input.days);
+      // 1. Recibir datos de mercado directamente del cliente.
+      const marketData = input.marketData;
+      
+      if (!marketData) {
+          throw new Error("Market data was not provided to the analysis flow.");
+      }
       
       // 2. Calcular indicadores
       const indicators = calculateIndicators(marketData.prices, marketData.volumes);

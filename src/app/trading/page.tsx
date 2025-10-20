@@ -75,6 +75,33 @@ const timeRanges = [
     { label: '1 Año', value: 365 },
 ];
 
+async function fetchMarketDataClientSide(crypto_id: string, days: number): Promise<z.infer<typeof MarketDataSchema>> {
+    try {
+        const interval = days < 2 ? 'hourly' : 'daily';
+        const url = `https://api.coingecko.com/api/v3/coins/${crypto_id}/market_chart?vs_currency=usd&days=${days}&interval=${interval}`;
+        
+        const response = await fetch(url, { 
+            headers: { 'Accept': 'application/json' },
+            mode: 'cors'
+        });
+
+        if (!response.ok) {
+            throw new Error(`Error al contactar la API de gráficos de mercado: ${response.statusText}`);
+        }
+        const data = await response.json();
+         if (!data.prices || !data.total_volumes) {
+            throw new Error(`Datos incompletos recibidos de la API para ${crypto_id}`);
+        }
+        return {
+            prices: data.prices.map(([timestamp, value]: [number, number]) => ({ timestamp, value })),
+            volumes: data.total_volumes.map(([timestamp, value]: [number, number]) => ({ timestamp, value }))
+        };
+    } catch (error) {
+        console.error('Error en fetchMarketDataClientSide:', error);
+        throw new Error(`Fallo al obtener datos de mercado para ${crypto_id}: ${(error as Error).message}`);
+    }
+}
+
 
 export default function TradingAnalysisPage() {
     const [isLoading, setIsLoading] = useState(false);
@@ -108,9 +135,12 @@ export default function TradingAnalysisPage() {
         setIsViewingHistory(false);
         
         try {
+            const marketData = await fetchMarketDataClientSide(selectedCoinId, selectedDays);
+
             const result: FullCryptoAnalysis = await runCryptoAnalysis({
                 crypto_id: selectedCoinId,
                 days: selectedDays,
+                marketData: marketData,
             });
             
             setAnalysisResult(result);
