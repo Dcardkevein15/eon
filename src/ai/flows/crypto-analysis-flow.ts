@@ -105,12 +105,11 @@ const get_coin_list = ai.defineTool({
             throw new Error(`Error al contactar la API de lista de monedas: ${response.statusText}`);
         }
         const data = await response.json();
-        const coinList = data.map((coin: any) => ({
+        return data.map((coin: any) => ({
             id: coin.id,
             symbol: coin.symbol,
             name: coin.name,
         }));
-        return coinList;
     } catch (error) {
         console.error('Error en la herramienta get_coin_list:', error);
         throw new Error(`Fallo en la herramienta get_coin_list: ${(error as Error).message}`);
@@ -310,7 +309,5 @@ export async function runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInpu
 
 
 export async function getCoinList(): Promise<z.infer<typeof CoinSchema>[]> {
-    const output = await get_coin_list({});
-    if (!output) throw new Error("No se pudo obtener la lista de monedas.");
-    return output;
+    return await get_coin_list({});
 }
