@@ -218,7 +218,7 @@ export async function runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInpu
       ];
 
       // Extract market data from Apex's tool usage
-      const marketDataToolCall = apexResult.toolCalls.find(call => call.toolName === 'get_market_chart_data');
+      const marketDataToolCall = apexResult.output?.toolCalls?.find(call => call.toolName === 'get_market_chart_data');
       const marketData = marketDataToolCall?.output as z.infer<typeof MarketDataSchema> | undefined;
 
       let indicators: z.infer<typeof IndicatorsSchema> | undefined;
