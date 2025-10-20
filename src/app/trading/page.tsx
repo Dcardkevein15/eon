@@ -56,7 +56,7 @@ function useLocalStorage<T>(key: string, initialValue: T) {
         window.localStorage.setItem(key, JSON.stringify(valueToStore));
       }
     } catch (error) {
-      console.log(error);
+        console.log(error);
     }
   };
 
@@ -111,13 +111,9 @@ export default function TradingAnalysisPage() {
             const result: FullCryptoAnalysis = await runCryptoAnalysis({
                 crypto_id: selectedCoinId,
                 days: selectedDays,
-                previousAlphaState: alphaState,
             });
             
             setAnalysisResult(result);
-
-            const newAlphaState = `El último análisis generó ${result.signals.length} señales para ${result.signals[0]?.crypto}. La principal fue ${result.signals[0]?.action} a ${result.signals[0]?.price}. Conclusión general: ${result.synthesis.substring(0, 100)}...`;
-            setAlphaState(newAlphaState);
             
             const newRecord: TradingAnalysisRecord = {
                 id: uuidv4(),
@@ -132,7 +128,7 @@ export default function TradingAnalysisPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [selectedCoinId, selectedDays, alphaState, setAnalysisHistory]);
+    }, [selectedCoinId, selectedDays, setAnalysisHistory]);
     
     const loadHistoryRecord = (record: TradingAnalysisRecord) => {
         setIsViewingHistory(true);
