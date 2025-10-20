@@ -45,7 +45,8 @@ const get_crypto_price = ai.defineTool(
       return { price };
     } catch (error) {
       console.error('Error en la herramienta get_crypto_price:', error);
-      return { price: -1 }; 
+      // Devolver un precio de -1 podría confundir a la IA. Mejor lanzar un error.
+      throw new Error(`Fallo en la herramienta get_crypto_price para ${crypto_id}: ${(error as Error).message}`);
     }
   }
 );
@@ -59,34 +60,28 @@ const analystPrompt = ai.definePrompt({
   prompt: `Eres {{{analystName}}}, un analista experto en criptomonedas.
   {{{identityDescription}}}
 
-  Estás en un debate en vivo con tu contraparte. Vuestro objetivo combinado es generar las señales de trading más rentables para hoy.
-  
-  **IMPORTANTE**: Para tu análisis, DEBES usar la herramienta \`get_crypto_price\` para obtener datos de precios reales.
+  **IMPORTANTE**: Para tu análisis, DEBES usar la herramienta \`get_crypto_price\` para obtener el precio actual de 'bitcoin'.
 
-  Memoria del Último Análisis (Alpha State): {{{previousAlphaState}}}
-  
-  Debate hasta ahora:
-  {{{debateHistory}}}
-
-  Tu tarea:
-  1. Llama a la herramienta para obtener el precio actual de 'bitcoin' o 'ethereum'.
-  2. Formula tu siguiente argumento o refutación desde TU perspectiva única, utilizando el precio real que obtuviste.
-  3. Sé conciso pero impactante.
-  4. Termina SIEMPRE con una pregunta directa y desafiante para el otro analista.`,
+  Basándote en el precio actual y tu perspectiva única, formula un argumento conciso pero impactante sobre el estado del mercado de Bitcoin hoy.
+  Tu análisis debe ser independiente y no necesitas interactuar con otros analistas. Simplemente proporciona tu experta opinión.
+  `,
 });
 
 const synthesizerPrompt = ai.definePrompt({
   name: 'synthesizerPrompt',
   input: { schema: SynthesizerInputSchema },
   output: { schema: SynthesizerOutputSchema },
-  prompt: `Eres 'The Synthesizer', un estratega de trading de IA de élite. Has observado el siguiente debate entre Apex (analista técnico) y Helios (analista fundamental), quienes han usado datos en tiempo real.
+  prompt: `Eres 'The Synthesizer', un estratega de trading de IA de élite. Has recibido los siguientes análisis independientes de tus dos expertos, quienes han usado datos en tiempo real.
 
-  Debate completo:
-  {{{fullDebate}}}
+  Análisis de Apex (Técnico):
+  "{{{apexArgument}}}"
+
+  Análisis de Helios (Fundamental):
+  "{{{heliosArgument}}}"
 
   Tu tarea es doble:
-  1.  **Síntesis:** Escribe un resumen estratégico del debate. ¿Cuáles fueron los puntos clave de conflicto y acuerdo? ¿Qué catalizadores o riesgos son más importantes? ¿Cuál es el sentimiento general del mercado que se desprende de la discusión?
-  2.  **Señales Accionables:** Basado en la síntesis y los datos discutidos, genera las 3 señales de trading más potentes. Para cada señal, especifica la criptomoneda, la acción (COMPRAR, VENDER, MANTENER), un precio de ejecución preciso en USD y una justificación clara y concisa en el campo 'reasoning'.`,
+  1.  **Síntesis:** Escribe un resumen estratégico que combine ambas perspectivas. ¿Cuáles son los puntos clave de conflicto y acuerdo? ¿Qué catalizadores o riesgos son más importantes? ¿Cuál es el sentimiento general del mercado?
+  2.  **Señales Accionables:** Basado en la síntesis y los datos discutidos, genera 3 señales de trading. Para cada señal, especifica la criptomoneda ('Bitcoin'), la acción (COMPRAR, VENDER, MANTENER), un precio de ejecución preciso en USD y una justificación clara y concisa en el campo 'reasoning'.`,
 });
 
 
@@ -94,7 +89,7 @@ const getIdentityDescription = (analystName: 'Apex' | 'Helios'): string => {
   if (analystName === 'Apex') {
     return "Tu identidad: Eres 'Apex', un analista técnico obsesionado con los datos. Tu objetivo es detectar tendencias, soportes y resistencias. DEBES usar la herramienta `get_crypto_price` para el precio más reciente y basar tu análisis en él (tendencias, medias móviles, etc.).";
   } else {
-    return "Tu identidad: Eres 'Helios', un analista fundamental visionario. Te enfocas en la tecnología subyacente, el equipo del proyecto, las noticias (tokenomics), la regulación y el sentimiento en redes sociales. DEBES usar la herramienta `get_crypto_price` para fundamentar tu análisis con el precio actual.";
+    return "Tu identidad: Eres 'Helios', un analista fundamental visionario. Te enfocas en la tecnología subyacente, las noticias (tokenomics), la regulación y el sentimiento en redes sociales. DEBES usar la herramienta `get_crypto_price` para fundamentar tu análisis con el precio actual.";
   }
 };
 
@@ -102,47 +97,44 @@ const getIdentityDescription = (analystName: 'Apex' | 'Helios'): string => {
 // Flujo Principal de Orquestación
 export async function runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInputSchema>): Promise<FullCryptoAnalysis> {
     
-      let debateHistory: CryptoDebateTurn[] = [];
-      let debateHistoryString = '';
-      const MAX_TURNS = 3;
+      const previousAlphaState = input.previousAlphaState || 'Sin estado previo.';
 
-      for (let i = 0; i < MAX_TURNS; i++) {
-        // Turno de Apex (Técnico)
-        const apexInput = { 
+      // Ejecutar análisis en paralelo para mejorar la velocidad
+      const [apexResult, heliosResult] = await Promise.all([
+        analystPrompt({ 
             analystName: 'Apex' as const, 
-            debateHistory: debateHistoryString, 
-            previousAlphaState: input.previousAlphaState || 'Sin estado previo.',
+            debateHistory: '', // Ya no es un debate
+            previousAlphaState,
             identityDescription: getIdentityDescription('Apex')
-        };
-        const { output: apexOutput } = await analystPrompt(apexInput);
-
-        if (!apexOutput?.argument) throw new Error("Apex failed to respond.");
-        
-        const apexTurn: CryptoDebateTurn = { analyst: 'Apex', argument: apexOutput.argument };
-        debateHistory.push(apexTurn);
-        debateHistoryString += `Apex: ${apexOutput.argument}\n\n`;
-        
-        // Turno de Helios (Fundamental)
-        const heliosInput = { 
+        }),
+        analystPrompt({ 
             analystName: 'Helios' as const, 
-            debateHistory: debateHistoryString,
-            previousAlphaState: input.previousAlphaState || 'Sin estado previo.',
+            debateHistory: '', // Ya no es un debate
+            previousAlphaState,
             identityDescription: getIdentityDescription('Helios')
-        };
-        const { output: heliosOutput } = await analystPrompt(heliosInput);
-        if (!heliosOutput?.argument) throw new Error("Helios failed to respond.");
+        })
+      ]);
 
-        const heliosTurn: CryptoDebateTurn = { analyst: 'Helios', argument: heliosOutput.argument };
-        debateHistory.push(heliosTurn);
-        debateHistoryString += `Helios: ${heliosOutput.argument}\n\n`;
-      }
+      const apexOutput = apexResult.output;
+      const heliosOutput = heliosResult.output;
 
+      if (!apexOutput?.argument) throw new Error("Apex no pudo generar un análisis.");
+      if (!heliosOutput?.argument) throw new Error("Helios no pudo generar un análisis.");
+      
+      const debateHistory: CryptoDebateTurn[] = [
+        { analyst: 'Apex', argument: apexOutput.argument },
+        { analyst: 'Helios', argument: heliosOutput.argument }
+      ];
+      
       // Turno del Sintetizador
-      const synthesizerInput = { fullDebate: debateHistoryString };
+      const synthesizerInput = { 
+        apexArgument: apexOutput.argument,
+        heliosArgument: heliosOutput.argument
+      };
       const { output: synthesizerResult } = await synthesizerPrompt(synthesizerInput);
 
       if (!synthesizerResult || !synthesizerResult.synthesis || !synthesizerResult.signals) {
-        throw new Error("Synthesizer failed to generate a complete analysis.");
+        throw new Error("Synthesizer no pudo generar un análisis completo.");
       }
       
       const finalResult: FullCryptoAnalysis = {
@@ -151,6 +143,6 @@ export async function runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInpu
         signals: synthesizerResult.signals,
       };
 
-      // Validate with Zod before returning
+      // Validar con Zod antes de retornar
       return FullCryptoAnalysisSchema.parse(finalResult);
 }
