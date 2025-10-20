@@ -63,6 +63,11 @@ function useLocalStorage<T>(key: string, initialValue: T) {
 }
 
 const timeRanges = [
+    { label: '1 Hora', value: 1/24 },
+    { label: '4 Horas', value: 4/24 },
+    { label: '12 Horas', value: 12/24 },
+    { label: '1 Día', value: 1 },
+    { label: '3 Días', value: 3 },
     { label: '7 Días', value: 7 },
     { label: '30 Días', value: 30 },
     { label: '90 Días', value: 90 },
@@ -79,7 +84,7 @@ export default function TradingAnalysisPage() {
     const [isViewingHistory, setIsViewingHistory] = useState(false);
     const [coins, setCoins] = useState<Coin[]>([]);
     const [selectedCoinId, setSelectedCoinId] = useState('bitcoin');
-    const [selectedDays, setSelectedDays] = useState(30);
+    const [selectedDays, setSelectedDays] = useState(7);
 
     useEffect(() => {
         const fetchCoins = async () => {

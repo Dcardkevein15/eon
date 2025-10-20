@@ -58,16 +58,18 @@ const get_crypto_price = ai.defineTool(
 const get_market_chart_data = ai.defineTool(
     {
         name: 'get_market_chart_data',
-        description: 'Obtiene datos históricos del mercado (precio, volumen) para una criptomoneda durante un número específico de días, con granularidad diaria.',
+        description: 'Obtiene datos históricos del mercado (precio, volumen) para una criptomoneda durante un número específico de días. La granularidad es por hora para rangos menores a 2 días y diaria para rangos mayores.',
         inputSchema: z.object({
             crypto_id: z.string().describe("El ID de la criptomoneda según CoinGecko (ej: 'bitcoin', 'ethereum')."),
-            days: z.number().describe("El número de días para obtener datos (ej: 7, 30, 90).")
+            days: z.number().describe("El número de días para obtener datos (ej: 0.5 para 12 horas, 1 para 24 horas, 30 para 30 días).")
         }),
         outputSchema: MarketDataSchema,
     },
     async ({ crypto_id, days }) => {
         try {
-            const response = await fetch(`https://api.coingecko.com/api/v3/coins/${crypto_id}/market_chart?vs_currency=usd&days=${days}&interval=daily`);
+            // CoinGecko API: <2 days gives hourly data, >=2 days gives daily data.
+            const interval = days < 2 ? 'hourly' : 'daily';
+            const response = await fetch(`https://api.coingecko.com/api/v3/coins/${crypto_id}/market_chart?vs_currency=usd&days=${days}&interval=${interval}`);
             if (!response.ok) {
                 throw new Error(`Error al contactar la API de gráficos de mercado: ${response.statusText}`);
             }
