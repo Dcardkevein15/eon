@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -15,7 +15,6 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { v4 as uuidv4 } from 'uuid';
-import { useTypingEffect } from '@/hooks/use-typing-effect';
 
 const AnalystAvatar = ({ name }: { name: string }) => {
     const isApex = name === 'Apex';
@@ -74,15 +73,6 @@ export default function TradingAnalysisPage() {
     
     // State to differentiate between live generation and viewing history
     const [isViewingHistory, setIsViewingHistory] = useState(false);
-
-    const displayedDebate = useTypingEffect(debate.map(t => `${t.analyst}: ${t.argument}`).join('\n\n'), 30);
-    const displayedSynthesis = useTypingEffect(synthesis, 30);
-
-    const debateEndRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        debateEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [displayedDebate]);
 
     const handleStartAnalysis = useCallback(async () => {
         setIsLoading(true);
@@ -203,7 +193,7 @@ export default function TradingAnalysisPage() {
                                                     <Loader2 className="w-8 h-8 animate-spin text-primary"/>
                                                 </div>
                                             )}
-                                            {(isViewingHistory ? debate : debate.slice(0, displayedDebate.split('\n\n').length)).map((turn, index) => (
+                                            {debate.map((turn, index) => (
                                                 <div key={index} className={`flex flex-col gap-2 ${turn.analyst === 'Apex' ? 'items-start' : 'items-end'}`}>
                                                     <AnalystAvatar name={turn.analyst}/>
                                                     <div className={`p-3 rounded-lg max-w-xl ${turn.analyst === 'Apex' ? 'bg-blue-900/40 rounded-bl-none' : 'bg-amber-900/40 rounded-br-none'}`}>
@@ -213,7 +203,6 @@ export default function TradingAnalysisPage() {
                                                     </div>
                                                 </div>
                                             ))}
-                                            <div ref={debateEndRef} />
                                         </div>
                                     </ScrollArea>
                                 </CardContent>
@@ -230,8 +219,13 @@ export default function TradingAnalysisPage() {
                                 <CardContent className="flex-1 overflow-hidden relative">
                                     <ScrollArea className="h-full">
                                         <div className="prose prose-sm dark:prose-invert max-w-none pr-4">
-                                           <ReactMarkdown>{isViewingHistory ? synthesis : displayedSynthesis}</ReactMarkdown>
-                                            {isLoading && synthesis.length === 0 && <span className="animate-pulse">.</span>}
+                                           {isLoading && !synthesis ? (
+                                                <div className="flex items-center justify-center h-full">
+                                                    <Loader2 className="w-6 h-6 animate-spin text-accent"/>
+                                                </div>
+                                           ) : (
+                                                <ReactMarkdown>{synthesis}</ReactMarkdown>
+                                           )}
                                         </div>
                                     </ScrollArea>
                                 </CardContent>
