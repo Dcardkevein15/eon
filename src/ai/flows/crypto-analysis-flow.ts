@@ -39,7 +39,7 @@ const get_crypto_price = ai.defineTool(
   async ({ crypto_id }) => {
     try {
       const url = `https://api.coingecko.com/api/v3/simple/price?ids=${crypto_id}&vs_currencies=usd`;
-      const response = await fetch(url);
+      const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
 
       if (!response.ok) {
         throw new Error(`Error al contactar la API de precios: ${response.statusText}`);
@@ -71,7 +71,7 @@ const get_market_chart_data = ai.defineTool(
         try {
             const interval = days < 2 ? 'hourly' : 'daily';
             const url = `https://api.coingecko.com/api/v3/coins/${crypto_id}/market_chart?vs_currency=usd&days=${days}&interval=${interval}`;
-            const response = await fetch(url);
+            const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
             
             if (!response.ok) {
                 throw new Error(`Error al contactar la API de gráficos de mercado: ${response.statusText}`);
@@ -99,7 +99,7 @@ const get_coin_list = ai.defineTool({
 }, async () => {
     try {
         const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false`;
-        const response = await fetch(url);
+        const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
 
         if (!response.ok) {
             throw new Error(`Error al contactar la API de lista de monedas: ${response.statusText}`);
