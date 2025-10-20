@@ -283,10 +283,20 @@ export const CoinSchema = z.object({
 });
 export type Coin = z.infer<typeof CoinSchema>;
 
+const MarketDataItemSchema = z.object({
+  timestamp: z.number(),
+  value: z.number(),
+});
+export const MarketDataSchema = z.object({
+    prices: z.array(MarketDataItemSchema),
+    volumes: z.array(MarketDataItemSchema),
+});
+
 export const CryptoAnalysisInputSchema = z.object({
   crypto_id: z.string().describe("El ID de la criptomoneda según CoinGecko (ej: 'bitcoin', 'ethereum')."),
   days: z.number().describe("El número de días para el análisis histórico."),
   previousAlphaState: z.string().optional().describe('El resumen del resultado del análisis anterior para mantener una memoria contextual.'),
+  marketData: MarketDataSchema,
 });
 export type CryptoAnalysisInput = z.infer<typeof CryptoAnalysisInputSchema>;
 
@@ -304,6 +314,7 @@ export const AnalystTurnInputSchema = z.object({
   identityDescription: z.string(),
   debateHistory: z.string(),
   previousAlphaState: z.string().optional(),
+  technicalSummary: z.string(),
 });
 export type AnalystTurnInput = z.infer<typeof AnalystTurnInputSchema>;
 
@@ -336,14 +347,6 @@ export const SynthesizerOutputSchema = z.object({
 export type SynthesizerOutput = z.infer<typeof SynthesizerOutputSchema>;
 
 
-const MarketDataItemSchema = z.object({
-  timestamp: z.number(),
-  value: z.number(),
-});
-export const MarketDataSchema = z.object({
-    prices: z.array(MarketDataItemSchema),
-    volumes: z.array(MarketDataItemSchema),
-});
 
 export const IndicatorDataSchema = z.object({
     rsi: z.array(z.object({ timestamp: z.number(), value: z.number() })),

@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, Play, BrainCircuit, Bot, Sparkles, ChevronLeft, History } from 'lucide-react';
-import type { TradingSignal, CryptoDebateTurn, TradingAnalysisRecord, FullCryptoAnalysis, Coin } from '@/lib/types';
+import type { TradingSignal, CryptoDebateTurn, TradingAnalysisRecord, FullCryptoAnalysis, Coin, MarketDataSchema } from '@/lib/types';
 import { runCryptoAnalysis, getCoinList } from '@/ai/flows/crypto-analysis-flow';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
@@ -17,6 +17,7 @@ import { es } from 'date-fns/locale';
 import { v4 as uuidv4 } from 'uuid';
 import TechnicalIndicatorCharts from '@/components/trading/technical-indicator-charts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { z } from 'zod';
 
 const AnalystAvatar = ({ name }: { name: string }) => {
     const isApex = name === 'Apex';
@@ -74,6 +75,30 @@ const timeRanges = [
     { label: '1 Año', value: 365 },
 ];
 
+async function fetchMarketDataClientSide({ crypto_id, days }: { crypto_id: string, days: number }): Promise<z.infer<typeof MarketDataSchema>> {
+    try {
+        const interval = days < 2 ? 'hourly' : 'daily';
+        const url = `https://api.coingecko.com/api/v3/coins/${crypto_id}/market_chart?vs_currency=usd&days=${days}&interval=${interval}`;
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`Error al contactar la API de gráficos de mercado: ${response.statusText}`);
+        }
+        const data = await response.json();
+         if (!data.prices || !data.total_volumes) {
+            throw new Error(`Datos incompletos recibidos de la API para ${crypto_id}`);
+        }
+        return {
+            prices: data.prices.map(([timestamp, value]: [number, number]) => ({ timestamp, value })),
+            volumes: data.total_volumes.map(([timestamp, value]: [number, number]) => ({ timestamp, value }))
+        };
+    } catch (error) {
+        console.error('Error en fetchMarketDataClientSide:', error);
+        throw new Error(`Fallo en la obtención de datos de mercado para ${crypto_id}: ${(error as Error).message}`);
+    }
+}
+
+
 export default function TradingAnalysisPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -106,10 +131,18 @@ export default function TradingAnalysisPage() {
         setIsViewingHistory(false);
         
         try {
+            // 1. Fetch market data from the client side first
+            const marketData = await fetchMarketDataClientSide({
+                crypto_id: selectedCoinId,
+                days: selectedDays,
+            });
+
+            // 2. Pass the fetched data to the AI flow
             const result: FullCryptoAnalysis = await runCryptoAnalysis({
                 crypto_id: selectedCoinId,
                 days: selectedDays,
-                previousAlphaState: alphaState
+                previousAlphaState: alphaState,
+                marketData: marketData, // Pass the data here
             });
             
             setAnalysisResult(result);
@@ -126,7 +159,7 @@ export default function TradingAnalysisPage() {
 
         } catch (e: any) {
             console.error(e);
-            setError("Error al ejecutar el análisis. Por favor, inténtalo de nuevo.");
+            setError(e.message || "Error al ejecutar el análisis. Por favor, inténtalo de nuevo.");
         } finally {
             setIsLoading(false);
         }
