@@ -90,7 +90,7 @@ const get_coin_list = ai.defineTool({
     name: 'get_coin_list',
     description: 'Obtiene una lista de las 100 principales criptomonedas por capitalización de mercado.',
     inputSchema: z.object({}),
-    outputSchema: z.array(CoinSchema),
+    outputSchema: z.object({ output: z.array(CoinSchema) }),
 }, async () => {
     try {
         const response = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false');
@@ -98,11 +98,12 @@ const get_coin_list = ai.defineTool({
             throw new Error(`Error al contactar la API de lista de monedas: ${response.statusText}`);
         }
         const data = await response.json();
-        return data.map((coin: any) => ({
+        const coinList = data.map((coin: any) => ({
             id: coin.id,
             symbol: coin.symbol,
             name: coin.name,
         }));
+        return { output: coinList };
     } catch (error) {
         console.error('Error en la herramienta get_coin_list:', error);
         throw new Error(`Fallo en la herramienta get_coin_list: ${(error as Error).message}`);
@@ -251,7 +252,7 @@ export async function runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInpu
         { analyst: 'Helios', argument: heliosOutput.argument }
       ];
 
-      const marketDataToolCall = apexResult.toolCalls?.find(call => call.toolName === 'get_market_chart_data');
+      const marketDataToolCall = apexResult.output!.toolCalls?.find(call => call.toolName === 'get_market_chart_data');
       const marketData = marketDataToolCall?.output as z.infer<typeof MarketDataSchema> | undefined;
 
       let indicators: z.infer<typeof IndicatorsSchema> = null;
@@ -276,7 +277,7 @@ export async function runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInpu
         synthesis: synthesizerResult.synthesis,
         technicalSummary: synthesizerResult.technicalSummary,
         signals: synthesizerResult.signals,
-        marketData: marketData || { prices: [], volumes: [] },
+        marketData: marketData || null,
         indicators: indicators,
       };
 
@@ -287,5 +288,5 @@ export async function runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInpu
 export async function getCoinList(): Promise<z.infer<typeof CoinSchema>[]> {
     const { output } = await get_coin_list({});
     if (!output) throw new Error("No se pudo obtener la lista de monedas.");
-    return output;
+    return output.output;
 }
