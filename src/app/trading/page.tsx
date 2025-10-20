@@ -130,12 +130,14 @@ export default function TradingAnalysisPage() {
     const loadHistoryRecord = (record: TradingAnalysisRecord) => {
         setIsViewingHistory(true);
         setAnalysisResult(record);
-        const coin = coins.find(c => c.name.toLowerCase() === record.signals[0]?.crypto.toLowerCase());
-        if (coin) {
-          const matchingCoinInList = coins.find(c => c.id === coin.id);
-          if (matchingCoinInList) {
-            setSelectedCoinId(matchingCoinInList.id);
-          }
+        if (Array.isArray(coins)) {
+            const coin = coins.find(c => c.name.toLowerCase() === record.signals[0]?.crypto.toLowerCase());
+            if (coin) {
+              const matchingCoinInList = coins.find(c => c.id === coin.id);
+              if (matchingCoinInList) {
+                setSelectedCoinId(matchingCoinInList.id);
+              }
+            }
         }
     };
     
@@ -297,7 +299,9 @@ export default function TradingAnalysisPage() {
                                                     <TableCell className={signal.action === 'COMPRAR' ? 'text-green-400 font-bold' : signal.action === 'VENDER' ? 'text-red-400 font-bold' : 'text-amber-400 font-bold'}>
                                                         {signal.action} {signal.crypto}
                                                     </TableCell>
-                                                    <TableCell className="font-mono">${signal.price.toFixed(2)}</TableCell>
+                                                    <TableCell className="font-mono">
+                                                        {signal.action !== 'MANTENER' ? `$${signal.price.toFixed(2)}` : '-'}
+                                                    </TableCell>
                                                 </TableRow>
                                             ))}
                                         </TableBody>
