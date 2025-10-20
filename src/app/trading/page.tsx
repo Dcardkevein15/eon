@@ -75,29 +75,6 @@ const timeRanges = [
     { label: '1 Año', value: 365 },
 ];
 
-async function fetchMarketDataClientSide({ crypto_id, days }: { crypto_id: string, days: number }): Promise<z.infer<typeof MarketDataSchema>> {
-    try {
-        const interval = days < 2 ? 'hourly' : 'daily';
-        const url = `https://api.coingecko.com/api/v3/coins/${crypto_id}/market_chart?vs_currency=usd&days=${days}&interval=${interval}`;
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-            throw new Error(`Error al contactar la API de gráficos de mercado: ${response.statusText}`);
-        }
-        const data = await response.json();
-         if (!data.prices || !data.total_volumes) {
-            throw new Error(`Datos incompletos recibidos de la API para ${crypto_id}`);
-        }
-        return {
-            prices: data.prices.map(([timestamp, value]: [number, number]) => ({ timestamp, value })),
-            volumes: data.total_volumes.map(([timestamp, value]: [number, number]) => ({ timestamp, value }))
-        };
-    } catch (error) {
-        console.error('Error en fetchMarketDataClientSide:', error);
-        throw new Error(`Fallo en la obtención de datos de mercado para ${crypto_id}: ${(error as Error).message}`);
-    }
-}
-
 
 export default function TradingAnalysisPage() {
     const [isLoading, setIsLoading] = useState(false);
@@ -131,18 +108,10 @@ export default function TradingAnalysisPage() {
         setIsViewingHistory(false);
         
         try {
-            // 1. Fetch market data from the client side first
-            const marketData = await fetchMarketDataClientSide({
-                crypto_id: selectedCoinId,
-                days: selectedDays,
-            });
-
-            // 2. Pass the fetched data to the AI flow
             const result: FullCryptoAnalysis = await runCryptoAnalysis({
                 crypto_id: selectedCoinId,
                 days: selectedDays,
                 previousAlphaState: alphaState,
-                marketData: marketData, // Pass the data here
             });
             
             setAnalysisResult(result);

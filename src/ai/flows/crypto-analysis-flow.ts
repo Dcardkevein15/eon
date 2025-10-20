@@ -57,6 +57,37 @@ const get_crypto_price = ai.defineTool(
   }
 );
 
+const get_market_chart_data = ai.defineTool({
+    name: 'get_market_chart_data',
+    description: 'Obtiene datos históricos de precios y volúmenes para una criptomoneda en un rango de días específico.',
+    inputSchema: z.object({
+        crypto_id: z.string().describe("El ID de la criptomoneda (ej: 'bitcoin')."),
+        days: z.number().describe("El número de días para los datos históricos."),
+    }),
+    outputSchema: MarketDataSchema,
+}, async ({ crypto_id, days }) => {
+    try {
+        const interval = days < 2 ? 'hourly' : 'daily';
+        const url = `https://api.coingecko.com/api/v3/coins/${crypto_id}/market_chart?vs_currency=usd&days=${days}&interval=${interval}`;
+        const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+        
+        if (!response.ok) {
+            throw new Error(`Error al contactar la API de gráficos de mercado: ${response.statusText}`);
+        }
+        const data = await response.json();
+        if (!data.prices || !data.total_volumes) {
+            throw new Error(`Datos incompletos recibidos de la API para ${crypto_id}`);
+        }
+        return {
+            prices: data.prices.map(([timestamp, value]: [number, number]) => ({ timestamp, value })),
+            volumes: data.total_volumes.map(([timestamp, value]: [number, number]) => ({ timestamp, value }))
+        };
+    } catch (error) {
+        console.error('Error en la herramienta get_market_chart_data:', error);
+        throw new Error(`Fallo en la herramienta get_market_chart_data para ${crypto_id}: ${(error as Error).message}`);
+    }
+});
+
 
 const get_coin_list = ai.defineTool({
     name: 'get_coin_list',
@@ -86,29 +117,39 @@ const get_coin_list = ai.defineTool({
 
 // --- Prompts de los Agentes ---
 
-const analystPrompt = ai.definePrompt({
-  name: 'analystPrompt',
+const apexPrompt = ai.definePrompt({
+  name: 'apexPrompt',
+  input: { schema: AnalystTurnInputSchema },
+  output: { schema: AnalystTurnOutputSchema },
+  tools: [get_crypto_price, get_market_chart_data],
+  prompt: `Eres 'Apex', un analista técnico de criptomonedas obsesionado con los datos para {{{cryptoName}}}.
+
+  **TAREA OBLIGATORIA:**
+  1.  USA la herramienta \`get_market_chart_data\` para obtener los datos de mercado de los últimos {{{days}}} días para {{{cryptoName}}}.
+  2.  USA la herramienta \`get_crypto_price\` para obtener el precio más reciente.
+
+  Una vez que tengas todos los datos, formula un argumento conciso pero impactante sobre el estado del mercado de {{{cryptoName}}} hoy, basándote en tu análisis de patrones de gráficos, soportes, resistencias y momentum.
+
+  Tu análisis debe ser independiente. Simplemente proporciona tu experta opinión técnica.`,
+});
+
+const heliosPrompt = ai.definePrompt({
+  name: 'heliosPrompt',
   input: { schema: AnalystTurnInputSchema },
   output: { schema: AnalystTurnOutputSchema },
   tools: [get_crypto_price],
-  prompt: `Eres {{{analystName}}}, un analista experto en criptomonedas para {{{cryptoName}}}.
-  {{{identityDescription}}}
+  prompt: `Eres 'Helios', un analista fundamental de criptomonedas visionario para {{{cryptoName}}}.
 
-  **IMPORTANTE**: Para tu análisis, DEBES usar la herramienta \`get_crypto_price\` para el precio más reciente. Los datos históricos y técnicos ya te han sido proporcionados.
+  **IMPORTANTE**: Para tu análisis, DEBES usar la herramienta \`get_crypto_price\` para el precio más reciente.
   
-  **Resumen de Indicadores Técnicos Clave:**
-  {{{technicalSummary}}}
-
-  Basándote en estos datos y tu perspectiva única, formula un argumento conciso pero impactante sobre el estado del mercado de {{{cryptoName}}} hoy.
-  Tu análisis debe ser independiente. Simplemente proporciona tu experta opinión.
-  `,
+  Tu análisis se centra en la tecnología subyacente, noticias, tokenomics, regulación y sentimiento en redes sociales. Formula un argumento conciso sobre el estado del mercado de {{{cryptoName}}} hoy desde una perspectiva fundamental, fundamentado con el precio actual.`,
 });
 
 const synthesizerPrompt = ai.definePrompt({
   name: 'synthesizerPrompt',
   input: { schema: SynthesizerInputSchema },
   output: { schema: SynthesizerOutputSchema },
-  prompt: `Eres 'The Synthesizer', un estratega de trading de IA de élite. Has recibido los siguientes análisis independientes de tus dos expertos para {{{cryptoName}}}, quienes han usado datos en tiempo real.
+  prompt: `Eres 'The Synthesizer', un estratega de trading de IA de élite. Has recibido los siguientes análisis independientes de tus dos expertos para {{{cryptoName}}}.
 
   Análisis de Apex (Técnico):
   "{{{apexArgument}}}"
@@ -121,17 +162,8 @@ const synthesizerPrompt = ai.definePrompt({
 
   Tu tarea es doble:
   1.  **Síntesis Estratégica:** Escribe un resumen que combine las perspectivas de Apex, Helios y el resumen técnico. ¿Cuáles son los puntos clave de conflicto y acuerdo? ¿Qué catalizadores o riesgos son más importantes? ¿Cuál es el sentimiento general del mercado?
-  2.  **Señales Accionables:** Basado en la síntesis y los datos discutidos, genera hasta 3 señales de trading. Para cada señal, especifica la criptomoneda ('{{{cryptoName}}}'), la acción (COMPRAR, VENDER, MANTENER), un precio de ejecución preciso en USD y una justificación clara y concisa en el campo 'reasoning'.`,
+  2.  **Señales Accionables:** Basado en la síntesis y los datos discutidos, genera hasta 3 señales de trading. Para cada señal, especifica la criptomoneda ('{{{cryptoName}}}'), la acción (COMPRAR, VENDER, MANTENER), un precio de ejecución preciso en USD (o 0 para MANTENER) y una justificación clara y concisa en el campo 'reasoning'.`,
 });
-
-
-const getIdentityDescription = (analystName: 'Apex' | 'Helios'): string => {
-  if (analystName === 'Apex') {
-    return "Tu identidad: Eres 'Apex', un analista técnico obsesionado con los datos. Tu objetivo es detectar tendencias, soportes y resistencias basándote en los datos técnicos proporcionados y el precio actual.";
-  } else {
-    return "Tu identidad: Eres 'Helios', un analista fundamental visionario. Te enfocas en la tecnología subyacente, las noticias (tokenomics), la regulación y el sentimiento en redes sociales. Debes fundamentar tu análisis con el precio actual.";
-  }
-};
 
 
 function calculateIndicators(prices: { timestamp: number; value: number }[], volumes: { timestamp: number; value: number }[]): z.infer<typeof IndicatorsSchema> {
@@ -197,10 +229,25 @@ function calculateIndicators(prices: { timestamp: number; value: number }[], vol
 
 export async function runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInputSchema>): Promise<FullCryptoAnalysis> {
     
-      const previousAlphaState = input.previousAlphaState || 'Sin estado previo.';
       const cryptoName = input.crypto_id.charAt(0).toUpperCase() + input.crypto_id.slice(1);
-      const marketData = input.marketData;
+      
+      const apexResult = await apexPrompt({ 
+          analystName: 'Apex' as const, 
+          cryptoName,
+          days: input.days,
+          debateHistory: '',
+          identityDescription: '',
+          previousAlphaState: '',
+          technicalSummary: '',
+      });
 
+      const apexOutput = apexResult.output;
+      if (!apexOutput?.argument) throw new Error("Apex no pudo generar un análisis.");
+      
+      const apexToolsOutput = apexResult.toolRequests[0]?.output as (z.infer<typeof MarketDataSchema> | undefined);
+      if (!apexToolsOutput) throw new Error("Apex no obtuvo los datos del mercado.");
+      const marketData = apexToolsOutput;
+      
       let indicators: z.infer<typeof IndicatorsSchema> = null;
       if (marketData?.prices && marketData?.volumes) {
         indicators = calculateIndicators(marketData.prices, marketData.volumes);
@@ -219,32 +266,17 @@ export async function runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInpu
               technicalSummary += "El histograma MACD es negativo, indicando momentum bajista.";
           }
       }
-
-      const [apexResult, heliosResult] = await Promise.all([
-        analystPrompt({ 
-            analystName: 'Apex' as const, 
-            cryptoName,
-            days: input.days,
-            debateHistory: '',
-            previousAlphaState,
-            identityDescription: getIdentityDescription('Apex'),
-            technicalSummary: technicalSummary,
-        }),
-        analystPrompt({ 
-            analystName: 'Helios' as const, 
-            cryptoName,
-            days: input.days,
-            debateHistory: '',
-            previousAlphaState,
-            identityDescription: getIdentityDescription('Helios'),
-            technicalSummary: technicalSummary,
-        }),
-      ]);
-
-      const apexOutput = apexResult.output;
+      
+      const heliosResult = await heliosPrompt({ 
+          analystName: 'Helios' as const, 
+          cryptoName,
+          days: input.days,
+          debateHistory: '',
+          identityDescription: '',
+          previousAlphaState: '',
+          technicalSummary: '',
+      });
       const heliosOutput = heliosResult.output;
-
-      if (!apexOutput?.argument) throw new Error("Apex no pudo generar un análisis.");
       if (!heliosOutput?.argument) throw new Error("Helios no pudo generar un análisis.");
       
       const debateHistory: CryptoDebateTurn[] = [
@@ -267,7 +299,7 @@ export async function runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInpu
       const finalResult: FullCryptoAnalysis = {
         debate: debateHistory,
         synthesis: synthesizerResult.synthesis,
-        technicalSummary: synthesizerResult.technicalSummary || technicalSummary, // Use generated summary as fallback
+        technicalSummary: synthesizerResult.technicalSummary || technicalSummary,
         signals: synthesizerResult.signals,
         marketData: marketData || null,
         indicators: indicators,
