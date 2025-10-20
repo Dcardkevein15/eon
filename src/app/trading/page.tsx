@@ -155,7 +155,7 @@ export default function TradingAnalysisPage() {
                             <h1 className="text-xl font-bold tracking-tight">Análisis Pro de Trading</h1>
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
-                            <Select value={selectedCoinId} onValueChange={setSelectedCoinId} disabled={coins.length === 0}>
+                            <Select value={selectedCoinId} onValueChange={setSelectedCoinId} disabled={!coins || coins.length === 0}>
                                 <SelectTrigger className="w-[150px]">
                                     <SelectValue placeholder="Seleccionar Cripto" />
                                 </SelectTrigger>
