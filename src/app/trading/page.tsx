@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, Play, BrainCircuit, Bot, Sparkles, ChevronLeft, History } from 'lucide-react';
-import type { TradingSignal, CryptoDebateTurn, TradingAnalysisRecord, FullCryptoAnalysis, Coin, MarketDataSchema } from '@/lib/types';
+import type { TradingSignal, CryptoDebateTurn, TradingAnalysisRecord, FullCryptoAnalysis, Coin } from '@/lib/types';
 import { runCryptoAnalysis, getCoinList } from '@/ai/flows/crypto-analysis-flow';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
@@ -15,9 +15,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { v4 as uuidv4 } from 'uuid';
-import TechnicalIndicatorCharts from '@/components/trading/technical-indicator-charts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { z } from 'zod';
 
 const AnalystAvatar = ({ name }: { name: string }) => {
     const isApex = name === 'Apex';
@@ -63,57 +61,16 @@ function useLocalStorage<T>(key: string, initialValue: T) {
   return [storedValue, setValue, loading] as const;
 }
 
-const timeRanges = [
-    { label: '1 Hora', value: 1/24 },
-    { label: '4 Horas', value: 4/24 },
-    { label: '12 Horas', value: 12/24 },
-    { label: '1 Día', value: 1 },
-    { label: '3 Días', value: 3 },
-    { label: '7 Días', value: 7 },
-    { label: '30 Días', value: 30 },
-    { label: '90 Días', value: 90 },
-    { label: '1 Año', value: 365 },
-];
-
-async function fetchMarketDataClientSide(crypto_id: string, days: number): Promise<z.infer<typeof MarketDataSchema>> {
-    try {
-        const interval = days < 2 ? 'hourly' : 'daily';
-        const url = `https://api.coingecko.com/api/v3/coins/${crypto_id}/market_chart?vs_currency=usd&days=${days}&interval=${interval}`;
-        
-        const response = await fetch(url, { 
-            headers: { 'Accept': 'application/json' },
-            mode: 'cors'
-        });
-
-        if (!response.ok) {
-            throw new Error(`Error al contactar la API de gráficos de mercado: ${response.statusText}`);
-        }
-        const data = await response.json();
-         if (!data.prices || !data.total_volumes) {
-            throw new Error(`Datos incompletos recibidos de la API para ${crypto_id}`);
-        }
-        return {
-            prices: data.prices.map(([timestamp, value]: [number, number]) => ({ timestamp, value })),
-            volumes: data.total_volumes.map(([timestamp, value]: [number, number]) => ({ timestamp, value }))
-        };
-    } catch (error) {
-        console.error('Error en fetchMarketDataClientSide:', error);
-        throw new Error(`Fallo al obtener datos de mercado para ${crypto_id}: ${(error as Error).message}`);
-    }
-}
-
 
 export default function TradingAnalysisPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [analysisResult, setAnalysisResult] = useState<FullCryptoAnalysis | null>(null);
-    const [alphaState, setAlphaState] = useState<string>('Sin análisis previo. Empezando desde cero.');
     const [analysisHistory, setAnalysisHistory, isHistoryLoading] = useLocalStorage<TradingAnalysisRecord[]>('trading-analysis-history', []);
     
     const [isViewingHistory, setIsViewingHistory] = useState(false);
     const [coins, setCoins] = useState<Coin[]>([]);
     const [selectedCoinId, setSelectedCoinId] = useState('bitcoin');
-    const [selectedDays, setSelectedDays] = useState(7);
 
     useEffect(() => {
         const fetchCoins = async () => {
@@ -135,12 +92,8 @@ export default function TradingAnalysisPage() {
         setIsViewingHistory(false);
         
         try {
-            const marketData = await fetchMarketDataClientSide(selectedCoinId, selectedDays);
-
             const result: FullCryptoAnalysis = await runCryptoAnalysis({
                 crypto_id: selectedCoinId,
-                days: selectedDays,
-                marketData: marketData,
             });
             
             setAnalysisResult(result);
@@ -158,7 +111,7 @@ export default function TradingAnalysisPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [selectedCoinId, selectedDays, setAnalysisHistory]);
+    }, [selectedCoinId, setAnalysisHistory]);
     
     const loadHistoryRecord = (record: TradingAnalysisRecord) => {
         setIsViewingHistory(true);
@@ -191,22 +144,12 @@ export default function TradingAnalysisPage() {
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
                             <Select value={selectedCoinId} onValueChange={setSelectedCoinId} disabled={!coins || coins.length === 0}>
-                                <SelectTrigger className="w-[150px]">
+                                <SelectTrigger className="w-[180px]">
                                     <SelectValue placeholder="Seleccionar Cripto" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {Array.isArray(coins) && coins.map(coin => (
                                         <SelectItem key={coin.id} value={coin.id}>{coin.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                             <Select value={String(selectedDays)} onValueChange={(v) => setSelectedDays(Number(v))}>
-                                <SelectTrigger className="w-[120px]">
-                                    <SelectValue placeholder="Temporalidad" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {timeRanges.map(range => (
-                                        <SelectItem key={range.value} value={String(range.value)}>{range.label}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
@@ -227,14 +170,11 @@ export default function TradingAnalysisPage() {
                                                 {analysisHistory.map(record => (
                                                     <Card key={record.id} className="cursor-pointer hover:border-primary" onClick={() => loadHistoryRecord(record)}>
                                                         <CardHeader>
-                                                            <CardTitle className="text-sm">Análisis del {new Date(record.timestamp).toLocaleDateString()}</CardTitle>
+                                                            <CardTitle className="text-sm">Análisis de {record.signals[0]?.crypto}</CardTitle>
                                                             <CardDescription>
                                                                 {formatDistanceToNow(new Date(record.timestamp), { addSuffix: true, locale: es })}
                                                             </CardDescription>
                                                         </CardHeader>
-                                                        <CardContent>
-                                                            <p className="text-xs text-muted-foreground">{record.signals.length} señales para {record.signals[0]?.crypto}.</p>
-                                                        </CardContent>
                                                     </Card>
                                                 ))}
                                             </div>
@@ -252,106 +192,95 @@ export default function TradingAnalysisPage() {
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 lg:p-6">
-                    {error && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}
-                    
-                    {!analysisResult && !isLoading && (
-                        <div className="flex items-center justify-center h-full text-center text-muted-foreground">
-                            <p>Selecciona una criptomoneda y presiona "Iniciar Análisis" para comenzar.</p>
-                        </div>
-                    )}
-
-                    {isLoading && (
-                        <div className="flex items-center justify-center h-full">
-                            <Loader2 className="w-8 h-8 animate-spin text-primary"/>
-                        </div>
-                    )}
-
-                    {analysisResult && (
-                    <div className="max-w-7xl mx-auto grid lg:grid-cols-3 gap-6 h-full">
-                        <div className="lg:col-span-2 h-full flex flex-col gap-6">
-                            <Card className="flex-1 flex flex-col bg-card/50">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2"><BrainCircuit className="w-5 h-5 text-primary"/> Debate de Analistas IA sobre {selectedCoin?.name || ''}</CardTitle>
-                                    <CardDescription>Apex (Técnico) y Helios (Fundamental) discuten en tiempo real.</CardDescription>
-                                </CardHeader>
-                                <CardContent className="flex-1 overflow-hidden relative">
-                                    <ScrollArea className="h-full">
-                                        <div className="space-y-6 pr-4">
-                                            {analysisResult.debate.map((turn, index) => (
-                                                <div key={index} className={`flex flex-col gap-2 ${turn.analyst === 'Apex' ? 'items-start' : 'items-end'}`}>
-                                                    <AnalystAvatar name={turn.analyst}/>
-                                                    <div className={`p-3 rounded-lg max-w-xl ${turn.analyst === 'Apex' ? 'bg-blue-900/40 rounded-bl-none' : 'bg-amber-900/40 rounded-br-none'}`}>
-                                                        <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none">
-                                                            {turn.argument}
-                                                        </ReactMarkdown>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </ScrollArea>
-                                </CardContent>
-                            </Card>
-                             {analysisResult.indicators && (
-                                <TechnicalIndicatorCharts
-                                    indicators={analysisResult.indicators}
-                                    technicalSummary={analysisResult.technicalSummary}
-                                />
-                            )}
-                        </div>
+                <ScrollArea className="flex-1">
+                    <div className="p-4 lg:p-6">
+                        {error && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}
                         
-                        <div className="h-full flex flex-col gap-6">
-                           <Card className="flex-1 flex flex-col bg-card/50">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2"><Sparkles className="w-5 h-5 text-accent"/> Síntesis Estratégica</CardTitle>
-                                    <CardDescription>The Synthesizer extrae las conclusiones clave.</CardDescription>
-                                </CardHeader>
-                                <CardContent className="flex-1 overflow-hidden relative">
-                                    <ScrollArea className="h-full">
-                                        <div className="prose prose-sm dark:prose-invert max-w-none pr-4">
-                                           <ReactMarkdown>{analysisResult.synthesis}</ReactMarkdown>
-                                        </div>
-                                    </ScrollArea>
-                                </CardContent>
-                            </Card>
-                             <Card className="bg-card/80 border-primary/30">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2 text-primary">Señales del Día</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Acción</TableHead>
-                                                <TableHead>Precio</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {analysisResult.signals.map((signal, index) => (
-                                                <TableRow key={`${signal.crypto}-${index}`}>
-                                                    <TableCell className={signal.action === 'COMPRAR' ? 'text-green-400 font-bold' : signal.action === 'VENDER' ? 'text-red-400 font-bold' : 'text-amber-400 font-bold'}>
-                                                        {signal.action} {signal.crypto}
-                                                    </TableCell>
-                                                    <TableCell className="font-mono">
-                                                        {signal.action !== 'MANTENER' ? `$${signal.price.toFixed(2)}` : '-'}
-                                                    </TableCell>
+                        {!analysisResult && !isLoading && (
+                            <div className="flex items-center justify-center h-full text-center text-muted-foreground py-16">
+                                <p>Selecciona una criptomoneda y presiona "Iniciar Análisis" para comenzar.</p>
+                            </div>
+                        )}
+
+                        {isLoading && (
+                            <div className="flex items-center justify-center h-full py-16">
+                                <Loader2 className="w-8 h-8 animate-spin text-primary"/>
+                            </div>
+                        )}
+
+                        {analysisResult && (
+                        <div className="max-w-7xl mx-auto grid lg:grid-cols-3 gap-6">
+                            <div className="lg:col-span-2 flex flex-col gap-6">
+                                <Card className="flex-1 flex flex-col bg-card/50">
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2"><BrainCircuit className="w-5 h-5 text-primary"/> Debate de Analistas IA sobre {selectedCoin?.name || ''}</CardTitle>
+                                        <CardDescription>Apex (Técnico) y Helios (Fundamental) discuten sus perspectivas.</CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="flex-1">
+                                        <ScrollArea className="h-96">
+                                            <div className="space-y-6 pr-4">
+                                                {analysisResult.debate.map((turn, index) => (
+                                                    <div key={index} className={`flex flex-col gap-2 ${turn.analyst === 'Apex' ? 'items-start' : 'items-end'}`}>
+                                                        <AnalystAvatar name={turn.analyst}/>
+                                                        <div className={`p-3 rounded-lg max-w-xl ${turn.analyst === 'Apex' ? 'bg-blue-900/40 rounded-bl-none' : 'bg-amber-900/40 rounded-br-none'}`}>
+                                                            <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none">
+                                                                {turn.argument}
+                                                            </ReactMarkdown>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </ScrollArea>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                            
+                            <div className="flex flex-col gap-6">
+                               <Card className="flex-1 flex flex-col bg-card/50">
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2"><Sparkles className="w-5 h-5 text-accent"/> Síntesis Estratégica</CardTitle>
+                                        <CardDescription>The Synthesizer extrae las conclusiones clave.</CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="flex-1">
+                                        <ScrollArea className="h-64">
+                                            <div className="prose prose-sm dark:prose-invert max-w-none pr-4">
+                                               <ReactMarkdown>{analysisResult.synthesis}</ReactMarkdown>
+                                            </div>
+                                        </ScrollArea>
+                                    </CardContent>
+                                </Card>
+                                 <Card className="bg-card/80 border-primary/30">
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2 text-primary">Señales del Día</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Acción</TableHead>
+                                                    <TableHead>Justificación</TableHead>
                                                 </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                     <div className="prose prose-xs dark:prose-invert max-w-none mt-4 text-muted-foreground space-y-2">
-                                        {analysisResult.signals.map((signal, index) => (
-                                             <p key={`reason-${index}`}>
-                                                <span className="font-bold">{signal.action}:</span> {signal.reasoning}
-                                            </p>
-                                        ))}
-                                    </div>
-                                </CardContent>
-                            </Card>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {analysisResult.signals.map((signal, index) => (
+                                                    <TableRow key={`${signal.crypto}-${index}`}>
+                                                        <TableCell className={signal.action === 'COMPRAR' ? 'text-green-400 font-bold' : signal.action === 'VENDER' ? 'text-red-400 font-bold' : 'text-amber-400 font-bold'}>
+                                                            {signal.action}
+                                                        </TableCell>
+                                                        <TableCell className="text-xs">
+                                                            {signal.reasoning}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </CardContent>
+                                </Card>
+                            </div>
                         </div>
+                        )}
                     </div>
-                    )}
-                </div>
+                </ScrollArea>
              </main>
         </div>
     );

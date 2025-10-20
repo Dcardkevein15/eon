@@ -294,8 +294,6 @@ export const MarketDataSchema = z.object({
 
 export const CryptoAnalysisInputSchema = z.object({
   crypto_id: z.string().describe("El ID de la criptomoneda según CoinGecko (ej: 'bitcoin', 'ethereum')."),
-  days: z.number().describe("El número de días para el análisis histórico."),
-  marketData: MarketDataSchema,
 });
 export type CryptoAnalysisInput = z.infer<typeof CryptoAnalysisInputSchema>;
 
@@ -309,10 +307,8 @@ export type CryptoDebateTurn = z.infer<typeof CryptoDebateTurnSchema>;
 export const AnalystTurnInputSchema = z.object({
   analystName: z.enum(['Apex', 'Helios']),
   cryptoName: z.string(),
-  days: z.number(),
   identityDescription: z.string(),
   debateHistory: z.string(),
-  previousAlphaState: z.string().optional(),
   technicalSummary: z.string(),
 });
 export type AnalystTurnInput = z.infer<typeof AnalystTurnInputSchema>;
@@ -333,15 +329,15 @@ export type SynthesizerInput = z.infer<typeof SynthesizerInputSchema>;
 export const TradingSignalSchema = z.object({
     crypto: z.string().describe("Nombre de la criptomoneda (ej. Bitcoin)."),
     action: z.enum(['COMPRAR', 'VENDER', 'MANTENER']).describe("La acción de trading recomendada."),
-    price: z.number().describe("El precio de ejecución sugerido en USD."),
-    reasoning: z.string().describe("Una justificación breve y clara para la señal, basada en el análisis técnico y fundamental."),
+    price: z.number().describe("El precio de ejecución sugerido en USD. Usa 0 si el precio no está disponible."),
+    reasoning: z.string().describe("Una justificación breve y clara para la señal, basada en el análisis."),
 });
 export type TradingSignal = z.infer<typeof TradingSignalSchema>;
 
 export const SynthesizerOutputSchema = z.object({
   synthesis: z.string().describe("Un resumen conciso del debate, destacando los puntos de acuerdo, desacuerdo y las conclusiones emergentes."),
-  technicalSummary: z.string().describe("Un resumen interpretativo de los indicadores técnicos."),
-  signals: z.array(TradingSignalSchema).describe("Una lista de 3 señales de trading accionables."),
+  technicalSummary: z.string().describe("Un resumen interpretativo del análisis técnico general."),
+  signals: z.array(TradingSignalSchema).describe("Una lista de hasta 3 señales de trading accionables."),
 });
 export type SynthesizerOutput = z.infer<typeof SynthesizerOutputSchema>;
 
