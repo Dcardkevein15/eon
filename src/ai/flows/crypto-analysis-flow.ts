@@ -131,7 +131,7 @@ const getIdentityDescription = (analystName: 'Apex' | 'Helios'): string => {
 
 
 // --- Función para Calcular Indicadores ---
-function calculateIndicators(prices: { timestamp: number; value: number }[]): z.infer<typeof IndicatorsSchema> {
+function calculateIndicators(prices: { timestamp: number; value: number }[], volumes: { timestamp: number; value: number }[]): z.infer<typeof IndicatorsSchema> {
     const closingPrices = prices.map(p => p.value);
     
     // RSI
@@ -156,6 +156,7 @@ function calculateIndicators(prices: { timestamp: number; value: number }[]): z.
 
     // Helper to align data
     const alignData = (indicatorData: any[], dataKey: string) => {
+        if (!indicatorData) return [];
         const offset = closingPrices.length - indicatorData.length;
         return prices.slice(offset).map((price, index) => ({
             timestamp: price.timestamp,
@@ -164,12 +165,15 @@ function calculateIndicators(prices: { timestamp: number; value: number }[]): z.
     };
 
     const alignMacdData = (indicatorData: any[]) => {
+        if (!indicatorData) return [];
         const offset = closingPrices.length - indicatorData.length;
         return prices.slice(offset).map((price, index) => ({
             timestamp: price.timestamp,
             ...indicatorData[index]
         }));
     }
+    
+    const volumeMap = new Map(volumes.map(v => [v.timestamp, v.value]));
 
     return {
         rsi: alignData(rsi, 'value'),
@@ -180,6 +184,7 @@ function calculateIndicators(prices: { timestamp: number; value: number }[]): z.
             price: price.value,
             sma10: sma10[index + 10], // sma10 has length closingPrices.length - 9
             sma20: sma20[index], // sma20 has length closingPrices.length - 19
+            volume: volumeMap.get(price.timestamp) || 0,
         })),
     };
 }
@@ -221,9 +226,9 @@ export async function runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInpu
       const marketDataToolCall = apexResult.output?.toolCalls?.find(call => call.toolName === 'get_market_chart_data');
       const marketData = marketDataToolCall?.output as z.infer<typeof MarketDataSchema> | undefined;
 
-      let indicators: z.infer<typeof IndicatorsSchema> | undefined;
-      if (marketData?.prices) {
-        indicators = calculateIndicators(marketData.prices);
+      let indicators: z.infer<typeof IndicatorsSchema> = null;
+      if (marketData?.prices && marketData?.volumes) {
+        indicators = calculateIndicators(marketData.prices, marketData.volumes);
       }
       
       // Turno del Sintetizador

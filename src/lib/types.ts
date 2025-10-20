@@ -352,6 +352,7 @@ export const IndicatorDataSchema = z.object({
         price: z.number(),
         sma10: z.number().optional(),
         sma20: z.number().optional(),
+        volume: z.number().optional(),
     })),
 });
 
@@ -363,7 +364,7 @@ export const FullCryptoAnalysisSchema = z.object({
     synthesis: z.string(),
     technicalSummary: z.string(),
     signals: z.array(TradingSignalSchema),
-    marketData: MarketDataSchema,
+    marketData: MarketDataSchema.nullable(),
     indicators: IndicatorsSchema,
 });
 export type FullCryptoAnalysis = z.infer<typeof FullCryptoAnalysisSchema>;
