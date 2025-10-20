@@ -72,11 +72,8 @@ const get_market_chart_data = ai.defineTool(
     },
     async ({ crypto_id, days }) => {
         try {
-            const apiKey = process.env.COINGECKO_API_KEY;
-            if (!apiKey) throw new Error("La clave de API de CoinGecko no está configurada.");
-
             const interval = days < 2 ? 'hourly' : 'daily';
-            const url = `https://api.coingecko.com/api/v3/coins/${crypto_id}/market_chart?vs_currency=usd&days=${days}&interval=${interval}&x_cg_demo_api_key=${apiKey}`;
+            const url = `https://api.coingecko.com/api/v3/coins/${crypto_id}/market_chart?vs_currency=usd&days=${days}&interval=${interval}`;
             const response = await fetch(url);
             
             if (!response.ok) {
