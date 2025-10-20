@@ -139,7 +139,7 @@ export default function TradingAnalysisPage() {
         }
     };
     
-    const selectedCoin = useMemo(() => coins.find(c => c.id === selectedCoinId), [coins, selectedCoinId]);
+    const selectedCoin = useMemo(() => Array.isArray(coins) ? coins.find(c => c.id === selectedCoinId) : null, [coins, selectedCoinId]);
 
     return (
         <div className="flex h-screen bg-background text-foreground">
