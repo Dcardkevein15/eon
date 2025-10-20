@@ -140,10 +140,12 @@ const synthesizerPrompt = ai.definePrompt({
   Análisis de Helios (Fundamental):
   "{{{heliosArgument}}}"
 
-  Tu tarea es triple:
-  1.  **Síntesis Estratégica:** Escribe un resumen que combine ambas perspectivas. ¿Cuáles son los puntos clave de conflicto y acuerdo? ¿Qué catalizadores o riesgos son más importantes? ¿Cuál es el sentimiento general del mercado?
-  2.  **Análisis de Indicadores Técnicos:** Revisa los datos de los indicadores proporcionados (RSI, MACD, etc.). Escribe un \`technicalSummary\` conciso explicando qué señalan estos indicadores en conjunto. Por ejemplo: "El RSI está en zona de sobrecompra, mientras que el MACD muestra un cruce bajista, sugiriendo una posible corrección a corto plazo."
-  3.  **Señales Accionables:** Basado en la síntesis y los datos discutidos, genera hasta 3 señales de trading. Para cada señal, especifica la criptomoneda ('{{{cryptoName}}}'), la acción (COMPRAR, VENDER, MANTENER), un precio de ejecución preciso en USD y una justificación clara y concisa en el campo 'reasoning'.`,
+  **Resumen del Análisis Técnico Cuantitativo:**
+  "{{{technicalSummary}}}"
+
+  Tu tarea es doble:
+  1.  **Síntesis Estratégica:** Escribe un resumen que combine las perspectivas de Apex, Helios y el resumen técnico. ¿Cuáles son los puntos clave de conflicto y acuerdo? ¿Qué catalizadores o riesgos son más importantes? ¿Cuál es el sentimiento general del mercado?
+  2.  **Señales Accionables:** Basado en la síntesis y los datos discutidos, genera hasta 3 señales de trading. Para cada señal, especifica la criptomoneda ('{{{cryptoName}}}'), la acción (COMPRAR, VENDER, MANTENER), un precio de ejecución preciso en USD y una justificación clara y concisa en el campo 'reasoning'.`,
 });
 
 
@@ -261,22 +263,37 @@ export async function runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInpu
         indicators = calculateIndicators(marketData.prices, marketData.volumes);
       }
       
+      // Generate a simple text summary of indicators
+      let technicalSummary = "No hay suficientes datos para un resumen técnico.";
+      if (indicators && indicators.rsi.length > 0 && indicators.macd.length > 0) {
+          const lastRsi = indicators.rsi[indicators.rsi.length - 1].value;
+          const lastMacd = indicators.macd[indicators.macd.length - 1];
+          technicalSummary = `El RSI actual es ${lastRsi.toFixed(2)}. `;
+          if (lastRsi > 70) technicalSummary += "Zona de sobrecompra. ";
+          if (lastRsi < 30) technicalSummary += "Zona de sobreventa. ";
+          if (lastMacd.histogram > 0) {
+              technicalSummary += "El histograma MACD es positivo, indicando momentum alcista.";
+          } else {
+              technicalSummary += "El histograma MACD es negativo, indicando momentum bajista.";
+          }
+      }
+
       const synthesizerInput = { 
         cryptoName,
         apexArgument: apexOutput.argument,
         heliosArgument: heliosOutput.argument,
-        indicators: indicators ? JSON.stringify(indicators, null, 2) : "No hay datos de indicadores disponibles."
+        technicalSummary,
       };
       const { output: synthesizerResult } = await synthesizerPrompt(synthesizerInput);
 
-      if (!synthesizerResult || !synthesizerResult.synthesis || !synthesizerResult.signals || !synthesizerResult.technicalSummary) {
+      if (!synthesizerResult || !synthesizerResult.synthesis || !synthesizerResult.signals) {
         throw new Error("Synthesizer no pudo generar un análisis completo.");
       }
       
       const finalResult: FullCryptoAnalysis = {
         debate: debateHistory,
         synthesis: synthesizerResult.synthesis,
-        technicalSummary: synthesizerResult.technicalSummary,
+        technicalSummary: synthesizerResult.technicalSummary || technicalSummary, // Use generated summary as fallback
         signals: synthesizerResult.signals,
         marketData: marketData || null,
         indicators: indicators,

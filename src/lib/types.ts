@@ -316,7 +316,7 @@ export const SynthesizerInputSchema = z.object({
   cryptoName: z.string(),
   apexArgument: z.string(),
   heliosArgument: z.string(),
-  indicators: z.string().describe('Un resumen JSON de los indicadores técnicos calculados (RSI, MACD, etc.).'),
+  technicalSummary: z.string().describe('Un resumen legible por humanos de los indicadores técnicos clave.'),
 });
 export type SynthesizerInput = z.infer<typeof SynthesizerInputSchema>;
 
