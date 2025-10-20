@@ -15,6 +15,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { v4 as uuidv4 } from 'uuid';
+import TechnicalIndicatorCharts from '@/components/trading/technical-indicator-charts';
 
 const AnalystAvatar = ({ name }: { name: string }) => {
     const isApex = name === 'Apex';
@@ -65,9 +66,7 @@ function useLocalStorage<T>(key: string, initialValue: T) {
 export default function TradingAnalysisPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [debate, setDebate] = useState<CryptoDebateTurn[]>([]);
-    const [synthesis, setSynthesis] = useState<string>('');
-    const [signals, setSignals] = useState<TradingSignal[]>([]);
+    const [analysisResult, setAnalysisResult] = useState<FullCryptoAnalysis | null>(null);
     const [alphaState, setAlphaState] = useState<string>('Sin análisis previo. Empezando desde cero.');
     const [analysisHistory, setAnalysisHistory, isHistoryLoading] = useLocalStorage<TradingAnalysisRecord[]>('trading-analysis-history', []);
     
@@ -77,17 +76,13 @@ export default function TradingAnalysisPage() {
     const handleStartAnalysis = useCallback(async () => {
         setIsLoading(true);
         setError(null);
-        setDebate([]);
-        setSynthesis('');
-        setSignals([]);
+        setAnalysisResult(null);
         setIsViewingHistory(false);
         
         try {
             const result: FullCryptoAnalysis = await runCryptoAnalysis({ previousAlphaState: alphaState });
             
-            setDebate(result.debate);
-            setSynthesis(result.synthesis);
-            setSignals(result.signals);
+            setAnalysisResult(result);
 
             const newAlphaState = `El último análisis generó ${result.signals.length} señales. La principal fue ${result.signals[0]?.action} ${result.signals[0]?.crypto} a ${result.signals[0]?.price}. Conclusión general: ${result.synthesis.substring(0, 100)}...`;
             setAlphaState(newAlphaState);
@@ -109,9 +104,7 @@ export default function TradingAnalysisPage() {
     
     const loadHistoryRecord = (record: TradingAnalysisRecord) => {
         setIsViewingHistory(true); // Switch to history viewing mode
-        setDebate(record.debate);
-        setSynthesis(record.synthesis);
-        setSignals(record.signals);
+        setAnalysisResult(record);
     };
 
     return (
@@ -172,6 +165,20 @@ export default function TradingAnalysisPage() {
 
                 <div className="flex-1 overflow-y-auto p-4 lg:p-6">
                     {error && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}
+                    
+                    {!analysisResult && !isLoading && (
+                        <div className="flex items-center justify-center h-full text-center text-muted-foreground">
+                            <p>Presiona "Iniciar Análisis" para comenzar.</p>
+                        </div>
+                    )}
+
+                    {isLoading && (
+                        <div className="flex items-center justify-center h-full">
+                            <Loader2 className="w-8 h-8 animate-spin text-primary"/>
+                        </div>
+                    )}
+
+                    {analysisResult && (
                     <div className="max-w-7xl mx-auto grid lg:grid-cols-3 gap-6 h-full">
                         {/* Main Debate Area */}
                         <div className="lg:col-span-2 h-full flex flex-col gap-6">
@@ -183,17 +190,7 @@ export default function TradingAnalysisPage() {
                                 <CardContent className="flex-1 overflow-hidden relative">
                                     <ScrollArea className="h-full">
                                         <div className="space-y-6 pr-4">
-                                            {debate.length === 0 && !isLoading && (
-                                                <div className="flex items-center justify-center h-full text-center text-muted-foreground">
-                                                    <p>El debate aparecerá aquí cuando inicie el análisis.</p>
-                                                </div>
-                                            )}
-                                             {isLoading && debate.length === 0 && (
-                                                <div className="flex items-center justify-center h-full">
-                                                    <Loader2 className="w-8 h-8 animate-spin text-primary"/>
-                                                </div>
-                                            )}
-                                            {debate.map((turn, index) => (
+                                            {analysisResult.debate.map((turn, index) => (
                                                 <div key={index} className={`flex flex-col gap-2 ${turn.analyst === 'Apex' ? 'items-start' : 'items-end'}`}>
                                                     <AnalystAvatar name={turn.analyst}/>
                                                     <div className={`p-3 rounded-lg max-w-xl ${turn.analyst === 'Apex' ? 'bg-blue-900/40 rounded-bl-none' : 'bg-amber-900/40 rounded-br-none'}`}>
@@ -207,6 +204,12 @@ export default function TradingAnalysisPage() {
                                     </ScrollArea>
                                 </CardContent>
                             </Card>
+                             {analysisResult.indicators && (
+                                <TechnicalIndicatorCharts
+                                    indicators={analysisResult.indicators}
+                                    technicalSummary={analysisResult.technicalSummary}
+                                />
+                            )}
                         </div>
                         
                         {/* Synthesis and Signals */}
@@ -214,18 +217,12 @@ export default function TradingAnalysisPage() {
                            <Card className="flex-1 flex flex-col bg-card/50">
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2"><Sparkles className="w-5 h-5 text-accent"/> Síntesis Estratégica</CardTitle>
-                                    <CardDescription>The Synthesizer extrae las conclusiones clave del debate.</CardDescription>
+                                    <CardDescription>The Synthesizer extrae las conclusiones clave.</CardDescription>
                                 </CardHeader>
                                 <CardContent className="flex-1 overflow-hidden relative">
                                     <ScrollArea className="h-full">
                                         <div className="prose prose-sm dark:prose-invert max-w-none pr-4">
-                                           {isLoading && !synthesis ? (
-                                                <div className="flex items-center justify-center h-full">
-                                                    <Loader2 className="w-6 h-6 animate-spin text-accent"/>
-                                                </div>
-                                           ) : (
-                                                <ReactMarkdown>{synthesis}</ReactMarkdown>
-                                           )}
+                                           <ReactMarkdown>{analysisResult.synthesis}</ReactMarkdown>
                                         </div>
                                     </ScrollArea>
                                 </CardContent>
@@ -235,34 +232,29 @@ export default function TradingAnalysisPage() {
                                     <CardTitle className="flex items-center gap-2 text-primary">Señales del Día</CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    {isLoading && signals.length === 0 ? (
-                                        <div className="text-center text-muted-foreground text-sm">Generando señales...</div>
-                                    ) : signals.length > 0 ? (
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Cripto</TableHead>
-                                                    <TableHead>Acción</TableHead>
-                                                    <TableHead>Precio</TableHead>
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Cripto</TableHead>
+                                                <TableHead>Acción</TableHead>
+                                                <TableHead>Precio</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {analysisResult.signals.map((signal, index) => (
+                                                <TableRow key={`${signal.crypto}-${index}`}>
+                                                    <TableCell className="font-medium">{signal.crypto}</TableCell>
+                                                    <TableCell className={signal.action === 'COMPRAR' ? 'text-green-400' : 'text-red-400'}>{signal.action}</TableCell>
+                                                    <TableCell className="font-mono">${signal.price.toFixed(2)}</TableCell>
                                                 </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {signals.map((signal, index) => (
-                                                    <TableRow key={`${signal.crypto}-${index}`}>
-                                                        <TableCell className="font-medium">{signal.crypto}</TableCell>
-                                                        <TableCell className={signal.action === 'COMPRAR' ? 'text-green-400' : 'text-red-400'}>{signal.action}</TableCell>
-                                                        <TableCell className="font-mono">${signal.price.toFixed(2)}</TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    ) : (
-                                         <div className="text-center text-muted-foreground text-sm">Las señales aparecerán aquí al finalizar el análisis.</div>
-                                    )}
+                                            ))}
+                                        </TableBody>
+                                    </Table>
                                 </CardContent>
                             </Card>
                         </div>
                     </div>
+                    )}
                 </div>
              </main>
         </div>

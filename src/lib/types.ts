@@ -297,34 +297,74 @@ export const AnalystTurnInputSchema = z.object({
 export type AnalystTurnInput = z.infer<typeof AnalystTurnInputSchema>;
 
 export const AnalystTurnOutputSchema = z.object({
-  argument: z.string().describe("El siguiente argumento o refutación en el debate, terminando con una pregunta directa al otro analista."),
+  argument: z.string().describe("El argumento conciso del analista."),
 });
 export type AnalystTurnOutput = z.infer<typeof AnalystTurnOutputSchema>;
 
 export const SynthesizerInputSchema = z.object({
-  fullDebate: z.string(),
+  apexArgument: z.string(),
+  heliosArgument: z.string(),
+  indicators: z.string().describe('Un resumen JSON de los indicadores técnicos calculados (RSI, MACD, etc.).'),
 });
 export type SynthesizerInput = z.infer<typeof SynthesizerInputSchema>;
 
 export const TradingSignalSchema = z.object({
-    crypto: z.string().describe("Símbolo de la criptomoneda (ej. BTC, ETH)."),
+    crypto: z.string().describe("Símbolo de la criptomoneda (ej. Bitcoin)."),
     action: z.enum(['COMPRAR', 'VENDER', 'MANTENER']).describe("La acción de trading recomendada."),
     price: z.number().describe("El precio de ejecución sugerido en USD."),
-    reasoning: z.string().describe("Una justificación breve y clara para la señal."),
+    reasoning: z.string().describe("Una justificación breve y clara para la señal, basada en el análisis técnico y fundamental."),
 });
 export type TradingSignal = z.infer<typeof TradingSignalSchema>;
 
 export const SynthesizerOutputSchema = z.object({
   synthesis: z.string().describe("Un resumen conciso del debate, destacando los puntos de acuerdo, desacuerdo y las conclusiones emergentes."),
-  signals: z.array(TradingSignalSchema).describe("Una lista de las 3 señales de trading más fuertes del día."),
+  technicalSummary: z.string().describe("Un resumen interpretativo de los indicadores técnicos."),
+  signals: z.array(TradingSignalSchema).describe("Una lista de 3 señales de trading accionables."),
 });
 export type SynthesizerOutput = z.infer<typeof SynthesizerOutputSchema>;
+
+
+const MarketDataItemSchema = z.object({
+  timestamp: z.number(),
+  value: z.number(),
+});
+export const MarketDataSchema = z.object({
+    prices: z.array(MarketDataItemSchema),
+    volumes: z.array(MarketDataItemSchema),
+});
+
+export const IndicatorDataSchema = z.object({
+    rsi: z.array(z.object({ timestamp: z.number(), value: z.number() })),
+    macd: z.array(z.object({
+        timestamp: z.number(),
+        MACD: z.number().optional(),
+        signal: z.number().optional(),
+        histogram: z.number().optional(),
+    })),
+    bollingerBands: z.array(z.object({
+        timestamp: z.number(),
+        upper: z.number(),
+        middle: z.number(),
+        lower: z.number(),
+    })),
+    sma: z.array(z.object({
+        timestamp: z.number(),
+        price: z.number(),
+        sma10: z.number().optional(),
+        sma20: z.number().optional(),
+    })),
+});
+
+export const IndicatorsSchema = IndicatorDataSchema.nullable();
 
 
 export const FullCryptoAnalysisSchema = z.object({
     debate: z.array(CryptoDebateTurnSchema),
     synthesis: z.string(),
+    technicalSummary: z.string(),
     signals: z.array(TradingSignalSchema),
+    marketData: MarketDataSchema,
+    indicators: IndicatorsSchema,
 });
 export type FullCryptoAnalysis = z.infer<typeof FullCryptoAnalysisSchema>;
 
