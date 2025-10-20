@@ -222,7 +222,7 @@ export async function runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInpu
       const previousAlphaState = input.previousAlphaState || 'Sin estado previo.';
       const cryptoName = input.crypto_id.charAt(0).toUpperCase() + input.crypto_id.slice(1);
 
-      const [apexResult, heliosResult] = await Promise.all([
+      const [apexResult, heliosResult, marketDataResult] = await Promise.all([
         analystPrompt({ 
             analystName: 'Apex' as const, 
             cryptoName,
@@ -238,7 +238,8 @@ export async function runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInpu
             debateHistory: '',
             previousAlphaState,
             identityDescription: getIdentityDescription('Helios')
-        })
+        }),
+        get_market_chart_data({ crypto_id: input.crypto_id, days: input.days })
       ]);
 
       const apexOutput = apexResult.output;
@@ -246,14 +247,14 @@ export async function runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInpu
 
       if (!apexOutput?.argument) throw new Error("Apex no pudo generar un análisis.");
       if (!heliosOutput?.argument) throw new Error("Helios no pudo generar un análisis.");
+      if (!marketDataResult) throw new Error("No se pudieron obtener los datos de mercado.");
       
       const debateHistory: CryptoDebateTurn[] = [
         { analyst: 'Apex', argument: apexOutput.argument },
         { analyst: 'Helios', argument: heliosOutput.argument }
       ];
 
-      const marketDataToolCall = apexOutput.toolCalls?.find(call => call.toolName === 'get_market_chart_data');
-      const marketData = marketDataToolCall?.output as z.infer<typeof MarketDataSchema> | undefined;
+      const marketData = marketDataResult as z.infer<typeof MarketDataSchema>;
 
       let indicators: z.infer<typeof IndicatorsSchema> = null;
       if (marketData?.prices && marketData?.volumes) {
