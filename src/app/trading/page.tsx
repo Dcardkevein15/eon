@@ -160,7 +160,7 @@ export default function TradingAnalysisPage() {
                                     <SelectValue placeholder="Seleccionar Cripto" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {coins.map(coin => (
+                                    {Array.isArray(coins) && coins.map(coin => (
                                         <SelectItem key={coin.id} value={coin.id}>{coin.name}</SelectItem>
                                     ))}
                                 </SelectContent>
