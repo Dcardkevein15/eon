@@ -131,7 +131,12 @@ export default function TradingAnalysisPage() {
         setIsViewingHistory(true);
         setAnalysisResult(record);
         const coin = coins.find(c => c.name.toLowerCase() === record.signals[0]?.crypto.toLowerCase());
-        if(coin) setSelectedCoinId(coin.id);
+        if (coin) {
+          const matchingCoinInList = coins.find(c => c.id === coin.id);
+          if (matchingCoinInList) {
+            setSelectedCoinId(matchingCoinInList.id);
+          }
+        }
     };
     
     const selectedCoin = useMemo(() => coins.find(c => c.id === selectedCoinId), [coins, selectedCoinId]);

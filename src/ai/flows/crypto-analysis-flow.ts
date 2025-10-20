@@ -252,7 +252,7 @@ export async function runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInpu
         { analyst: 'Helios', argument: heliosOutput.argument }
       ];
 
-      const marketDataToolCall = apexResult.output!.toolCalls?.find(call => call.toolName === 'get_market_chart_data');
+      const marketDataToolCall = apexOutput.toolCalls?.find(call => call.toolName === 'get_market_chart_data');
       const marketData = marketDataToolCall?.output as z.infer<typeof MarketDataSchema> | undefined;
 
       let indicators: z.infer<typeof IndicatorsSchema> = null;
