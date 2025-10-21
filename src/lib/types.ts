@@ -297,7 +297,6 @@ export type MarketData = z.infer<typeof MarketDataSchema>;
 
 export const CryptoAnalysisInputSchema = z.object({
   crypto_id: z.string().describe("El ID de la criptomoneda según CoinGecko (ej: 'bitcoin', 'ethereum')."),
-  marketData: MarketDataSchema.optional().describe("Datos opcionales del mercado si ya han sido obtenidos."),
 });
 export type CryptoAnalysisInput = z.infer<typeof CryptoAnalysisInputSchema>;
 
@@ -327,7 +326,6 @@ export const SynthesizerInputSchema = z.object({
   apexArgument: z.string(),
   heliosArgument: z.string(),
   technicalSummary: z.string().describe('Un resumen legible por humanos de los indicadores técnicos clave.'),
-  currentPrice: z.number().describe('El precio actual de la criptomoneda.'),
 });
 export type SynthesizerInput = z.infer<typeof SynthesizerInputSchema>;
 
@@ -336,7 +334,7 @@ export const TradingSignalSchema = z.object({
     action: z.enum(['COMPRAR', 'VENDER', 'MANTENER']).describe("La acción de trading recomendada."),
     price: z.number().describe("El precio de ejecución sugerido en USD. Usa 0 si el precio no está disponible."),
     reasoning: z.string().describe("Una justificación breve y clara para la señal, basada en el análisis."),
-}).extend({}).passthrough();
+}).passthrough();
 export type TradingSignal = z.infer<typeof TradingSignalSchema>;
 
 export const SynthesizerOutputSchema = z.object({

@@ -91,7 +91,9 @@ const SignalCard = ({ signal }: { signal: TradingSignal }) => {
                     <span className="font-bold text-sm uppercase tracking-wider">{signal.action}</span>
                 </div>
                 <div className="text-right">
-                    <p className="font-bold text-lg text-foreground">${signal.price > 0 ? signal.price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</p>
+                    <p className="font-bold text-lg text-foreground">
+                        {signal.price > 0 ? `$${signal.price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`: '-'}
+                    </p>
                 </div>
             </div>
             <p className="text-xs text-foreground/70 mt-2">{signal.reasoning}</p>
@@ -156,12 +158,9 @@ export default function TradingAnalysisPage() {
         setIsViewingHistory(true);
         setAnalysisResult(record);
         if (Array.isArray(coins)) {
-            const coin = coins.find(c => c.name.toLowerCase() === record.signals[0]?.crypto.toLowerCase());
+            const coin = coins.find(c => c.id === record.crypto_id);
             if (coin) {
-              const matchingCoinInList = coins.find(c => c.id === coin.id);
-              if (matchingCoinInList) {
-                setSelectedCoinId(matchingCoinInList.id);
-              }
+              setSelectedCoinId(coin.id);
             }
         }
     };
@@ -209,7 +208,7 @@ export default function TradingAnalysisPage() {
                                                 {analysisHistory.map(record => (
                                                     <Card key={record.id} className="cursor-pointer hover:border-primary" onClick={() => loadHistoryRecord(record)}>
                                                         <CardHeader>
-                                                            <CardTitle className="text-sm">Análisis de {record.signals[0]?.crypto}</CardTitle>
+                                                            <CardTitle className="text-sm">Análisis de {record.crypto_id}</CardTitle>
                                                             <CardDescription>
                                                                 {formatDistanceToNow(new Date(record.timestamp), { addSuffix: true, locale: es })}
                                                             </CardDescription>

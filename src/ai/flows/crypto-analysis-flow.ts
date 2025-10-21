@@ -22,29 +22,6 @@ import { SMA, MACD, RSI, BollingerBands } from 'technicalindicators';
 
 // --- Herramientas ---
 
-const get_current_price = ai.defineTool({
-    name: 'get_current_price',
-    description: 'Obtiene el precio actual de una criptomoneda específica.',
-    inputSchema: z.object({ cryptoId: z.string().describe("El ID de la criptomoneda, ej: 'bitcoin'.") }),
-    outputSchema: z.number(),
-}, async ({ cryptoId }) => {
-    try {
-        const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cryptoId}&vs_currencies=usd`);
-        if (!response.ok) {
-            throw new Error(`Error de red: ${response.statusText}`);
-        }
-        const data = await response.json();
-        const price = data[cryptoId]?.usd;
-        if (typeof price !== 'number') {
-            throw new Error(`Precio no encontrado para ${cryptoId}`);
-        }
-        return price;
-    } catch (error) {
-        console.error(`Error en la herramienta get_current_price para ${cryptoId}:`, error);
-        return 0; // Return 0 on failure to avoid breaking the main flow.
-    }
-});
-
 const get_coin_list = ai.defineTool({
     name: 'get_coin_list',
     description: 'Obtiene una lista de las principales criptomonedas.',
@@ -114,11 +91,9 @@ const synthesizerPrompt = ai.definePrompt({
   Análisis de Helios (Fundamental):
   "{{{heliosArgument}}}"
 
-  El precio actual de {{{cryptoName}}} es \${{{currentPrice}}}.
-
   Tu tarea es doble:
   1.  **Síntesis Estratégica:** Escribe un resumen que combine las perspectivas de Apex y Helios. ¿Cuáles son los puntos clave de conflicto y acuerdo? ¿Qué catalizadores o riesgos son más importantes? ¿Cuál es el sentimiento general del mercado?
-  2.  **Señales Accionables:** Basado en la síntesis, genera hasta 3 señales de trading. Para cada señal, especifica la criptomoneda ('{{{cryptoName}}}'), la acción (COMPRAR, VENDER, MANTENER), y una justificación clara y concisa en el campo 'reasoning'. **Usa el precio actual de \${{{currentPrice}}} para el campo 'price' de cada señal**.`,
+  2.  **Señales Accionables:** Basado en la síntesis, genera hasta 3 señales de trading. Para cada señal, especifica la criptomoneda ('{{{cryptoName}}}'), la acción (COMPRAR, VENDER, MANTENER), y una justificación clara y concisa en el campo 'reasoning'. Para el campo 'price', determina el precio de ejecución óptimo basado en tu análisis; si la acción es 'MANTENER' o no aplica un precio específico, usa 0.`,
 });
 
 
@@ -156,16 +131,12 @@ export async function runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInpu
         { analyst: 'Helios', argument: analystOutputs.heliosArgument }
       ];
 
-      // 2. Obtener el precio actual
-      const currentPrice = await get_current_price({ cryptoId: input.crypto_id });
-
-      // 3. Invocar al sintetizador con los argumentos y el precio
+      // 2. Invocar al sintetizador con los argumentos
       const synthesizerInput = { 
         cryptoName,
         apexArgument: analystOutputs.apexArgument,
         heliosArgument: analystOutputs.heliosArgument,
         technicalSummary: "El análisis técnico se basa en conocimiento general de patrones históricos, no en datos de mercado en tiempo real.",
-        currentPrice: currentPrice,
       };
       const { output: synthesizerResult } = await synthesizerPrompt(synthesizerInput);
 
@@ -173,7 +144,7 @@ export async function runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInpu
         throw new Error("Synthesizer no pudo generar un análisis completo.");
       }
       
-      // 4. Construir el resultado final
+      // 3. Construir el resultado final
       const finalResult: FullCryptoAnalysis = {
         debate: debateHistory,
         synthesis: synthesizerResult.synthesis,
