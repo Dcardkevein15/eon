@@ -15,7 +15,7 @@ import { analyzeSentiment as analyzeSentimentFlow } from '@/ai/flows/analyze-sen
 import { getTacticalAdvice as getTacticalAdviceFlow } from '@/ai/flows/get-tactical-advice';
 import { classifyIntent as classifyIntentFlow } from '@/ai/flows/classify-intent';
 import { analyzeVoiceMessage as analyzeVoiceMessageFlow } from '@/ai/flows/analyze-voice-message';
-import { updateWhiteboard as updateWhiteboardFlow } from '@/ai/flows/update-whiteboard';
+import { updateWhiteboardFlow } from '@/ai/flows/update-whiteboard';
 
 
 const expertRoles = [
