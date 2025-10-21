@@ -15,60 +15,81 @@ import { Sparkles } from 'lucide-react';
 
 const ThinkingAnimation = () => {
     return (
-        <div className="w-full h-full relative overflow-hidden flex items-center justify-center">
+        <div className="w-full h-full relative overflow-hidden flex items-center justify-center bg-black rounded-lg">
             <svg
-                width="80%"
-                height="80%"
-                viewBox="0 0 100 100"
-                style={{ filter: "url(#goo)" }}
+                width="100%"
+                height="100%"
+                viewBox="0 0 200 150"
+                preserveAspectRatio="xMidYMid meet"
             >
-                {/* Defs for the goo effect */}
+                {/* Stars Background */}
+                <g>
+                    {[...Array(50)].map((_, i) => (
+                        <motion.circle
+                            key={`star-${i}`}
+                            cx={Math.random() * 200}
+                            cy={Math.random() * 150}
+                            r={Math.random() * 0.8 + 0.2}
+                            fill="white"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: [0, Math.random() * 0.7 + 0.1, 0] }}
+                            transition={{
+                                duration: Math.random() * 3 + 2,
+                                repeat: Infinity,
+                                repeatType: 'mirror',
+                                delay: Math.random() * 2,
+                            }}
+                        />
+                    ))}
+                </g>
+
+                {/* Buddha Silhouette */}
+                <motion.path
+                    d="M100 75
+                       C 90 75, 85 80, 85 90
+                       L 85 105
+                       A 15 15 0 0 0 100 120
+                       A 15 15 0 0 0 115 105
+                       L 115 90
+                       C 115 80, 110 75, 100 75 Z
+                       M 80 110 L 120 110 L 120 115 C 120 125, 110 130, 100 130 C 90 130, 80 125, 80 115 Z
+                       "
+                    fill="hsl(var(--primary))"
+                    initial={{ opacity: 0.8 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 2, repeat: Infinity, repeatType: 'mirror' }}
+                    filter="url(#glow)"
+                />
+
+                {/* Expanding Waves */}
                 <defs>
-                    <filter id="goo">
-                        <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur" />
-                        <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -7" result="goo" />
-                        <feBlend in="SourceGraphic" in2="goo" />
+                    <filter id="glow">
+                        <feGaussianBlur stdDeviation="3.5" result="coloredBlur" />
+                        <feMerge>
+                            <feMergeNode in="coloredBlur" />
+                            <feMergeNode in="SourceGraphic" />
+                        </feMerge>
                     </filter>
                 </defs>
-                {/* Animated blobs */}
-                <motion.g>
-                    <motion.circle
-                        cx="50"
-                        cy="50"
-                        r="12"
-                        fill="hsl(var(--primary))"
-                        animate={{
-                            cx: [45, 55, 45],
-                            r: [10, 15, 10],
-                            opacity: [0.8, 1, 0.8],
-                        }}
-                        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                    />
-                    <motion.circle
-                        cx="35"
-                        cy="50"
-                        r="10"
-                        fill="hsl(var(--accent))"
-                        animate={{
-                            cy: [55, 45, 55],
-                            r: [8, 12, 8],
-                            opacity: [0.7, 1, 0.7],
-                        }}
-                        transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
-                    />
-                     <motion.circle
-                        cx="65"
-                        cy="50"
-                        r="10"
-                        fill="hsl(var(--accent))"
-                        animate={{
-                            cy: [45, 55, 45],
-                            r: [12, 8, 12],
-                            opacity: [1, 0.7, 1],
-                        }}
-                        transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
-                    />
-                </motion.g>
+                <g transform="translate(100, 70)">
+                    {[...Array(3)].map((_, i) => (
+                        <motion.circle
+                            key={`wave-${i}`}
+                            r={5}
+                            fill="none"
+                            stroke="hsl(var(--primary))"
+                            strokeWidth={1.5}
+                            initial={{ scale: 0, opacity: 1 }}
+                            animate={{ scale: 15, opacity: 0 }}
+                            transition={{
+                                duration: 4,
+                                repeat: Infinity,
+                                ease: 'easeOut',
+                                delay: i * 1.33,
+                            }}
+                        />
+                    ))}
+                </g>
             </svg>
         </div>
     );
@@ -84,7 +105,7 @@ const ThinkingMessage = () => {
                 </AvatarFallback>
             </Avatar>
             <div className={cn(
-                'px-4 py-3 rounded-2xl w-48 h-24 overflow-hidden',
+                'px-4 py-3 rounded-2xl w-48 h-36 overflow-hidden',
                 'bg-card border rounded-bl-none flex items-center justify-center'
             )}>
                 <ThinkingAnimation />
