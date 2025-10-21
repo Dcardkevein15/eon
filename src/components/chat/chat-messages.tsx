@@ -43,17 +43,9 @@ const ThinkingAnimation = () => {
                     ))}
                 </g>
 
-                {/* Buddha Silhouette */}
-                <motion.path
-                    d="M100 75
-                       C 90 75, 85 80, 85 90
-                       L 85 105
-                       A 15 15 0 0 0 100 120
-                       A 15 15 0 0 0 115 105
-                       L 115 90
-                       C 115 80, 110 75, 100 75 Z
-                       M 80 110 L 120 110 L 120 115 C 120 125, 110 130, 100 130 C 90 130, 80 125, 80 115 Z
-                       "
+                {/* Buddha Silhouette - More detailed and recognizable */}
+                 <motion.path
+                    d="M100 80 C95 80 90 85 90 90 C90 95 95 100 100 100 C105 100 110 95 110 90 C110 85 105 80 100 80 Z M85 105 C80 105 75 110 75 115 L75 120 L125 120 L125 115 C125 110 120 105 115 105 Z M70 125 L130 125 L125 135 L75 135 Z"
                     fill="hsl(var(--primary))"
                     initial={{ opacity: 0.8 }}
                     animate={{ opacity: 1 }}
@@ -71,7 +63,7 @@ const ThinkingAnimation = () => {
                         </feMerge>
                     </filter>
                 </defs>
-                <g transform="translate(100, 70)">
+                <g transform="translate(100, 90)">
                     {[...Array(3)].map((_, i) => (
                         <motion.circle
                             key={`wave-${i}`}
