@@ -129,16 +129,7 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
 
   const fetchSuggestions = useCallback(async () => {
     const currentMessages = messages || [];
-    if (currentMessages.length === 0 && !messagesLoading) {
-      // Fetch suggestions for brand new chats
-       try {
-        const newSuggestions = await getSmartComposeSuggestions('');
-        setSuggestions(newSuggestions.slice(0, 3));
-      } catch (error) {
-          console.error("Error fetching initial suggestions", error);
-      }
-      return;
-    }
+    // This function can be called to manually refresh suggestions.
     setIsRefreshingSuggestions(true);
     try {
         const historyString = currentMessages.map((m) => `${m.role}: ${m.content}`).join('\n');
@@ -149,26 +140,12 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
     } finally {
         setIsRefreshingSuggestions(false);
     }
-  }, [messages, messagesLoading]);
-
-  // Fetch suggestions for existing chats on load.
-  useEffect(() => {
-    if (messages && messages.length > 0 && !messagesLoading) {
-      fetchSuggestions();
-    }
-  }, [messages, messagesLoading, fetchSuggestions]);
-  
-  // Also fetch suggestions for newly created empty chats.
-  useEffect(() => {
-    if (messages && messages.length === 0 && !messagesLoading && !isResponding) {
-      fetchSuggestions();
-    }
-  }, [messages, messagesLoading, isResponding, fetchSuggestions]);
+  }, [messages]);
 
   const getAIResponseAndUpdate = useCallback(async (currentMessages: Message[]) => {
     if (!user || !firestore) return;
     setIsResponding(true);
-    setSuggestions([]);
+    setSuggestions([]); // Clear previous suggestions immediately
     if (suggestionTimeoutRef.current) {
         clearTimeout(suggestionTimeoutRef.current);
     }
@@ -225,7 +202,7 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
 
       // Delayed suggestions logic
       const words = aiResponseContent.split(/\s+/).length;
-      const readingTime = Math.max(12000, words * 360);
+      const readingTime = Math.max(12000, words * 360); // min 12 seconds
       
       suggestionTimeoutRef.current = setTimeout(async () => {
          const historyString = updatedMessages.map((m) => `${m.role}: ${m.content}`).join('\n');
@@ -300,12 +277,13 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
 
 
   useEffect(() => {
+    // Clear any pending suggestion timeout when the component unmounts or chat changes
     return () => {
       if (suggestionTimeoutRef.current) {
         clearTimeout(suggestionTimeoutRef.current);
       }
     };
-  }, []);
+  }, [chat.id]);
 
   const handleClearSuggestions = () => {
     setSuggestions([]);
