@@ -11,7 +11,7 @@ import {
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Send, Sparkles, Paperclip, X, RefreshCw } from 'lucide-react';
+import { Send, Sparkles, Paperclip, X, RefreshCw, Mic, Square, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem } from '@/components/ui/form';
@@ -26,7 +26,7 @@ const chatSchema = z.object({
 type ChatFormValues = z.infer<typeof chatSchema>;
 
 interface ChatInputProps {
-  onSendMessage: (message: string, imageUrl?: string) => void;
+  onSendMessage: (message: string, imageUrl?: string, audioUrl?: string) => void;
   isLoading: boolean;
   suggestions: string[];
   onClearSuggestions: () => void;
@@ -38,10 +38,15 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
   ({ onSendMessage, isLoading, suggestions, onClearSuggestions, onRefreshSuggestions, isRefreshingSuggestions }, ref) => {
     const localTextareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
+
     const [isFocused, setIsFocused] = useState(false);
     const [attachedImage, setAttachedImage] = useState<string | null>(null);
     const [showSuggestions, setShowSuggestions] = useState(true);
-
+    const [isRecording, setIsRecording] = useState(false);
+    const [recordedAudio, setRecordedAudio] = useState<string | null>(null);
+    
     useImperativeHandle(ref, () => localTextareaRef.current as HTMLTextAreaElement);
 
     const form = useForm<ChatFormValues>({
@@ -51,7 +56,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
 
     const messageValue = form.watch('message');
     const isMessageEmpty = !messageValue || messageValue.trim() === '';
-    const canSubmit = !isLoading && (!isMessageEmpty || !!attachedImage);
+    const canSubmit = !isLoading && (!isMessageEmpty || !!attachedImage || !!recordedAudio);
 
     const handleSuggestion = (suggestion: string) => {
       if (isLoading) return;
@@ -62,10 +67,11 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
 
     const handleSubmit: SubmitHandler<ChatFormValues> = (data) => {
       if (!canSubmit) return;
-      onSendMessage(data.message, attachedImage || undefined);
+      onSendMessage(data.message, attachedImage || undefined, recordedAudio || undefined);
       form.reset();
       onClearSuggestions();
       setAttachedImage(null);
+      setRecordedAudio(null);
     };
 
     const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -119,6 +125,61 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
         }
     };
 
+    const handleStartRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorderRef.current = new MediaRecorder(stream);
+            audioChunksRef.current = [];
+            
+            mediaRecorderRef.current.addEventListener("dataavailable", event => {
+                audioChunksRef.current.push(event.data);
+            });
+
+            mediaRecorderRef.current.addEventListener("stop", () => {
+                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                const audioUrl = URL.createObjectURL(audioBlob);
+                setRecordedAudio(audioUrl);
+            });
+
+            mediaRecorderRef.current.start();
+            setIsRecording(true);
+        } catch (err) {
+            console.error("Error accessing microphone:", err);
+            // You might want to show a toast message to the user here
+        }
+    };
+
+    const handleStopRecording = () => {
+        if (mediaRecorderRef.current) {
+            mediaRecorderRef.current.stop();
+            // Stop all tracks on the stream to turn off the mic indicator
+            mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+            setIsRecording(false);
+        }
+    };
+    
+    const clearRecording = () => {
+        setRecordedAudio(null);
+    }
+
+    const sendAudio = () => {
+        if (recordedAudio) {
+            // Convert blob URL to data URI to send to server action
+            fetch(recordedAudio)
+                .then(res => res.blob())
+                .then(blob => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        onSendMessage(form.getValues('message'), attachedImage || undefined, reader.result as string);
+                        form.reset();
+                        setAttachedImage(null);
+                        setRecordedAudio(null);
+                    };
+                    reader.readAsDataURL(blob);
+                });
+        }
+    };
+
 
     return (
       <TooltipProvider delayDuration={200}>
@@ -169,18 +230,36 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
           >
              <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
             
-            {attachedImage && (
-              <div className="relative mb-2 w-28 h-28 group">
-                <Image src={attachedImage} alt="Preview" layout="fill" className="rounded-lg object-cover" />
-                <Button 
-                  type="button" 
-                  variant="destructive" 
-                  size="icon" 
-                  className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={() => setAttachedImage(null)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+            {(attachedImage || recordedAudio) && (
+              <div className="flex gap-2 mb-2">
+                {attachedImage && (
+                  <div className="relative w-28 h-28 group">
+                    <Image src={attachedImage} alt="Preview" layout="fill" className="rounded-lg object-cover" />
+                    <Button 
+                      type="button" 
+                      variant="destructive" 
+                      size="icon" 
+                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => setAttachedImage(null)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                {recordedAudio && (
+                  <div className="p-2 border rounded-lg bg-card flex items-center gap-2 group">
+                    <audio src={recordedAudio} controls className="h-10" />
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-7 w-7 text-destructive"
+                      onClick={clearRecording}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -216,6 +295,17 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
                                <TooltipContent>
                                 <p>Adjuntar archivo</p>
                               </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={isRecording ? handleStopRecording : handleStartRecording} disabled={isLoading}>
+                                    {isRecording ? <Square className="h-5 w-5 text-red-500 fill-red-500" /> : <Mic className="h-5 w-5" />}
+                                    <span className="sr-only">{isRecording ? 'Detener grabación' : 'Grabar audio'}</span>
+                                </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>{isRecording ? 'Detener grabación' : 'Grabar audio'}</p>
+                                </TooltipContent>
                             </Tooltip>
                         </div>
                         <Textarea

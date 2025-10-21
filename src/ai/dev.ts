@@ -13,3 +13,4 @@ import '@/ai/flows/analyze-sentiment.ts';
 import '@/ai/flows/get-tactical-advice.ts';
 import '@/ai/flows/classify-intent.ts';
 import '@/ai/flows/crypto-analysis-flow.ts';
+import '@/ai/flows/analyze-voice-message.ts';

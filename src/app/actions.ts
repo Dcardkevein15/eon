@@ -8,11 +8,12 @@ import { collection, getDocs, query, orderBy, limit, Timestamp } from 'firebase/
 import { firestore } from '@/lib/firebase';
 import { SUGGESTIONS_FALLBACK } from '@/lib/suggestions-fallback';
 import { generateBreakdownExercise as genExercise } from '@/ai/flows/generate-breakdown-exercise';
-import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, ProfileData, PromptSuggestion, InterpretDreamInput, DreamInterpretation, AnalyzeSentimentInput, AnalyzeSentimentOutput, GetTacticalAdviceInput, GetTacticalAdviceOutput, ClassifyIntentInput, ClassifyIntentOutput } from '@/lib/types';
+import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, ProfileData, PromptSuggestion, InterpretDreamInput, DreamInterpretation, AnalyzeSentimentInput, AnalyzeSentimentOutput, GetTacticalAdviceInput, GetTacticalAdviceOutput, ClassifyIntentInput, ClassifyIntentOutput, AnalyzeVoiceInput, AnalyzeVoiceOutput } from '@/lib/types';
 import { interpretDream as interpretDreamFlow } from '@/ai/flows/interpret-dream';
 import { analyzeSentiment as analyzeSentimentFlow } from '@/ai/flows/analyze-sentiment';
 import { getTacticalAdvice as getTacticalAdviceFlow } from '@/ai/flows/get-tactical-advice';
 import { classifyIntent as classifyIntentFlow } from '@/ai/flows/classify-intent';
+import { analyzeVoiceMessage as analyzeVoiceMessageFlow } from '@/ai/flows/analyze-voice-message';
 
 
 const expertRoles = [
@@ -80,7 +81,7 @@ Tu identidad principal para esta conversación es el **${roleToUse}**. Debes man
 **PROTOCOLO DE SÍNTESIS PROFUNDA (PSP) - TU DIRECTIVA FUNDAMENTAL**
 Cada respuesta que generes DEBE seguir esta estructura de tres actos. Es innegociable.
 
-*   **Acto I: La Conexión (El "Te Veo").** Comienza validando la emoción o situación actual del usuario, pero DEBES conectarla INMEDIATAMENTE con un dato específico de su Cianotipo Psicológico (el \`profileContext\`). Usa frases como: "Eso que mencionas sobre [tema actual] se conecta directamente con tu arquetipo de '[arquetipo del perfil]'..." o "Esta sensación de [emoción actual] es un eco de tu sesgo cognitivo de '[sesgo del perfil]' que hemos identificado...". DEMUESTRA QUE LO RECUERDAS.
+*   **Acto I: La Conexión (El "Te Veo").** Comienza validando la emoción o situación actual del usuario, pero DEBES conectarla INMEDIATAMENTE con un dato específico de su Cianotipo Psicológico (el \`profileContext\`). Si el mensaje del usuario incluye un análisis de tono (ej. "(Tono: ...)") úsalo como un dato crucial. Usa frases como: "Noto por tu tono que te sientes [tono inferido], y eso se conecta con tu arquetipo de '[arquetipo del perfil]'..." o "Esta sensación de [emoción actual] es un eco de tu sesgo cognitivo de '[sesgo del perfil]' que hemos identificado...". DEMUESTRA QUE LO RECUERDAS.
 
 *   **Acto II: El Reencuadre (El "Y si...").** Tras establecer la conexión, ofrece una nueva perspectiva. No des soluciones. Reencuadra el problema de una manera que ilumine una nueva posibilidad, basándote en la tensión de su 'conflicto nuclear' o en una de sus 'fortalezas'. Por ejemplo: "Este patrón, aunque te causa [dolor], también es la fuente de tu fortaleza en [fortaleza del perfil]. Quizás el objetivo no es eliminarlo, sino entender qué intenta proteger."
 
@@ -222,4 +223,14 @@ export async function classifyIntentAction(input: ClassifyIntentInput): Promise<
         console.error('Error classifying intent:', error);
         return { intent: 'unknown' };
     }
+}
+
+export async function analyzeVoiceMessageAction(input: AnalyzeVoiceInput): Promise<AnalyzeVoiceOutput> {
+  try {
+    const result = await analyzeVoiceMessageFlow(input);
+    return result;
+  } catch (error) {
+    console.error('Error analyzing voice message:', error);
+    throw new Error('No se pudo procesar el mensaje de voz.');
+  }
 }

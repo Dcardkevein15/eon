@@ -290,14 +290,14 @@ export const MarketDataItemSchema = z.object({
 export type MarketDataItem = z.infer<typeof MarketDataItemSchema>;
 
 export const MarketDataSchema = z.object({
-    prices: z.array(MarketDataItemSchema),
-    volumes: z.array(MarketDataItemSchema),
-});
+    prices: z.array(z.array(z.number())),
+    total_volumes: z.array(z.array(z.number())),
+}).nullable();
 export type MarketData = z.infer<typeof MarketDataSchema>;
 
 export const CryptoAnalysisInputSchema = z.object({
   crypto_id: z.string().describe("El ID de la criptomoneda según CoinGecko (ej: 'bitcoin', 'ethereum')."),
-  days: z.string().describe("El número de días para el análisis histórico (ej: '1', '7', '30')."),
+  marketData: MarketDataSchema,
 });
 export type CryptoAnalysisInput = z.infer<typeof CryptoAnalysisInputSchema>;
 
@@ -326,22 +326,20 @@ export const SynthesizerInputSchema = z.object({
   cryptoName: z.string(),
   apexArgument: z.string(),
   heliosArgument: z.string(),
-  technicalSummary: z.string().describe('Un resumen legible por humanos de los indicadores técnicos clave.'),
-  currentPrice: z.number().describe('El precio de mercado actual en USD.'),
+  currentPrice: z.number().describe("El precio de mercado actual en USD."),
 });
 export type SynthesizerInput = z.infer<typeof SynthesizerInputSchema>;
 
 export const TradingSignalSchema = z.object({
     crypto: z.string().describe("Nombre de la criptomoneda (ej. Bitcoin)."),
     action: z.enum(['COMPRAR', 'VENDER', 'MANTENER']).describe("La acción de trading recomendada."),
-    price: z.number().describe("El precio de ejecución sugerido en USD. Usa 0 si el precio no está disponible."),
+    price: z.number().describe("El precio de ejecución sugerido en USD. Para 'MANTENER' DEBES usar el precio actual. Para 'COMPRAR' o 'VENDER', calcula un precio de ejecución realista basado en tu análisis y el precio actual."),
     reasoning: z.string().describe("Una justificación breve y clara para la señal, basada en el análisis."),
 }).passthrough();
 export type TradingSignal = z.infer<typeof TradingSignalSchema>;
 
 export const SynthesizerOutputSchema = z.object({
   synthesis: z.string().describe("Un resumen conciso del debate, destacando los puntos de acuerdo, desacuerdo y las conclusiones emergentes."),
-  technicalSummary: z.string().describe("Un resumen interpretativo del análisis técnico general."),
   signals: z.array(TradingSignalSchema).describe("Una lista de hasta 3 señales de trading accionables."),
 });
 export type SynthesizerOutput = z.infer<typeof SynthesizerOutputSchema>;
@@ -377,10 +375,9 @@ export const IndicatorsSchema = IndicatorDataSchema.nullable();
 export const FullCryptoAnalysisSchema = z.object({
     debate: z.array(CryptoDebateTurnSchema),
     synthesis: z.string(),
-    technicalSummary: z.string(),
+    technicalSummary: z.string().optional(),
     signals: z.array(TradingSignalSchema),
-    marketData: MarketDataSchema.nullable(),
-    indicators: IndicatorsSchema,
+    indicators: IndicatorsSchema.optional(),
 });
 export type FullCryptoAnalysis = z.infer<typeof FullCryptoAnalysisSchema>;
 
@@ -389,3 +386,15 @@ export type TradingAnalysisRecord = FullCryptoAnalysis & {
     timestamp: string;
     crypto_id: string;
 }
+
+// --- Voice Analysis Types ---
+export const AnalyzeVoiceInputSchema = z.object({
+  audioDataUri: z.string(),
+});
+export type AnalyzeVoiceInput = z.infer<typeof AnalyzeVoiceInputSchema>;
+
+export const AnalyzeVoiceOutputSchema = z.object({
+  transcription: z.string(),
+  inferredTone: z.string(),
+});
+export type AnalyzeVoiceOutput = z.infer<typeof AnalyzeVoiceOutputSchema>;

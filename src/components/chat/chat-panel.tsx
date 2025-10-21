@@ -2,7 +2,7 @@
 
 import { useState, useCallback, memo, useEffect, useMemo, useRef } from 'react';
 import type { Chat, Message, ProfileData, CachedProfile } from '@/lib/types';
-import { generateChatTitle, getAIResponse, getSmartComposeSuggestions } from '@/app/actions';
+import { generateChatTitle, getAIResponse, getSmartComposeSuggestions, analyzeVoiceMessageAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import ChatMessages from './chat-messages';
 import ChatInput from './chat-input';
@@ -220,8 +220,8 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
   }, [user, chat.id, chat.anchorRole, chat.title, appendMessage, updateChatTitle, toast, triggerBlueprintUpdate, cachedProfile]);
 
 
-  const handleSendMessage = useCallback(async (input: string, imageUrl?: string) => {
-    if ((!input || !input.trim()) && !imageUrl) return;
+  const handleSendMessage = useCallback(async (input: string, imageUrl?: string, audioUrl?: string) => {
+    if ((!input || !input.trim()) && !imageUrl && !audioUrl) return;
     if (!user) {
         toast({
             variant: "destructive",
@@ -230,10 +230,30 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
         });
         return;
     }
+    
+    let messageContent = input;
+
+    // If there's an audio URL, process it first
+    if (audioUrl) {
+      try {
+        const { transcription, inferredTone } = await analyzeVoiceMessageAction({ audioDataUri: audioUrl });
+        // Combine text input (if any) with the transcription
+        const combinedText = [input.trim(), transcription].filter(Boolean).join(' \n\n');
+        messageContent = `(Tono: ${inferredTone}) "${combinedText}"`;
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Error de Voz",
+          description: "No se pudo procesar el mensaje de voz. Inténtalo de nuevo.",
+        });
+        return; // Stop if voice processing fails
+      }
+    }
+
 
     const userMessage: Omit<Message, 'id'> = {
       role: 'user',
-      content: input,
+      content: messageContent,
       timestamp: Timestamp.now(),
       ...(imageUrl && { imageUrl }),
     };
