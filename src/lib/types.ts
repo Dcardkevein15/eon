@@ -326,6 +326,7 @@ export const SynthesizerInputSchema = z.object({
   apexArgument: z.string(),
   heliosArgument: z.string(),
   technicalSummary: z.string().describe('Un resumen legible por humanos de los indicadores técnicos clave.'),
+  currentPrice: z.number().describe('El precio de mercado actual en USD.'),
 });
 export type SynthesizerInput = z.infer<typeof SynthesizerInputSchema>;
 
