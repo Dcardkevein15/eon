@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import type { WhiteboardState } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
-import { BrainCircuit, Image as ImageIcon } from 'lucide-react';
+import { Image as ImageIcon } from 'lucide-react';
 import Image from 'next/image';
 
 interface WhiteboardProps {
@@ -20,19 +20,19 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ state, isLoading }) => {
   }, []);
 
   if (isLoading) {
-    return <Skeleton className="w-full h-full" />;
+    return <Skeleton className="w-full h-full bg-background" />;
   }
 
   if (!isClient) {
-    return <Skeleton className="w-full h-full" />;
+    return <Skeleton className="w-full h-full bg-background" />;
   }
 
   if (!state || !state.imageUrl) {
     return (
-        <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8 bg-background/50">
+        <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8 bg-background">
             <ImageIcon className="w-12 h-12 text-primary/50 mb-4" />
             <h3 className="font-semibold text-lg text-foreground">Esta es tu Pizarra Visual</h3>
-            <p className="mt-2 max-w-sm">La IA generará una imagen artística para visualizar tus ideas. Prueba con: <strong className="text-primary/80">"Crea un mapa mental de mis metas"</strong>.</p>
+            <p className="mt-2 max-w-sm">La IA generará una imagen artística para visualizar tus ideas. Prueba con: <strong className="text-primary/80">"Dibuja cómo ves mis miedos"</strong>.</p>
         </div>
     );
   }

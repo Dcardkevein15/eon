@@ -402,25 +402,8 @@ export type AnalyzeVoiceOutput = z.infer<typeof AnalyzeVoiceOutputSchema>;
 
 
 // --- Whiteboard Types ---
-export const WhiteboardNodeSchema = z.object({
-  id: z.string(),
-  label: z.string(),
-  x: z.number().optional(),
-  y: z.number().optional(),
-  color: z.string().optional(),
-});
-export type WhiteboardNode = z.infer<typeof WhiteboardNodeSchema>;
-
-export const WhiteboardLinkSchema = z.object({
-  source: z.string(),
-  target: z.string(),
-});
-export type WhiteboardLink = z.infer<typeof WhiteboardLinkSchema>;
-
 export const WhiteboardStateSchema = z.object({
   imageUrl: z.string().url().optional(),
-  nodes: z.array(WhiteboardNodeSchema).optional(),
-  links: z.array(WhiteboardLinkSchema).optional(),
 });
 export type WhiteboardState = z.infer<typeof WhiteboardStateSchema>;
 

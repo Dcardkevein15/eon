@@ -181,7 +181,7 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
 
       // --- Whiteboard Logic ---
       const lastUserMessage = currentMessages[currentMessages.length - 1]?.content || '';
-      if (lastUserMessage.toLowerCase().includes('pizarra') || lastUserMessage.toLowerCase().includes('mapa mental') || lastUserMessage.toLowerCase().includes('diagrama')) {
+      if (lastUserMessage.toLowerCase().includes('pizarra') || lastUserMessage.toLowerCase().includes('mapa mental') || lastUserMessage.toLowerCase().includes('diagrama') || lastUserMessage.toLowerCase().includes('dibuja')) {
           try {
               const { imageUrl } = await updateWhiteboardAction({
                   conversationHistory: updatedMessages.map(m => `${m.role}: ${m.content}`).join('\n'),
