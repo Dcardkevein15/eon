@@ -400,32 +400,4 @@ export const AnalyzeVoiceOutputSchema = z.object({
 });
 export type AnalyzeVoiceOutput = z.infer<typeof AnalyzeVoiceOutputSchema>;
 
-
-// --- Whiteboard Types ---
-export const WhiteboardStateSchema = z.object({
-  imageUrl: z.string().url().optional(),
-});
-export type WhiteboardState = z.infer<typeof WhiteboardStateSchema>;
-
-export const UpdateWhiteboardInputSchema = z.object({
-  conversationHistory: z.string(),
-  currentState: WhiteboardStateSchema.nullable(),
-});
-export type UpdateWhiteboardInput = z.infer<typeof UpdateWhiteboardInputSchema>;
-
-
-export const UpdateWhiteboardOutputSchema = z.object({
-    imageUrl: z.string().describe("The generated image as a data URI."),
-    imagePrompt: z.string(),
-});
-export type UpdateWhiteboardOutput = z.infer<typeof UpdateWhiteboardOutputSchema>;
-
-
-export type WhiteboardImageRecord = {
-  id: string;
-  imageUrl: string;
-  prompt: string;
-  createdAt: string; // ISO string
-};
-
     

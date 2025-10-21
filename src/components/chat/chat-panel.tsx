@@ -2,8 +2,8 @@
 'use client';
 
 import { useState, useCallback, memo, useEffect, useMemo, useRef } from 'react';
-import type { Chat, Message, ProfileData, CachedProfile, WhiteboardState, WhiteboardImageRecord } from '@/lib/types';
-import { generateChatTitle, getAIResponse, getSmartComposeSuggestions, analyzeVoiceMessageAction, updateWhiteboardAction } from '@/app/actions';
+import type { Chat, Message, ProfileData, CachedProfile } from '@/lib/types';
+import { generateChatTitle, getAIResponse, getSmartComposeSuggestions, analyzeVoiceMessageAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import ChatMessages from './chat-messages';
 import ChatInput from './chat-input';
@@ -16,18 +16,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import type { SecurityRuleContext } from '@/firebase/errors';
-import { Button } from '../ui/button';
-import { LayoutDashboard, Loader2, History } from 'lucide-react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../ui/sheet';
-import { useDocument } from '@/firebase/use-doc';
-import dynamic from 'next/dynamic';
-import WhiteboardHistory from '../whiteboard/WhiteboardHistory';
-
-const Whiteboard = dynamic(() => import('../whiteboard/Whiteboard'), {
-  ssr: false,
-  loading: () => <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
-});
-
 
 interface ChatPanelProps {
   chat: Chat;
@@ -40,63 +28,12 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const suggestionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isRefreshingSuggestions, setIsRefreshingSuggestions] = useState(false);
-  const [isWhiteboardOpen, setIsWhiteboardOpen] = useState(false);
-  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [activeImageUrl, setActiveImageUrl] = useState<string | null>(null);
-
 
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { user } = useAuth();
   const firestore = useFirestore();
   const [cachedProfile, setCachedProfile] = useState<ProfileData | null>(null);
-  
-  const historyStorageKey = useMemo(() => user ? `whiteboard-history-${user.uid}-${chat.id}` : null, [user, chat.id]);
-  const [localHistory, setLocalHistory] = useState<WhiteboardImageRecord[]>([]);
-
-  useEffect(() => {
-    if (historyStorageKey) {
-      try {
-        const storedHistory = localStorage.getItem(historyStorageKey);
-        if (storedHistory) {
-          setLocalHistory(JSON.parse(storedHistory));
-        }
-      } catch (e) {
-        console.error("Failed to load whiteboard history from localStorage", e);
-      }
-    }
-  }, [historyStorageKey]);
-
-  const updateLocalHistory = (newRecord: WhiteboardImageRecord) => {
-    const updatedHistory = [newRecord, ...localHistory].slice(0, 50); // Keep last 50
-    setLocalHistory(updatedHistory);
-    if (historyStorageKey) {
-      localStorage.setItem(historyStorageKey, JSON.stringify(updatedHistory));
-    }
-  };
-
-  const deleteFromLocalHistory = (id: string) => {
-    const updatedHistory = localHistory.filter(record => record.id !== id);
-    setLocalHistory(updatedHistory);
-    if (historyStorageKey) {
-      localStorage.setItem(historyStorageKey, JSON.stringify(updatedHistory));
-    }
-  };
-
-
-  // --- Whiteboard State ---
-  const whiteboardDocRef = useMemo(() =>
-      user ? doc(firestore, `users/${user.uid}/chats/${chat.id}/whiteboard/main`)
-      : undefined,
-      [user, firestore, chat.id]
-  );
-  const { data: whiteboardState, loading: whiteboardLoading } = useDocument<WhiteboardState>(whiteboardDocRef);
-  
-  useEffect(() => {
-    setActiveImageUrl(whiteboardState?.imageUrl || null);
-  }, [whiteboardState]);
-
 
   const messagesQuery = useMemo(
     () =>
@@ -199,7 +136,7 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
           timestamp: m.timestamp instanceof Timestamp ? m.timestamp.toDate() : m.timestamp,
       }));
 
-      const { response: aiResponseContent, newRole } = await getAIResponse(
+      const { response: aiResponseContent, imageUrl, newRole } = await getAIResponse(
         historyForAI,
         user.uid,
         chat.anchorRole || null,
@@ -209,43 +146,12 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
       if (newRole && newRole !== chat.anchorRole) {
         await updateChat(chat.id, { anchorRole: newRole });
       }
-
-      // Special handling for the visual artist role
-      if (newRole === 'El Artista de Conceptos' || chat.anchorRole === 'El Artista de Conceptos') {
-          setIsGeneratingImage(true);
-          try {
-              const { imageUrl, imagePrompt } = await updateWhiteboardAction({
-                  conversationHistory: historyForAI.map(m => `${m.role}: ${m.content}`).join('\n'),
-                  currentState: whiteboardState || null,
-              });
-              
-              if (imageUrl && whiteboardDocRef) {
-                  const newRecord: WhiteboardImageRecord = {
-                    id: uuidv4(),
-                    imageUrl,
-                    prompt: imagePrompt,
-                    createdAt: new Date().toISOString(),
-                  };
-                  updateLocalHistory(newRecord);
-                  await setDoc(whiteboardDocRef, { imageUrl }, { merge: true });
-              }
-          } catch(e) {
-              console.error("Error updating whiteboard with image:", e);
-              toast({
-                  variant: "destructive",
-                  title: "Error de Pizarra",
-                  description: "No se pudo actualizar la imagen de la pizarra."
-              });
-          } finally {
-              setIsGeneratingImage(false);
-          }
-      }
-
-
+      
       const aiMessage: Omit<Message, 'id'> = {
         role: 'assistant',
         content: aiResponseContent,
         timestamp: Timestamp.now(),
+        ...(imageUrl && { imageUrl }),
       };
       
       setIsResponding(false); 
@@ -287,7 +193,7 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
           description: "No se pudo obtener una respuesta de la IA. Por favor, inténtalo de nuevo.",
         });
     }
-  }, [user, firestore, chat, appendMessage, updateChat, toast, triggerBlueprintUpdate, cachedProfile, whiteboardState, whiteboardDocRef, updateLocalHistory]);
+  }, [user, firestore, chat, appendMessage, updateChat, toast, triggerBlueprintUpdate, cachedProfile]);
 
 
   const handleSendMessage = useCallback(async (input: string, imageUrl?: string, audioDataUri?: string) => {
@@ -361,16 +267,6 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
             )}
            </div>
         </div>
-        <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={() => setIsHistoryOpen(true)}>
-               <History className="h-5 w-5" />
-               <span className="sr-only">Abrir Historial de Pizarra</span>
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsWhiteboardOpen(true)}>
-               <LayoutDashboard className="h-5 w-5" />
-               <span className="sr-only">Abrir Pizarra</span>
-            </Button>
-        </div>
       </header>
       <div className="flex-1 overflow-y-auto">
         <ChatMessages messages={messages || []} isResponding={isResponding || messagesLoading} />
@@ -378,41 +274,13 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
       <div className="mt-auto px-2 py-4 md:px-4 md:py-4 border-t bg-background/95 backdrop-blur-sm">
         <ChatInput
           onSendMessage={handleSendMessage}
-          isLoading={isResponding || messagesLoading || isGeneratingImage}
+          isLoading={isResponding || messagesLoading}
           suggestions={suggestions}
           onClearSuggestions={handleClearSuggestions}
           onRefreshSuggestions={fetchSuggestions}
           isRefreshingSuggestions={isRefreshingSuggestions}
         />
       </div>
-      <Sheet open={isWhiteboardOpen} onOpenChange={setIsWhiteboardOpen}>
-          <SheetContent side="right" className="p-0 sm:max-w-xl md:max-w-2xl lg:max-w-3xl !w-[90vw] md:!w-[50vw]">
-               <SheetHeader className="p-4 border-b">
-                <SheetTitle>Pizarra Colaborativa</SheetTitle>
-               </SheetHeader>
-               <div className='h-[calc(100%-4.5rem)] w-full'>
-                 <Whiteboard state={{...whiteboardState, imageUrl: activeImageUrl}} isLoading={whiteboardLoading || isGeneratingImage} />
-               </div>
-          </SheetContent>
-      </Sheet>
-      <Sheet open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
-          <SheetContent side="right" className="p-0 w-full sm:max-w-md">
-               <SheetHeader className="p-4 border-b">
-                <SheetTitle>Historial de la Pizarra</SheetTitle>
-               </SheetHeader>
-               <div className='h-[calc(100%-4.5rem)] w-full'>
-                 <WhiteboardHistory 
-                    history={localHistory} 
-                    onSelectImage={(url) => {
-                        setActiveImageUrl(url);
-                        setIsHistoryOpen(false);
-                        setIsWhiteboardOpen(true);
-                    }}
-                    onDeleteImage={deleteFromLocalHistory}
-                />
-               </div>
-          </SheetContent>
-      </Sheet>
     </div>
   );
 }

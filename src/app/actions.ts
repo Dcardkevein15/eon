@@ -9,7 +9,7 @@ import { collection, getDocs, query, orderBy, limit, Timestamp } from 'firebase/
 import { firestore } from '@/lib/firebase';
 import { SUGGESTIONS_FALLBACK } from '@/lib/suggestions-fallback';
 import { generateBreakdownExercise as genExercise } from '@/ai/flows/generate-breakdown-exercise';
-import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, ProfileData, PromptSuggestion, InterpretDreamInput, DreamInterpretation, AnalyzeSentimentInput, AnalyzeSentimentOutput, GetTacticalAdviceInput, GetTacticalAdviceOutput, ClassifyIntentInput, ClassifyIntentOutput, AnalyzeVoiceInput, AnalyzeVoiceOutput, UpdateWhiteboardInput, UpdateWhiteboardOutput } from '@/lib/types';
+import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, ProfileData, PromptSuggestion, InterpretDreamInput, DreamInterpretation, AnalyzeSentimentInput, AnalyzeSentimentOutput, GetTacticalAdviceInput, GetTacticalAdviceOutput, ClassifyIntentInput, ClassifyIntentOutput, AnalyzeVoiceInput, AnalyzeVoiceOutput } from '@/lib/types';
 import { interpretDream as interpretDreamFlow } from '@/ai/flows/interpret-dream';
 import { analyzeSentiment as analyzeSentimentFlow } from '@/ai/flows/analyze-sentiment';
 import { getTacticalAdvice as getTacticalAdviceFlow } from '@/ai/flows/get-tactical-advice';
@@ -69,7 +69,7 @@ export async function getAIResponse(
   userId: string, 
   currentAnchorRole: string | null,
   userProfile: ProfileData | null
-): Promise<{ response: string, newRole?: string }> {
+): Promise<{ response: string, imageUrl?: string, newRole?: string }> {
     
   const cleanHistory = history.map(m => {
     // La conversión de Timestamp a Date debe ocurrir antes de pasar los datos a la Server Action
@@ -92,11 +92,32 @@ export async function getAIResponse(
   
   // *** Special Flow for Image Generation ***
   if (roleToUse === 'El Artista de Conceptos') {
-      // Don't generate a conversational response.
-      // The whiteboard update is triggered in the client-side `ChatPanel` component.
-      // Return a canned response to notify the user.
-      const response = "Entendido. Iniciando la creación visual. El resultado aparecerá en tu Pizarra Colaborativa en un momento.";
-      return { response, newRole };
+      try {
+          const { prompt: artisticPrompt } = await generateImagePrompt({
+              conversationHistory: cleanHistory
+          });
+
+          if (!artisticPrompt) {
+              throw new Error('Could not generate an artistic prompt.');
+          }
+
+          const { imageUrl } = await generateImageX({
+              prompt: artisticPrompt
+          });
+          
+          return {
+              response: "Aquí tienes la visualización que pediste.",
+              imageUrl: imageUrl,
+              newRole: newRole
+          };
+
+      } catch (error) {
+          console.error('Error in image generation flow:', error);
+          return {
+              response: "Lo siento, tuve un problema al generar la imagen. Por favor, intenta describir tu idea de otra manera.",
+              newRole: newRole
+          };
+      }
   }
 
   const profileContext = userProfile ? JSON.stringify(userProfile) : 'No hay perfil de usuario disponible.';
@@ -276,25 +297,4 @@ export async function analyzeVoiceMessageAction(input: AnalyzeVoiceInput): Promi
   }
 }
 
-export async function updateWhiteboardAction(input: UpdateWhiteboardInput): Promise<UpdateWhiteboardOutput> {
-    try {
-        // Step 1: Generate the artistic prompt
-        const { prompt: artisticPrompt } = await generateImagePrompt({
-            conversationHistory: input.conversationHistory
-        });
-
-        if (!artisticPrompt) {
-            throw new Error('Could not generate an artistic prompt.');
-        }
-
-        // Step 2: Generate the image from the artistic prompt
-        const { imageUrl } = await generateImageX({
-            prompt: artisticPrompt
-        });
-
-        return { imageUrl, imagePrompt: artisticPrompt };
-    } catch (error) {
-        console.error('Error updating whiteboard:', error);
-        throw new Error('No se pudo actualizar la pizarra.');
-    }
-}
+    
