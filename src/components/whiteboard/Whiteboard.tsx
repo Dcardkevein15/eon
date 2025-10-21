@@ -2,8 +2,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef, useMemo } from 'react';
-import ForceGraph2D from 'react-force-graph-2d';
-import type { NodeObject, LinkObject } from 'react-force-graph-2d';
+import ForceGraph2D, { ForceGraphMethods, NodeObject, LinkObject } from 'react-force-graph-2d';
 import type { WhiteboardState } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 import { BrainCircuit } from 'lucide-react';
@@ -12,7 +11,7 @@ interface MyNodeObject extends NodeObject {
   id: string;
   label: string;
   color?: string;
-  val?: number; // Add val for node size
+  val: number;
 }
 
 interface WhiteboardProps {
@@ -21,17 +20,24 @@ interface WhiteboardProps {
 }
 
 const Whiteboard: React.FC<WhiteboardProps> = ({ state, isLoading }) => {
-  const fgRef = useRef<any>();
+  const fgRef = useRef<ForceGraphMethods>();
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
+    // Apply forces after a short delay to allow the graph to initialize
+    setTimeout(() => {
+        if (fgRef.current) {
+            fgRef.current.d3Force('charge', -200);
+            fgRef.current.d3Force('link', null); // Use default link force initially
+            fgRef.current.zoomToFit(400);
+        }
+    }, 100);
   }, []);
 
   const graphData = useMemo(() => {
     if (!state) return { nodes: [], links: [] };
-    // Assign a default value for 'val' if it doesn't exist, for sizing
-    const nodes = state.nodes.map(n => ({ ...n, id: n.id || n.label, val: n.val || 8 }));
+    const nodes = state.nodes.map(n => ({ ...n, id: n.id || n.label, val: n.val || 12 }));
     return {
       nodes,
       links: state.links,
@@ -60,7 +66,7 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ state, isLoading }) => {
     <ForceGraph2D
       ref={fgRef}
       graphData={graphData}
-      nodeLabel="label"
+      nodeLabel="" // Disable default tooltip
       nodeVal="val"
       nodeColor={(node: any) => node.color || 'hsl(var(--primary))'}
       linkColor={() => 'hsl(var(--border))'}
@@ -68,24 +74,21 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ state, isLoading }) => {
       cooldownTicks={100}
       onEngineStop={() => fgRef.current?.zoomToFit(400, 100)}
       nodeCanvasObjectMode={() => 'after'}
-      nodeCanvasObject={(node: any, ctx, globalScale) => {
-        const label = node.label;
+      nodeCanvasObject={(node, ctx, globalScale) => {
+        const myNode = node as MyNodeObject;
+        const label = myNode.label;
         const fontSize = 12 / globalScale;
-        ctx.font = `${fontSize}px Sans-Serif`;
+        ctx.font = `600 ${fontSize}px Sans-Serif`;
         
-        // Coordinates are guaranteed to be numbers here by the library's lifecycle
-        const x = node.x ?? 0;
-        const y = node.y ?? 0;
-
-        // Determine text position based on node's horizontal position
-        const canvasWidth = ctx.canvas.width;
-        const textIsRight = x < canvasWidth / 2;
-        ctx.textAlign = textIsRight ? 'left' : 'right';
-        const textX = textIsRight ? x + (node.val || 5) + 3 : x - (node.val || 5) - 3;
+        const x = myNode.x ?? 0;
+        const y = myNode.y ?? 0;
+        const nodeVal = myNode.val ?? 8;
         
+        ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = 'hsl(var(--foreground))';
-        ctx.fillText(label, textX, y);
+        
+        ctx.fillText(label, x, y);
       }}
     />
   );

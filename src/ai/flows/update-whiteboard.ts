@@ -28,7 +28,7 @@ const prompt = ai.definePrompt({
     currentStateString: z.string(),
   }) },
   output: { schema: UpdateWhiteboardOutputSchema },
-  prompt: `Eres un asistente de IA experto en organizar información visualmente. Tu tarea es analizar la última petición de un usuario en una conversación y actualizar una pizarra digital (un grafo de nodos y enlaces) para reflejar esa petición.
+  prompt: `Eres un asistente de IA experto en organizar información visualmente en un mapa mental. Tu tarea es analizar la última petición de un usuario y actualizar una pizarra digital para reflejarla de forma clara, estética y organizada.
 
 **Contexto de la Conversación (lo más reciente al final):**
 {{{conversationHistory}}}
@@ -39,54 +39,46 @@ const prompt = ai.definePrompt({
 **Petición del Usuario (el último mensaje):**
 Analiza el último mensaje del usuario para entender qué quiere hacer en la pizarra.
 
-**Instrucciones:**
-Genera una lista de operaciones para modificar el estado actual de la pizarra. Las operaciones disponibles son:
-- \`ADD_NODE\`: Añade un nuevo nodo. Payload: \`{ id: string, label: string, color?: string }\`. Siempre genera un ID único para nuevos nodos.
+**Instrucciones Generales:**
+- Genera una lista de operaciones para modificar el estado actual.
+- Usa los IDs de los nodos existentes si el usuario se refiere a ellos.
+- **Para nodos nuevos, SIEMPRE genera un ID único usando un formato como "concepto-uuid".**
+- No generes nodos o enlaces que ya existan.
+
+**Instrucciones para crear MAPAS MENTALES:**
+Si el usuario pide crear un mapa mental (ej. "mapa mental de mis preocupaciones"), DEBES seguir estos pasos:
+1.  Crea un nodo central claro. Dale un color primario (ej. 'hsl(var(--primary))').
+2.  Genera entre 3 y 5 nodos secundarios que representen sub-temas del concepto central.
+3.  **Asigna a cada nodo secundario un color DISTINTO y atractivo** de la paleta de la aplicación (ej. 'hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', etc.).
+4.  Conecta CADA nodo secundario al nodo central con un enlace.
+
+**Operaciones Disponibles:**
+- \`ADD_NODE\`: Añade un nuevo nodo. Payload: \`{ id: string, label: string, color?: string }\`.
 - \`REMOVE_NODE\`: Elimina un nodo. Payload: \`{ id: string }\`.
-- \`UPDATE_NODE\`: Actualiza un nodo existente. Payload: \`{ id: string, label?: string, color?: string }\`.
-- \`ADD_LINK\`: Añade un enlace entre dos nodos. Payload: \`{ source: string, target: string }\`.
+- \`UPDATE_NODE\`: Actualiza un nodo. Payload: \`{ id: string, label?: string, color?: string }\`.
+- \`ADD_LINK\`: Añade un enlace. Payload: \`{ source: string, target: string }\`.
 - \`REMOVE_LINK\`: Elimina un enlace. Payload: \`{ source: string, target: string }\`.
-- \`CLEAR\`: Elimina todos los nodos y enlaces. Payload: \`{}\`.
+- \`CLEAR\`: Elimina todo. Payload: \`{}\`.
 
-**Ejemplos de Peticiones y Operaciones:**
+**Ejemplo de un BUEN mapa mental para "Mapa mental de mis necesidades":**
+\`\`\`json
+{
+  "operations": [
+    { "op": "CLEAR", "payload": {} },
+    { "op": "ADD_NODE", "payload": { "id": "necesidades-central", "label": "Mis Necesidades", "color": "hsl(var(--primary))" } },
+    { "op": "ADD_NODE", "payload": { "id": "seguridad-1a2b", "label": "Seguridad", "color": "hsl(var(--chart-1))" } },
+    { "op": "ADD_NODE", "payload": { "id": "crecimiento-3c4d", "label": "Crecimiento", "color": "hsl(var(--chart-2))" } },
+    { "op": "ADD_NODE", "payload": { "id": "conexion-5e6f", "label": "Conexión Social", "color": "hsl(var(--chart-3))" } },
+    { "op": "ADD_NODE", "payload": { "id": "descanso-7g8h", "label": "Descanso", "color": "hsl(var(--chart-4))" } },
+    { "op": "ADD_LINK", "payload": { "source": "necesidades-central", "target": "seguridad-1a2b" } },
+    { "op": "ADD_LINK", "payload": { "source": "necesidades-central", "target": "crecimiento-3c4d" } },
+    { "op": "ADD_LINK", "payload": { "source": "necesidades-central", "target": "conexion-5e6f" } },
+    { "op": "ADD_LINK", "payload": { "source": "necesidades-central", "target": "descanso-7g8h" } }
+  ]
+}
+\`\`\`
 
-1.  **Petición:** "Crea un mapa mental sobre mis preocupaciones."
-    **Operaciones Resultantes:**
-    \`\`\`json
-    {
-      "operations": [
-        { "op": "CLEAR", "payload": {} },
-        { "op": "ADD_NODE", "payload": { "id": "preocupaciones", "label": "Mis Preocupaciones", "color": "hsl(var(--primary))" } },
-        { "op": "ADD_NODE", "payload": { "id": "trabajo", "label": "Trabajo" } },
-        { "op": "ADD_NODE", "payload": { "id": "familia", "label": "Familia" } },
-        { "op": "ADD_LINK", "payload": { "source": "preocupaciones", "target": "trabajo" } },
-        { "op": "ADD_LINK", "payload": { "source": "preocupaciones", "target": "familia" } }
-      ]
-    }
-    \`\`\`
-
-2.  **Petición:** "Conecta 'Trabajo' con 'Estrés'."
-    **Operaciones Resultantes:**
-    \`\`\`json
-    {
-      "operations": [
-        { "op": "ADD_NODE", "payload": { "id": "estres", "label": "Estrés" } },
-        { "op": "ADD_LINK", "payload": { "source": "trabajo", "target": "estres" } }
-      ]
-    }
-    \`\`\`
-    
-3.  **Petición:** "Borra todo."
-    **Operaciones Resultantes:**
-    \`\`\`json
-    {
-      "operations": [
-        { "op": "CLEAR", "payload": {} }
-      ]
-    }
-    \`\`\`
-
-Basado en la conversación y el estado actual, genera la lista de operaciones. Sé conciso y preciso. No generes nodos o enlaces que ya existan a menos que el usuario lo pida explícitamente.
+Ahora, basándote en la petición del usuario, genera la lista de operaciones.
 `,
 });
 
@@ -113,7 +105,7 @@ const updateWhiteboardFlow = ai.defineFlow(
       throw new Error('La IA no pudo generar operaciones para la pizarra.');
     }
 
-    // Ensure new nodes have unique IDs
+    // Ensure new nodes have unique IDs if the AI forgets
     output.operations.forEach(op => {
       if (op.op === 'ADD_NODE' && !op.payload.id) {
         op.payload.id = op.payload.label.toLowerCase().replace(/\s+/g, '-') + '-' + uuidv4().substring(0, 4);
