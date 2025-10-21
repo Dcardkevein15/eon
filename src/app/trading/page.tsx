@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, Play, BrainCircuit, Bot, Sparkles, ChevronLeft, History } from 'lucide-react';
-import type { TradingSignal, CryptoDebateTurn, TradingAnalysisRecord, FullCryptoAnalysis, Coin } from '@/lib/types';
+import type { TradingSignal, CryptoDebateTurn, TradingAnalysisRecord, FullCryptoAnalysis, Coin, MarketData } from '@/lib/types';
 import { runCryptoAnalysis, getCoinList } from '@/ai/flows/crypto-analysis-flow';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
@@ -61,7 +61,6 @@ function useLocalStorage<T>(key: string, initialValue: T) {
   return [storedValue, setValue, loading] as const;
 }
 
-
 export default function TradingAnalysisPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -101,6 +100,7 @@ export default function TradingAnalysisPage() {
             const newRecord: TradingAnalysisRecord = {
                 id: uuidv4(),
                 timestamp: new Date().toISOString(),
+                crypto_id: selectedCoinId,
                 ...result,
             };
             setAnalysisHistory(prev => [newRecord, ...prev].slice(0, 20));
@@ -258,6 +258,7 @@ export default function TradingAnalysisPage() {
                                             <TableHeader>
                                                 <TableRow>
                                                     <TableHead>Acción</TableHead>
+                                                    <TableHead>Precio (USD)</TableHead>
                                                     <TableHead>Justificación</TableHead>
                                                 </TableRow>
                                             </TableHeader>
@@ -267,6 +268,7 @@ export default function TradingAnalysisPage() {
                                                         <TableCell className={signal.action === 'COMPRAR' ? 'text-green-400 font-bold' : signal.action === 'VENDER' ? 'text-red-400 font-bold' : 'text-amber-400 font-bold'}>
                                                             {signal.action}
                                                         </TableCell>
+                                                        <TableCell className="font-mono">${signal.price > 0 ? signal.price.toFixed(2) : '-'}</TableCell>
                                                         <TableCell className="text-xs">
                                                             {signal.reasoning}
                                                         </TableCell>

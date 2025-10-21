@@ -22,14 +22,39 @@ import { SMA, MACD, RSI, BollingerBands } from 'technicalindicators';
 
 // --- Herramientas ---
 
-// Herramienta para obtener la lista de monedas (Hardcodeada para evitar llamadas a API)
+const get_current_price = ai.defineTool({
+    name: 'get_current_price',
+    description: 'Obtiene el precio actual de una criptomoneda específica.',
+    inputSchema: z.object({ cryptoId: z.string().describe("El ID de la criptomoneda, ej: 'bitcoin'.") }),
+    outputSchema: z.number(),
+}, async ({ cryptoId }) => {
+    try {
+        const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cryptoId}&vs_currencies=usd`);
+        if (!response.ok) {
+            throw new Error(`Error de red: ${response.statusText}`);
+        }
+        const data = await response.json();
+        const price = data[cryptoId]?.usd;
+        if (typeof price !== 'number') {
+            throw new Error(`Precio no encontrado para ${cryptoId}`);
+        }
+        return price;
+    } catch (error) {
+        console.error(`Error en la herramienta get_current_price para ${cryptoId}:`, error);
+        // Devolvemos 0 si falla para no romper el flujo principal.
+        // El prompt del sintetizador usará '-' si el precio es 0.
+        return 0;
+    }
+});
+
+
 const get_coin_list = ai.defineTool({
     name: 'get_coin_list',
     description: 'Obtiene una lista de las principales criptomonedas.',
     inputSchema: z.object({}),
     outputSchema: z.array(CoinSchema),
 }, async () => {
-    // Retornamos una lista estática para evitar fallos de API.
+    // Retornamos una lista estática para evitar fallos de API y asegurar la estabilidad.
     return [
       { id: 'bitcoin', symbol: 'btc', name: 'Bitcoin' },
       { id: 'ethereum', symbol: 'eth', name: 'Ethereum' },
@@ -82,6 +107,7 @@ const get_fundamental_analysis = ai.defineTool({
 
 const synthesizerPrompt = ai.definePrompt({
   name: 'synthesizerPrompt',
+  tools: [get_current_price],
   input: { schema: SynthesizerInputSchema },
   output: { schema: SynthesizerOutputSchema },
   prompt: `Eres 'The Synthesizer', un estratega de trading de IA de élite. Has recibido los siguientes análisis independientes de tus dos expertos para {{{cryptoName}}}.
@@ -94,7 +120,7 @@ const synthesizerPrompt = ai.definePrompt({
 
   Tu tarea es doble:
   1.  **Síntesis Estratégica:** Escribe un resumen que combine las perspectivas de Apex y Helios. ¿Cuáles son los puntos clave de conflicto y acuerdo? ¿Qué catalizadores o riesgos son más importantes? ¿Cuál es el sentimiento general del mercado?
-  2.  **Señales Accionables:** Basado en la síntesis, genera hasta 3 señales de trading. Para cada señal, especifica la criptomoneda ('{{{cryptoName}}}'), la acción (COMPRAR, VENDER, MANTENER), y una justificación clara y concisa en el campo 'reasoning'. Como no tienes precios en tiempo real, usa un guion ('-') para el campo 'price'.`,
+  2.  **Señales Accionables:** Basado en la síntesis, genera hasta 3 señales de trading. Para cada señal, especifica la criptomoneda ('{{{cryptoName}}}'), la acción (COMPRAR, VENDER, MANTENER), y una justificación clara y concisa en el campo 'reasoning'. **Usa la herramienta 'get_current_price' para obtener el precio actual y exacto para cada señal**.`,
 });
 
 
@@ -150,10 +176,7 @@ export async function runCryptoAnalysis(input: z.infer<typeof CryptoAnalysisInpu
         debate: debateHistory,
         synthesis: synthesizerResult.synthesis,
         technicalSummary: synthesizerResult.technicalSummary,
-        signals: synthesizerResult.signals.map(s => ({
-            ...s,
-            price: 0 // No hay precio real, se usa 0 como placeholder
-        })),
+        signals: synthesizerResult.signals,
         marketData: null, // No hay datos de mercado
         indicators: null,   // No hay indicadores
       };

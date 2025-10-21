@@ -283,17 +283,21 @@ export const CoinSchema = z.object({
 });
 export type Coin = z.infer<typeof CoinSchema>;
 
-const MarketDataItemSchema = z.object({
+export const MarketDataItemSchema = z.object({
   timestamp: z.number(),
   value: z.number(),
 });
+export type MarketDataItem = z.infer<typeof MarketDataItemSchema>;
+
 export const MarketDataSchema = z.object({
     prices: z.array(MarketDataItemSchema),
     volumes: z.array(MarketDataItemSchema),
 });
+export type MarketData = z.infer<typeof MarketDataSchema>;
 
 export const CryptoAnalysisInputSchema = z.object({
   crypto_id: z.string().describe("El ID de la criptomoneda según CoinGecko (ej: 'bitcoin', 'ethereum')."),
+  marketData: MarketDataSchema.optional().describe("Datos opcionales del mercado si ya han sido obtenidos."),
 });
 export type CryptoAnalysisInput = z.infer<typeof CryptoAnalysisInputSchema>;
 
@@ -382,4 +386,5 @@ export type FullCryptoAnalysis = z.infer<typeof FullCryptoAnalysisSchema>;
 export type TradingAnalysisRecord = FullCryptoAnalysis & {
     id: string;
     timestamp: string;
+    crypto_id: string;
 }
