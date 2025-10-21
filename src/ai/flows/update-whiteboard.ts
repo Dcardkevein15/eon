@@ -59,10 +59,12 @@ export const updateWhiteboardFlow = ai.defineFlow(
 
         Now, generate ONLY the artistic image prompt for the user's request. Do not add any other text or explanation.`;
     
-    const { text: imagePrompt } = await ai.generate({
+    const llmResponse = await ai.generate({
         model: googleAI.model('gemini-1.5-flash'),
         prompt: artDirectorPrompt,
     });
+    
+    const imagePrompt = llmResponse.output?.message.content[0].text;
 
     if (!imagePrompt) {
       throw new Error('Art Director AI failed to generate a prompt.');
