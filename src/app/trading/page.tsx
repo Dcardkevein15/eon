@@ -111,6 +111,7 @@ export default function TradingAnalysisPage() {
     const [isViewingHistory, setIsViewingHistory] = useState(false);
     const [coins, setCoins] = useState<Coin[]>([]);
     const [selectedCoinId, setSelectedCoinId] = useState('bitcoin');
+    const [selectedDays, setSelectedDays] = useState('30');
 
     useEffect(() => {
         const fetchCoins = async () => {
@@ -134,6 +135,7 @@ export default function TradingAnalysisPage() {
         try {
             const result: FullCryptoAnalysis = await runCryptoAnalysis({
                 crypto_id: selectedCoinId,
+                days: selectedDays,
             });
             
             setAnalysisResult(result);
@@ -152,7 +154,7 @@ export default function TradingAnalysisPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [selectedCoinId, setAnalysisHistory]);
+    }, [selectedCoinId, selectedDays, setAnalysisHistory]);
     
     const loadHistoryRecord = (record: TradingAnalysisRecord) => {
         setIsViewingHistory(true);
@@ -189,6 +191,18 @@ export default function TradingAnalysisPage() {
                                     {Array.isArray(coins) && coins.map(coin => (
                                         <SelectItem key={coin.id} value={coin.id}>{coin.name}</SelectItem>
                                     ))}
+                                </SelectContent>
+                            </Select>
+                            <Select value={selectedDays} onValueChange={setSelectedDays}>
+                                <SelectTrigger className="w-[140px]">
+                                    <SelectValue placeholder="Temporalidad" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="1">24 horas</SelectItem>
+                                    <SelectItem value="7">7 días</SelectItem>
+                                    <SelectItem value="30">30 días</SelectItem>
+                                    <SelectItem value="90">90 días</SelectItem>
+                                    <SelectItem value="365">1 año</SelectItem>
                                 </SelectContent>
                             </Select>
                             <Sheet>
