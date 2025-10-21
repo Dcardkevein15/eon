@@ -15,6 +15,8 @@ import {
 import { getAdminApp } from '@/lib/firebase-admin';
 import { getStorage } from 'firebase-admin/storage';
 import { v4 as uuidv4 } from 'uuid';
+import { googleAI } from '@genkit-ai/google-genai';
+
 
 // Define a new output schema that returns the image URL
 const UpdateWhiteboardOutputSchema = z.object({
@@ -42,8 +44,7 @@ const updateWhiteboardFlow = ai.defineFlow(
     
     // 2. Generate a creative, artistic prompt for the image model.
     // This prompt now includes the art direction logic directly.
-    const { text: imagePrompt } = await ai.generate({
-        prompt: `You are an expert art director for a creative AI. A user wants to create a mind map or diagram. Your job is to translate their simple request into a rich, detailed, and artistic prompt for an image generation model.
+    const artDirectorPrompt = `You are an expert art director for a creative AI. A user wants to create a mind map or diagram. Your job is to translate their simple request into a rich, detailed, and artistic prompt for an image generation model.
 
         The image should be:
         - **Visually Stunning:** Use terms like 'cinematic lighting', 'intricate details', '4K', 'photorealistic', 'Unreal Engine render'.
@@ -57,9 +58,10 @@ const updateWhiteboardFlow = ai.defineFlow(
         *   **User's Request:** "Crea un mapa mental sobre mis preocupaciones."
         *   **Generated Image Prompt:** "A cinematic, 4K, photorealistic render of a conceptual mind map. A central, softly glowing orb labeled 'Preocupaciones' floats in a dark, minimalist space. Luminous, thread-like synapses of energy in pastel colors (soft blue, gentle pink, pale yellow) connect it to smaller, distinct nodes labeled 'Trabajo', 'Familia', 'Futuro', and 'Salud'. The entire structure has a subtle, intricate, and neurological feel, like a beautiful and complex thought captured in motion. Ethereal, soft focus background."
 
-        Now, generate ONLY the artistic image prompt for the user's request. Do not add any other text or explanation.`,
-        model: 'gemini-1.5-flash' // Use a powerful model for prompt generation
-    });
+        Now, generate ONLY the artistic image prompt for the user's request. Do not add any other text or explanation.`;
+
+    const llmResponse = await googleAI.model('gemini-1.5-flash').generate(artDirectorPrompt);
+    const imagePrompt = llmResponse.text();
 
     if (!imagePrompt) {
         throw new Error('Art Director AI failed to generate a prompt.');
@@ -67,7 +69,7 @@ const updateWhiteboardFlow = ai.defineFlow(
 
     // 3. Generate the image using the artistic prompt.
     const { media } = await ai.generate({
-      model: 'googleai/imagen-4.0-fast-generate-001',
+      model: googleAI.model('imagen-4.0-fast-generate-001'),
       prompt: imagePrompt,
     });
 
