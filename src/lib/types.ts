@@ -180,6 +180,7 @@ export type SimulationSession = {
 export const DreamInterpretationInputSchema = z.object({
     dreamDescription: z.string().describe('La descripción detallada del sueño contada por el usuario.'),
     userProfile: z.string().describe('El perfil psicológico completo del usuario en formato JSON. Proporciona el contexto para una interpretación personalizada.'),
+    perspective: z.string().describe('La perspectiva o "especialista" elegido para interpretar el sueño (ej: "psychological", "symbolic", "spiritual", "shamanic").'),
 });
 export type InterpretDreamInput = z.infer<typeof DreamInterpretationInputSchema>;
 
@@ -194,7 +195,7 @@ export const SymbolAnalysisSchema = z.object({
 export const DreamInterpretationContentSchema = z.object({
     dreamTitle: z.string().describe('Un título poético y evocador para el sueño, de 4 a 6 palabras.'),
     dominantFeeling: z.string().describe('La emoción principal o atmósfera que prevalece en el sueño (ej. "Ansiedad y confusión", "Liberación y alegría").'),
-    coreArchetype: z.string().describe('El arquetipo junguiano principal que parece estar activo en este sueño (ej. "La Sombra", "El Héroe", "El Trickster").'),
+    coreArchetype: z.string().describe('El arquetipo (psicológico, espiritual o chamánico) principal activo en este sueño (ej. "La Sombra", "El Héroe", "El Trickster").'),
     symbolAnalysis: z.array(SymbolAnalysisSchema).describe('Un análisis de 3 a 5 de los símbolos más importantes del sueño.'),
     narrativeInterpretation: z.string().describe('Una interpretación de la "trama" del sueño, explicándola como una metáfora de un conflicto, deseo o proceso psicológico que el usuario está viviendo, basándose en su perfil.'),
     reflectiveQuestion: z.string().describe('Una pregunta final, poderosa y abierta, diseñada para que el usuario reflexione sobre la conexión entre el sueño y su vida.'),
@@ -211,6 +212,14 @@ export type DreamInterpretationDoc = {
     dreamDescription: string;
     interpretation: DreamInterpretation;
     createdAt: string; // ISO string for easy JSON serialization
+};
+
+export type DreamSpecialist = {
+  name: string;
+  title: string;
+  description: string;
+  perspective: 'psychological' | 'symbolic' | 'spiritual' | 'shamanic';
+  icon: React.ComponentType<{ className?: string }>;
 };
 
 

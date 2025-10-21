@@ -1,9 +1,8 @@
-
 'use client';
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import type { CachedProfile, ProfileData, DreamInterpretationDoc, Chat } from '@/lib/types';
+import type { CachedProfile, ProfileData, DreamInterpretationDoc, Chat, DreamSpecialist } from '@/lib/types';
 import { interpretDreamAction, analyzeVoiceMessageAction } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -38,6 +37,8 @@ import { useAuth, useFirestore, useCollection } from '@/firebase';
 import { query, collection, orderBy } from 'firebase/firestore';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import { AnimatePresence, motion } from 'framer-motion';
+import DreamSpecialistSelection from '@/components/dreams/DreamSpecialistSelection';
 
 // Custom hook for managing state in localStorage
 function useLocalStorage<T>(key: string, initialValue: T) {
@@ -160,6 +161,8 @@ const blobUrlToDataUri = (blobUrl: string): Promise<string> => {
     });
 };
 
+type AnalysisStep = 'input' | 'specialist';
+
 export default function DreamWeaverPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -172,6 +175,7 @@ export default function DreamWeaverPage() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [analysisStep, setAnalysisStep] = useState<AnalysisStep>('input');
   
   // --- Voice Recording State ---
   const [isRecording, setIsRecording] = useState(false);
@@ -241,17 +245,20 @@ export default function DreamWeaverPage() {
       }
       setRecordedAudioUrl(null);
   };
-  
-  const handleAnalyzeDream = async () => {
-    if (!dreamText.trim() && !recordedAudioUrl) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Por favor, describe o narra tu sueño.' });
-      return;
-    }
-    if (!profile) {
-       toast({ variant: 'destructive', title: 'Perfil no encontrado', description: 'Es necesario un perfil psicológico para interpretar el sueño.' });
-       return;
-    }
 
+  const handleProceedToSelection = () => {
+      if (!dreamText.trim() && !recordedAudioUrl) {
+          toast({ variant: 'destructive', title: 'Sueño Vacío', description: 'Por favor, describe o narra tu sueño antes de continuar.' });
+          return;
+      }
+      if (!profile) {
+          toast({ variant: 'destructive', title: 'Perfil no encontrado', description: 'Es necesario un perfil psicológico para elegir un especialista.' });
+          return;
+      }
+      setAnalysisStep('specialist');
+  };
+  
+  const handleAnalyzeDream = async (specialist: DreamSpecialist) => {
     setIsAnalyzing(true);
     try {
       let dreamDescription = dreamText;
@@ -259,13 +266,14 @@ export default function DreamWeaverPage() {
       if (recordedAudioUrl) {
           const audioDataUri = await blobUrlToDataUri(recordedAudioUrl);
           const voiceAnalysis = await analyzeVoiceMessageAction({ audioDataUri });
-          const tacticText = `(Táctica de comunicación detectada: ${voiceAnalysis.inferredTactic})`;
-          dreamDescription = `${tacticText}\n\nTranscripción: "${voiceAnalysis.transcription}"\n\nNotas adicionales: ${dreamText}`;
+          const tacticText = `(El usuario usa esta táctica de comunicación al narrar: ${voiceAnalysis.inferredTactic})`;
+          dreamDescription = `${tacticText}\n\nTranscripción de la narración: "${voiceAnalysis.transcription}"\n\nNotas adicionales del usuario: ${dreamText}`;
       }
 
       const interpretation = await interpretDreamAction({
         dreamDescription: dreamDescription,
         userProfile: JSON.stringify(profile),
+        perspective: specialist.perspective,
       });
 
       const newDreamDoc: DreamInterpretationDoc = {
@@ -287,6 +295,7 @@ export default function DreamWeaverPage() {
         title: 'Error en el análisis',
         description: error.message || 'No se pudo interpretar el sueño. Por favor, inténtalo de nuevo.',
       });
+      setAnalysisStep('input'); // Return to input step on error
     } finally {
         setIsAnalyzing(false);
     }
@@ -315,12 +324,22 @@ export default function DreamWeaverPage() {
             </aside>
             <main className="flex-1 flex flex-col overflow-y-auto">
                 <div className="sticky top-0 bg-background/80 backdrop-blur-sm border-b border-border/80 p-4 z-10">
-                    <div className="flex items-center justify-between gap-2 max-w-3xl mx-auto">
+                    <div className="flex items-center justify-between gap-2 max-w-4xl mx-auto">
                         <div className='flex items-center gap-2'>
-                            <Button asChild variant="ghost" size="icon" className="-ml-2 text-muted-foreground hover:bg-accent/10 hover:text-foreground">
-                                <Link href="/">
+                           <Button 
+                                asChild={analysisStep === 'input'} 
+                                variant="ghost" 
+                                size="icon" 
+                                className="-ml-2 text-muted-foreground hover:bg-accent/10 hover:text-foreground"
+                                onClick={() => analysisStep === 'specialist' && setAnalysisStep('input')}
+                            >
+                                {analysisStep === 'input' ? (
+                                    <Link href="/">
+                                        <ChevronLeft className="h-5 w-5" />
+                                    </Link>
+                                ) : (
                                     <ChevronLeft className="h-5 w-5" />
-                                </Link>
+                                )}
                             </Button>
                             <h1 className="text-xl font-bold tracking-tight">Portal de Sueños</h1>
                         </div>
@@ -341,83 +360,92 @@ export default function DreamWeaverPage() {
                 </div>
 
                 <div className="flex-1 flex items-center justify-center p-4">
-                    <div className="w-full max-w-2xl mx-auto text-center space-y-8 animate-in fade-in-50 duration-700">
-                         <div className="space-y-2">
-                             <h2 className="text-4xl md:text-5xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-chart-5 via-chart-1 to-chart-2">
-                                ¿Qué te ha mostrado tu subconsciente?
-                             </h2>
-                             <p className="text-lg text-muted-foreground">Describe o narra tu sueño con todos los detalles que recuerdes. La IA conectará sus símbolos con tu viaje interior.</p>
-                         </div>
-                        
-                         {profileError && (
-                            <Alert variant="default" className="text-left bg-yellow-900/20 border-yellow-500/30 text-yellow-200">
-                                <Info className="h-4 w-4 text-yellow-400" />
-                                <AlertTitle className="text-yellow-300">Contexto Limitado</AlertTitle>
-                                <AlertDescription>
-                                    {profileError}
-                                </AlertDescription>
-                            </Alert>
-                         )}
-
-                        <div className="space-y-4">
-                            <div className="relative">
-                                <Textarea
-                                    value={dreamText}
-                                    onChange={(e) => setDreamText(e.target.value)}
-                                    placeholder="Añade aquí cualquier detalle escrito, o usa este espacio para notas mientras grabas..."
-                                    className="min-h-[160px] bg-card/80 border-border rounded-xl p-4 text-base ring-offset-background focus-visible:ring-2 focus-visible:ring-primary/80 focus-visible:ring-offset-2 transition-all duration-300"
-                                />
-                            </div>
-                             <div className="flex flex-col items-center gap-4">
-                                {recordedAudioUrl && (
-                                     <div className="p-2 border rounded-lg bg-card/80 flex items-center gap-2 group w-full max-w-sm">
-                                        <audio src={recordedAudioUrl} controls className="h-10 flex-grow" />
-                                        <Button 
-                                          type="button" 
-                                          variant="ghost" 
-                                          size="icon" 
-                                          className="h-8 w-8 text-destructive flex-shrink-0"
-                                          onClick={clearRecording}
-                                        >
-                                          <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                      </div>
-                                )}
-                                <Button onClick={handleStartRecording} variant="outline" className={cn("w-full max-w-sm", isRecording && "bg-red-900/20 text-red-400 border-red-500/50 hover:bg-red-900/30")}>
-                                     {isRecording ? (
-                                        <>
-                                            <Square className="mr-2 h-5 w-5 fill-current" />
-                                            Detener Grabación
-                                        </>
-                                     ) : (
-                                        <>
-                                            <Mic className="mr-2 h-5 w-5" />
-                                            {recordedAudioUrl ? 'Grabar de Nuevo' : 'Narrar mi Sueño'}
-                                        </>
-                                     )}
-                                </Button>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={analysisStep}
+                      initial={{ opacity: 0, x: 50 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -50 }}
+                      transition={{ duration: 0.3 }}
+                      className="w-full h-full flex"
+                    >
+                      {analysisStep === 'input' ? (
+                        <div className="w-full max-w-2xl mx-auto text-center space-y-8 my-auto">
+                             <div className="space-y-2">
+                                 <h2 className="text-4xl md:text-5xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-chart-5 via-chart-1 to-chart-2">
+                                    ¿Qué te ha mostrado tu subconsciente?
+                                 </h2>
+                                 <p className="text-lg text-muted-foreground">Describe o narra tu sueño con todos los detalles que recuerdes. Luego, elige un especialista para la interpretación.</p>
                              </div>
-                        </div>
+                            
+                             {profileError && (
+                                <Alert variant="default" className="text-left bg-yellow-900/20 border-yellow-500/30 text-yellow-200">
+                                    <Info className="h-4 w-4 text-yellow-400" />
+                                    <AlertTitle className="text-yellow-300">Contexto Limitado</AlertTitle>
+                                    <AlertDescription>
+                                        {profileError}
+                                    </AlertDescription>
+                                </Alert>
+                             )}
 
-                         <Button
-                            onClick={handleAnalyzeDream}
-                            disabled={isAnalyzing || (!profile && !authLoading) || (!dreamText.trim() && !recordedAudioUrl)}
-                            size="lg"
-                            className="w-full sm:w-auto text-base px-8 py-6 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all transform hover:scale-105"
-                         >
-                            {isAnalyzing ? (
-                                <>
-                                    <Loader2 className="mr-3 h-5 w-5 animate-spin" />
-                                    Analizando...
-                                </>
-                            ) : (
-                                <>
-                                    <Wand2 className="mr-3 h-5 w-5" />
-                                    Interpretar mi Sueño
-                                </>
-                            )}
-                         </Button>
-                    </div>
+                            <div className="space-y-4">
+                                <div className="relative">
+                                    <Textarea
+                                        value={dreamText}
+                                        onChange={(e) => setDreamText(e.target.value)}
+                                        placeholder="Añade aquí cualquier detalle escrito, o usa este espacio para notas mientras grabas..."
+                                        className="min-h-[160px] bg-card/80 border-border rounded-xl p-4 text-base ring-offset-background focus-visible:ring-2 focus-visible:ring-primary/80 focus-visible:ring-offset-2 transition-all duration-300"
+                                    />
+                                </div>
+                                 <div className="flex flex-col items-center gap-4">
+                                    {recordedAudioUrl && (
+                                         <div className="p-2 border rounded-lg bg-card/80 flex items-center gap-2 group w-full max-w-sm">
+                                            <audio src={recordedAudioUrl} controls className="h-10 flex-grow" />
+                                            <Button 
+                                              type="button" 
+                                              variant="ghost" 
+                                              size="icon" 
+                                              className="h-8 w-8 text-destructive flex-shrink-0"
+                                              onClick={clearRecording}
+                                            >
+                                              <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                          </div>
+                                    )}
+                                    <Button onClick={handleStartRecording} variant="outline" className={cn("w-full max-w-sm", isRecording && "bg-red-900/20 text-red-400 border-red-500/50 hover:bg-red-900/30")}>
+                                         {isRecording ? (
+                                            <>
+                                                <Square className="mr-2 h-5 w-5 fill-current" />
+                                                Detener Grabación
+                                            </>
+                                         ) : (
+                                            <>
+                                                <Mic className="mr-2 h-5 w-5" />
+                                                {recordedAudioUrl ? 'Grabar de Nuevo' : 'Narrar mi Sueño'}
+                                            </>
+                                         )}
+                                    </Button>
+                                 </div>
+                            </div>
+
+                             <Button
+                                onClick={handleProceedToSelection}
+                                disabled={isAnalyzing || (!profile && !authLoading)}
+                                size="lg"
+                                className="w-full sm:w-auto text-base px-8 py-6 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all transform hover:scale-105"
+                             >
+                                <Wand2 className="mr-3 h-5 w-5" />
+                                Elegir Especialista
+                             </Button>
+                        </div>
+                      ) : (
+                        <DreamSpecialistSelection 
+                            onSelectSpecialist={handleAnalyzeDream}
+                            isLoading={isAnalyzing}
+                        />
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
                 </div>
             </main>
         </SidebarInset>

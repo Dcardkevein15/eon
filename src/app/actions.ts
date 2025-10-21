@@ -17,6 +17,9 @@ import { classifyIntent as classifyIntentFlow } from '@/ai/flows/classify-intent
 import { analyzeVoiceMessage as analyzeVoiceMessageFlow } from '@/ai/flows/analyze-voice-message';
 import { generateImagePrompt } from '@/ai/flows/generate-image-prompt';
 import { generateImageX } from '@/ai/flows/generate-image-x';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { useStorage } from '@/firebase/storage';
+import { v4 as uuidv4 } from 'uuid';
 
 
 const expertRoles = [
@@ -100,14 +103,23 @@ export async function getAIResponse(
           if (!artisticPrompt) {
               throw new Error('Could not generate an artistic prompt.');
           }
+          
+          const storage = useStorage();
+          const imageId = uuidv4();
+          const storageRef = ref(storage, `generated-images/${userId}/${imageId}.png`);
 
-          const { imageUrl } = await generateImageX({
+
+          const { imageUrl: imageDataUri } = await generateImageX({
               prompt: artisticPrompt
           });
+
+          // Subir la imagen y obtener la URL de descarga
+          await uploadString(storageRef, imageDataUri, 'data_url');
+          const downloadURL = await getDownloadURL(storageRef);
           
           return {
               response: "Aquí tienes la visualización que pediste.",
-              imageUrl: imageUrl,
+              imageUrl: downloadURL,
               newRole: newRole
           };
 
