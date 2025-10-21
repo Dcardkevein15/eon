@@ -180,6 +180,10 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
         cachedProfile
       );
       
+      if (newRole) {
+        await updateChat(chat.id, { anchorRole: newRole });
+      }
+
       const aiMessage: Omit<Message, 'id'> = {
         role: 'assistant',
         content: aiResponseContent,
@@ -229,12 +233,7 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
           const userMessage = currentMessages[0];
           const conversationForTitle = `User: ${userMessage.content}\nAssistant: ${aiResponseContent}`;
           const newTitle = await generateChatTitle(conversationForTitle);
-          
-          const updates: Partial<Chat> = { title: newTitle };
-          if (newRole) {
-            updates.anchorRole = newRole;
-          }
-          await updateChat(chat.id, updates);
+          await updateChat(chat.id, { title: newTitle });
       }
       
       // Blueprint update
@@ -251,7 +250,7 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
           description: "No se pudo obtener una respuesta de la IA. Por favor, inténtalo de nuevo.",
         });
     }
-  }, [user, firestore, chat.id, chat.anchorRole, chat.title, appendMessage, updateChat, toast, triggerBlueprintUpdate, cachedProfile, whiteboardState, whiteboardDocRef]);
+  }, [user, firestore, chat, appendMessage, updateChat, toast, triggerBlueprintUpdate, cachedProfile, whiteboardState, whiteboardDocRef]);
 
 
   const handleSendMessage = useCallback(async (input: string, imageUrl?: string, audioDataUri?: string) => {

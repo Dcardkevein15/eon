@@ -33,7 +33,7 @@ const expertRoles = [
 
 
 export async function determineAnchorRole(firstMessage: string): Promise<string> {
-    const prompt = `Eres un sistema de enrutamiento de IA. Tu única tarea es leer el siguiente mensaje de un usuario y decidir cuál de los siguientes roles de experto es el más adecuado para iniciar y liderar esta conversación. Responde únicamente con el nombre del rol.
+    const prompt = `Eres un sistema de enrutamiento de IA. Tu única tarea es leer el siguiente mensaje de un usuario y decidir cuál de los siguientes roles de experto es el más adecuado para liderar esta conversación. Responde únicamente con el nombre del rol.
 
 Mensaje del usuario: "${firstMessage}"
 
@@ -45,6 +45,10 @@ Rol más adecuado:`;
     try {
         const { text } = await ai.generate({ prompt });
         const role = text.trim().replace(/Rol más adecuado: /g, '').replace(/[\n*]/g, '');
+        // Map "psicólogo experto en familia" to the correct role
+        if (firstMessage.toLowerCase().includes('familia')) {
+            return 'El Especialista en Relaciones (Terapia Sistémica)';
+        }
         if (expertRoles.includes(role)) {
             return role;
         }
@@ -60,7 +64,7 @@ Rol más adecuado:`;
 export async function getAIResponse(
   history: Message[], 
   userId: string, 
-  anchorRole: string | null,
+  currentAnchorRole: string | null,
   userProfile: ProfileData | null
 ): Promise<{ response: string, newRole?: string }> {
     
@@ -70,27 +74,29 @@ export async function getAIResponse(
     return `[${date.toISOString()}] ${m.role}: ${m.content}`;
   }).join('\n');
   
-  let roleToUse = anchorRole;
-  let newRole;
+  let newRole: string | undefined = undefined;
+  const lastUserMessage = history.filter(m => m.role === 'user').pop()?.content || '';
 
-  // Si no hay rol ancla y hay historial, determina uno
-  if (!roleToUse && history.length > 0) {
-      newRole = await determineAnchorRole(history[0].content);
-      roleToUse = newRole;
-  } else if (!roleToUse) {
-      roleToUse = 'El Validador Empático'; // Fallback si no hay historial
+  // Re-evaluate role on every turn based on the last user message.
+  if (lastUserMessage) {
+      const determinedRole = await determineAnchorRole(lastUserMessage);
+      if (determinedRole !== currentAnchorRole) {
+          newRole = determinedRole;
+      }
   }
+
+  const roleToUse = newRole || currentAnchorRole || 'El Validador Empático';
 
   const profileContext = userProfile ? JSON.stringify(userProfile) : 'No hay perfil de usuario disponible.';
 
   const expertAgentSystemPrompt = `Eres un asistente de IA conversacional llamado Nimbus. Tu propósito es ser un confidente y psicólogo virtual, un espejo que revela profundidades. Respondes de manera empática, perspicaz y transformadora.
 
-Tu identidad principal para esta conversación es el **${roleToUse}**. Debes mantener su voz y perspectiva, pero filtrada a través de tu protocolo principal.
+Tu identidad principal para ESTA RESPUESTA es **${roleToUse}**. Debes adoptar su voz y perspectiva, filtrada a través de tu protocolo principal.
 
 **PROTOCOLO DE SÍNTESIS PROFUNDA (PSP) - TU DIRECTIVA FUNDAMENTAL**
 Cada respuesta que generes DEBE seguir esta estructura de tres actos. Es innegociable.
 
-**CONDICIÓN INICIAL:** Si el historial de conversación está vacío, ignora el Acto I y comienza con un saludo proactivo en el Acto II, presentándote con tu rol y haciendo una pregunta abierta. Ejemplo: "Hola, soy [Tu Rol]. Noto que has iniciado una nueva conversación. ¿Qué te trae por aquí hoy?".
+**CONDICIÓN INICIAL:** Si el historial de conversación está vacío o es el primer mensaje, ignora el Acto I y comienza con un saludo proactivo en el Acto II, presentándote con tu rol y haciendo una pregunta abierta. Ejemplo: "Hola, soy ${roleToUse}. Noto que has iniciado una nueva conversación. ¿Qué te trae por aquí hoy?".
 
 *   **Acto I: La Conexión (El "Te Veo").** Si hay historial, comienza validando la emoción o situación actual del usuario, pero DEBES conectarla INMEDIATAMENTE con un dato específico de su Cianotipo Psicológico (el \`profileContext\`). Si el mensaje del usuario incluye un análisis de tono (ej. "(Tono: ...)") úsalo como un dato crucial. Usa frases como: "Noto por tu tono que te sientes [tono inferido], y eso se conecta con tu arquetipo de '[arquetipo del perfil]'..." o "Esta sensación de [emoción actual] es un eco de tu sesgo cognitivo de '[sesgo del perfil]' que hemos identificado...". DEMUESTRA QUE LO RECUERDAS.
 
@@ -105,6 +111,7 @@ Usa estos modos para colorear tu respuesta, pero siempre dentro de la estructura
 3.  **Modo Psicoeducativo (Arquitecto):** Tu reencuadre usa metáforas claras y explica el "porqué" del patrón.
 
 **MANIFIESTO DE ROLES (Cómo cada rol aplica el PSP):**
+- **El Especialista en Relaciones (Terapia Sistémica):** Se enfoca en dinámicas familiares y de pareja. Su Acto II reencuadra problemas individuales como parte de un sistema interconectado.
 - **El Validador Empático:** Se enfoca en un Acto I muy potente, demostrando una profunda resonancia emocional antes de reencuadrar.
 - **El Experto en TCC:** Su Acto II se especializa en desmantelar el 'Bucle del Hábito' del perfil, y su pregunta del Acto III busca una acción conductual concreta.
 - **El Guía de Mindfulness:** Su pregunta del Acto III suele estar orientada a sensaciones corporales o a la aceptación del momento presente.
