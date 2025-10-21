@@ -209,8 +209,19 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
 
     if (audioDataUri) {
       try {
-        const { transcription } = await analyzeVoiceMessageAction({ audioDataUri });
-        messageContent = [`Transcripción: "${transcription}"`, input.trim()].filter(Boolean).join('\n');
+        const { transcription, sentiment } = await analyzeVoiceMessageAction({ audioDataUri });
+        
+        let sentimentText = '';
+        if (sentiment !== undefined) {
+            if (sentiment > 0.5) sentimentText = 'Tono: Muy positivo';
+            else if (sentiment > 0.1) sentimentText = 'Tono: Positivo';
+            else if (sentiment < -0.5) sentimentText = 'Tono: Muy negativo';
+            else if (sentiment < -0.1) sentimentText = 'Tono: Negativo';
+            else sentimentText = 'Tono: Neutral';
+        }
+
+        messageContent = [`Transcripción: "${transcription}"`, sentimentText, input.trim()].filter(Boolean).join('\n\n');
+
       } catch (error) {
         console.error('Error in voice analysis action:', error);
         toast({

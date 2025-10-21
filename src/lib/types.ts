@@ -406,6 +406,7 @@ export const AnalyzeVoiceInputSchema = z.object({
 export type AnalyzeVoiceInput = z.infer<typeof AnalyzeVoiceInputSchema>;
 
 export const AnalyzeVoiceOutputSchema = z.object({
-  transcription: z.string(),
+  transcription: z.string().describe('El texto transcrito del audio.'),
+  sentiment: z.number().optional().describe('El puntaje de sentimiento del texto, de -1.0 a 1.0.'),
 });
 export type AnalyzeVoiceOutput = z.infer<typeof AnalyzeVoiceOutputSchema>;

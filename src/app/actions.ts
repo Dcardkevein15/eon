@@ -295,6 +295,13 @@ export async function analyzeVoiceMessageAction(input: AnalyzeVoiceInput): Promi
   try {
     if (input.audioDataUri) {
       const voiceAnalysis = await analyzeVoiceMessageFlow({ audioDataUri: input.audioDataUri });
+      if (voiceAnalysis.transcription) {
+          const sentimentAnalysis = await analyzeSentimentAction({ text: voiceAnalysis.transcription });
+          return {
+              transcription: voiceAnalysis.transcription,
+              sentiment: sentimentAnalysis.sentiment,
+          };
+      }
       return { transcription: voiceAnalysis.transcription };
     }
     return { transcription: '' };
