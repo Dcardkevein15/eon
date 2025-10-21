@@ -180,7 +180,7 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
         cachedProfile
       );
       
-      if (newRole) {
+      if (newRole && newRole !== chat.anchorRole) {
         await updateChat(chat.id, { anchorRole: newRole });
       }
 
