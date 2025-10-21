@@ -1,3 +1,4 @@
+
 import { Timestamp } from 'firebase/firestore';
 import { z } from 'zod';
 
@@ -297,7 +298,7 @@ export type MarketData = z.infer<typeof MarketDataSchema>;
 
 export const CryptoAnalysisInputSchema = z.object({
   crypto_id: z.string().describe("El ID de la criptomoneda según CoinGecko (ej: 'bitcoin', 'ethereum')."),
-  marketData: MarketDataSchema,
+  days: z.string().describe("El número de días para el análisis histórico."),
 });
 export type CryptoAnalysisInput = z.infer<typeof CryptoAnalysisInputSchema>;
 
@@ -398,3 +399,43 @@ export const AnalyzeVoiceOutputSchema = z.object({
   inferredTone: z.string(),
 });
 export type AnalyzeVoiceOutput = z.infer<typeof AnalyzeVoiceOutputSchema>;
+
+
+// --- Whiteboard Types ---
+export const WhiteboardNodeSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  x: z.number().optional(),
+  y: z.number().optional(),
+  color: z.string().optional(),
+});
+export type WhiteboardNode = z.infer<typeof WhiteboardNodeSchema>;
+
+export const WhiteboardLinkSchema = z.object({
+  source: z.string(),
+  target: z.string(),
+});
+export type WhiteboardLink = z.infer<typeof WhiteboardLinkSchema>;
+
+export const WhiteboardStateSchema = z.object({
+  nodes: z.array(WhiteboardNodeSchema),
+  links: z.array(WhiteboardLinkSchema),
+});
+export type WhiteboardState = z.infer<typeof WhiteboardStateSchema>;
+
+export const UpdateWhiteboardInputSchema = z.object({
+  conversationHistory: z.string(),
+  currentState: WhiteboardStateSchema,
+});
+export type UpdateWhiteboardInput = z.infer<typeof UpdateWhiteboardInputSchema>;
+
+export const WhiteboardOperationSchema = z.object({
+  op: z.enum(['ADD_NODE', 'REMOVE_NODE', 'UPDATE_NODE', 'ADD_LINK', 'REMOVE_LINK', 'CLEAR']),
+  payload: z.any(),
+});
+export type WhiteboardOperation = z.infer<typeof WhiteboardOperationSchema>;
+
+export const UpdateWhiteboardOutputSchema = z.object({
+  operations: z.array(WhiteboardOperationSchema),
+});
+export type UpdateWhiteboardOutput = z.infer<typeof UpdateWhiteboardOutputSchema>;

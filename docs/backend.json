@@ -126,7 +126,43 @@
     "simulationScenario": { "title": "Simulation Scenario", "description": "A predefined scenario for the Emotional Gym.", "type": "object", "properties": { "id": { "type": "string" }, "title": { "type": "string" }, "description": { "type": "string" }, "category": { "type": "string" }, "personaPrompt": { "type": "string" } }, "required": ["id", "title", "description", "category", "personaPrompt"] },
     "simulationSession": { "title": "Simulation Session", "description": "A record of a user's practice session in the Emotional Gym.", "type": "object", "properties": { "userId": { "type": "string" }, "scenarioId": { "type": "string" }, "scenarioTitle": { "type": "string" }, "createdAt": { "type": "string", "format": "date-time" }, "completedAt": { "type": "string", "format": "date-time" }, "feedback": { "type": "string" }, "path": { "type": "string" } }, "required": ["userId", "scenarioId", "scenarioTitle", "createdAt", "path"] },
     "dreamInterpretation": { "title": "Dream Interpretation", "description": "An AI-generated interpretation of a user's dream.", "type": "object", "properties": { "userId": { "type": "string" }, "dreamDescription": { "type": "string" }, "interpretation": { "type": "object", "properties": { "dreamTitle": { "type": "string" }, "dominantFeeling": { "type": "string" }, "coreArchetype": { "type": "string" }, "symbolAnalysis": { "type": "array", "items": { "$ref": "#/entities/symbolAnalysis" } }, "narrativeInterpretation": { "type": "string" }, "reflectiveQuestion": { "type": "string" } } }, "createdAt": { "type": "string", "format": "date-time" } }, "required": ["userId", "dreamDescription", "interpretation", "createdAt"] },
-    "symbolAnalysis": { "title": "Symbol Analysis", "description": "Analysis of a single symbol within a dream.", "type": "object", "properties": { "symbol": { "type": "string" }, "universalMeaning": { "type": "string" }, "personalMeaning": { "type": "string" }, "icon": { "type": "string" } } }
+    "symbolAnalysis": { "title": "Symbol Analysis", "description": "Analysis of a single symbol within a dream.", "type": "object", "properties": { "symbol": { "type": "string" }, "universalMeaning": { "type": "string" }, "personalMeaning": { "type": "string" }, "icon": { "type": "string" } } },
+    "whiteboardState": {
+      "title": "Whiteboard State",
+      "description": "The state of the collaborative whiteboard for a chat session.",
+      "type": "object",
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "items": { "$ref": "#/entities/whiteboardNode" }
+        },
+        "links": {
+          "type": "array",
+          "items": { "$ref": "#/entities/whiteboardLink" }
+        }
+      }
+    },
+    "whiteboardNode": {
+        "title": "Whiteboard Node",
+        "type": "object",
+        "properties": {
+            "id": { "type": "string" },
+            "label": { "type": "string" },
+            "x": { "type": "number" },
+            "y": { "type": "number" },
+            "color": { "type": "string" }
+        },
+        "required": ["id", "label"]
+    },
+    "whiteboardLink": {
+        "title": "Whiteboard Link",
+        "type": "object",
+        "properties": {
+            "source": { "type": "string" },
+            "target": { "type": "string" }
+        },
+        "required": ["source", "target"]
+    }
   },
   "auth": {
     "providers": ["google.com"]
@@ -135,6 +171,7 @@
     "/users/{userId}": { "schema": { "$ref": "#/entities/user" }, "rules": "auth.uid == userId" },
     "/users/{userId}/chats/{chatId}": { "schema": { "$ref": "#/entities/chat" }, "rules": "auth.uid == userId" },
     "/users/{userId}/chats/{chatId}/messages/{messageId}": { "schema": { "$ref": "#/entities/message" }, "rules": "auth.uid == userId" },
+    "/users/{userId}/chats/{chatId}/whiteboard/main": { "schema": { "$ref": "#/entities/whiteboardState" }, "rules": "auth.uid == userId" },
     "/users/{userId}/chatbotState/main": { "schema": { "$ref": "#/entities/chatbotState" }, "rules": "auth.uid == userId" },
     "/users/{userId}/profile/main": { "schema": { "$ref": "#/entities/userProfile" }, "rules": "auth.uid == userId" },
     "/users/{userId}/gymSessions/{sessionId}": { "schema": { "$ref": "#/entities/simulationSession" }, "rules": "auth.uid == userId" },

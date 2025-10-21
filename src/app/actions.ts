@@ -1,3 +1,4 @@
+
 'use server';
 
 import { ai } from '@/ai/genkit';
@@ -8,12 +9,13 @@ import { collection, getDocs, query, orderBy, limit, Timestamp } from 'firebase/
 import { firestore } from '@/lib/firebase';
 import { SUGGESTIONS_FALLBACK } from '@/lib/suggestions-fallback';
 import { generateBreakdownExercise as genExercise } from '@/ai/flows/generate-breakdown-exercise';
-import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, ProfileData, PromptSuggestion, InterpretDreamInput, DreamInterpretation, AnalyzeSentimentInput, AnalyzeSentimentOutput, GetTacticalAdviceInput, GetTacticalAdviceOutput, ClassifyIntentInput, ClassifyIntentOutput, AnalyzeVoiceInput, AnalyzeVoiceOutput } from '@/lib/types';
+import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, ProfileData, PromptSuggestion, InterpretDreamInput, DreamInterpretation, AnalyzeSentimentInput, AnalyzeSentimentOutput, GetTacticalAdviceInput, GetTacticalAdviceOutput, ClassifyIntentInput, ClassifyIntentOutput, AnalyzeVoiceInput, AnalyzeVoiceOutput, UpdateWhiteboardInput, UpdateWhiteboardOutput } from '@/lib/types';
 import { interpretDream as interpretDreamFlow } from '@/ai/flows/interpret-dream';
 import { analyzeSentiment as analyzeSentimentFlow } from '@/ai/flows/analyze-sentiment';
 import { getTacticalAdvice as getTacticalAdviceFlow } from '@/ai/flows/get-tactical-advice';
 import { classifyIntent as classifyIntentFlow } from '@/ai/flows/classify-intent';
 import { analyzeVoiceMessage as analyzeVoiceMessageFlow } from '@/ai/flows/analyze-voice-message';
+import { updateWhiteboard as updateWhiteboardFlow } from '@/ai/flows/update-whiteboard';
 
 
 const expertRoles = [
@@ -101,7 +103,7 @@ Usa estos modos para colorear tu respuesta, pero siempre dentro de la estructura
 
 **REGLAS SECUNDARIAS:**
 - **Invisibilidad:** Nunca anuncies tu rol, modo o el protocolo PSP. Sé fluido.
-- **Transición para Tareas:** Si el usuario pide una tarea concreta (código, traducción), ejecútala brevemente y DE INMEDIATO retorna al PSP con una pregunta conectora. Ejemplo: "Aquí tienes la traducción. Curiosamente, la palabra que elegiste, 'límite', es central en tu conflicto nuclear. ¿Qué sientes al verla en otro idioma?".
+- **Transición para Tareas:** Si el usuario pide una tarea concreta (código, traducción, actualización de pizarra), ejecútala brevemente y DE INMEDIATO retorna al PSP con una pregunta conectora. Ejemplo: "Aquí tienes la traducción. Curiosamente, la palabra que elegiste, 'límite', es central en tu conflicto nuclear. ¿Qué sientes al verla en otro idioma?".
 - **Síntesis Total:** Cada palabra tuya debe estar informada por el \`profileContext\`. Eres un especialista con memoria perfecta de tu paciente.
 
 **Perfil Psicológico del Usuario (Contexto de Memoria):**
@@ -233,4 +235,14 @@ export async function analyzeVoiceMessageAction(input: AnalyzeVoiceInput): Promi
     console.error('Error analyzing voice message:', error);
     throw new Error('No se pudo procesar el mensaje de voz.');
   }
+}
+
+export async function updateWhiteboardAction(input: UpdateWhiteboardInput): Promise<UpdateWhiteboardOutput> {
+    try {
+        const result = await updateWhiteboardFlow(input);
+        return result;
+    } catch (error) {
+        console.error('Error updating whiteboard:', error);
+        throw new Error('No se pudo actualizar la pizarra.');
+    }
 }

@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useState, useCallback, memo, useEffect, useMemo, useRef } from 'react';
-import type { Chat, Message, ProfileData, CachedProfile } from '@/lib/types';
-import { generateChatTitle, getAIResponse, getSmartComposeSuggestions, analyzeVoiceMessageAction } from '@/app/actions';
+import type { Chat, Message, ProfileData, CachedProfile, WhiteboardState, WhiteboardOperation } from '@/lib/types';
+import { generateChatTitle, getAIResponse, getSmartComposeSuggestions, analyzeVoiceMessageAction, updateWhiteboardAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import ChatMessages from './chat-messages';
 import ChatInput from './chat-input';
@@ -15,6 +16,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import type { SecurityRuleContext } from '@/firebase/errors';
+import { Button } from '../ui/button';
+import { LayoutDashboard } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../ui/sheet';
+import Whiteboard from '../whiteboard/Whiteboard';
+import { useDocument } from '@/firebase/use-doc';
 
 
 interface ChatPanelProps {
@@ -28,15 +34,22 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const suggestionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isRefreshingSuggestions, setIsRefreshingSuggestions] = useState(false);
+  const [isWhiteboardOpen, setIsWhiteboardOpen] = useState(false);
 
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { user } = useAuth();
   const firestore = useFirestore();
   const [cachedProfile, setCachedProfile] = useState<ProfileData | null>(null);
-
-  // Local messages state for optimistic updates
   const [optimisticMessages, setOptimisticMessages] = useState<Message[]>([]);
+
+  // --- Whiteboard State ---
+  const whiteboardDocRef = useMemo(() =>
+      user ? doc(firestore, `users/${user.uid}/chats/${chat.id}/whiteboard/main`)
+      : undefined,
+      [user, firestore, chat.id]
+  );
+  const { data: whiteboardState, loading: whiteboardLoading } = useDocument<WhiteboardState>(whiteboardDocRef);
 
 
   const messagesQuery = useMemo(
@@ -53,12 +66,9 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
   const { data: messages, loading: messagesLoading } = useCollection<Message>(messagesQuery);
   
   const allMessages = useMemo(() => {
-    // If we have messages from firestore, use them. Otherwise, use optimistic messages.
     return messages && messages.length > 0 ? messages : optimisticMessages;
   }, [messages, optimisticMessages]);
   
-  
-  // Load cached profile on component mount
   useEffect(() => {
     if (user) {
       const storageKey = `psych-profile-${user.uid}`;
@@ -75,17 +85,13 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
     }
   }, [user]);
 
-  // Effect to handle pending message from new chat creation
   useEffect(() => {
     const pendingMessageJSON = sessionStorage.getItem('pending_chat_message');
     if (pendingMessageJSON) {
       sessionStorage.removeItem('pending_chat_message');
       try {
         const pendingMessage = JSON.parse(pendingMessageJSON) as Message;
-        // Convert date string back to Date object
         pendingMessage.timestamp = new Date(pendingMessage.timestamp);
-        
-        // Optimistically add the user's first message and trigger AI response
         setOptimisticMessages([pendingMessage]);
         getAIResponseAndUpdate([pendingMessage]);
       } catch (e) {
@@ -94,7 +100,6 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chat.id]);
-
 
   const triggerBlueprintUpdate = useCallback(async (currentMessages: Message[]) => {
       if (!user) return;
@@ -152,6 +157,49 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
     }
   }, [messages]);
 
+  const applyWhiteboardOperations = useCallback((operations: WhiteboardOperation[]) => {
+        if (!whiteboardDocRef) return;
+
+        const currentState = whiteboardState || { nodes: [], links: [] };
+        let newNodes = [...currentState.nodes];
+        let newLinks = [...currentState.links];
+
+        operations.forEach(op => {
+            switch (op.op) {
+                case 'ADD_NODE':
+                    if (!newNodes.some(n => n.id === op.payload.id)) {
+                        newNodes.push(op.payload);
+                    }
+                    break;
+                case 'REMOVE_NODE':
+                    newNodes = newNodes.filter(n => n.id !== op.payload.id);
+                    newLinks = newLinks.filter(l => l.source !== op.payload.id && l.target !== op.payload.id);
+                    break;
+                case 'UPDATE_NODE':
+                    newNodes = newNodes.map(n => n.id === op.payload.id ? { ...n, ...op.payload } : n);
+                    break;
+                case 'ADD_LINK':
+                     if (!newLinks.some(l => l.source === op.payload.source && l.target === op.payload.target)) {
+                        newLinks.push(op.payload);
+                    }
+                    break;
+                case 'REMOVE_LINK':
+                    newLinks = newLinks.filter(l => !(l.source === op.payload.source && l.target === op.payload.target));
+                    break;
+                case 'CLEAR':
+                    newNodes = [];
+                    newLinks = [];
+                    break;
+            }
+        });
+
+        const newState = { nodes: newNodes, links: newLinks };
+        setDoc(whiteboardDocRef, newState, { merge: true }).catch(err => {
+             console.error("Failed to update whiteboard state:", err);
+             // Optionally handle permission errors here as in other places
+        });
+  }, [whiteboardState, whiteboardDocRef]);
+
 
   const getAIResponseAndUpdate = useCallback(async (currentMessages: Message[]) => {
     if (!user) return;
@@ -185,9 +233,20 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
       
       const updatedMessages = [...currentMessages, { ...aiMessage, id: uuidv4() }];
 
-      // Delayed suggestions logic, made 6x slower.
+      // --- Whiteboard Logic ---
+      const lastUserMessage = currentMessages[currentMessages.length - 1]?.content || '';
+      if (lastUserMessage.toLowerCase().includes('pizarra') || lastUserMessage.toLowerCase().includes('mapa mental') || lastUserMessage.toLowerCase().includes('diagrama')) {
+          const whiteboardInput: UpdateWhiteboardInput = {
+              conversationHistory: updatedMessages.map(m => `${m.role}: ${m.content}`).join('\n'),
+              currentState: whiteboardState || { nodes: [], links: [] },
+          };
+          const { operations } = await updateWhiteboardAction(whiteboardInput);
+          applyWhiteboardOperations(operations);
+      }
+
+      // Delayed suggestions logic
       const words = aiResponseContent.split(/\s+/).length;
-      const readingTime = Math.max(12000, words * 360); // 360ms per word, minimum 12 seconds
+      const readingTime = Math.max(12000, words * 360);
       
       suggestionTimeoutRef.current = setTimeout(async () => {
          const historyString = updatedMessages.map((m) => `${m.role}: ${m.content}`).join('\n');
@@ -196,7 +255,7 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
       }, readingTime);
 
 
-      // Title is generated only if it's the default "Nuevo Chat"
+      // Title generation
       if (currentMessages.length === 1 && chat.title === 'Nuevo Chat') {
           const userMessage = currentMessages[0];
           const conversationForTitle = `User: ${userMessage.content}\nAssistant: ${aiResponseContent}`;
@@ -204,20 +263,21 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
           await updateChatTitle(chat.id, newTitle);
       }
       
+      // Blueprint update
       if (updatedMessages.length % 5 === 0) {
         triggerBlueprintUpdate(updatedMessages);
       }
 
     } catch (error) {
         console.error("Error getting AI response:", error);
-        setIsResponding(false); // Make sure to turn off responding on error
+        setIsResponding(false);
         toast({
           variant: "destructive",
           title: "Error",
           description: "No se pudo obtener una respuesta de la IA. Por favor, inténtalo de nuevo.",
         });
     }
-  }, [user, chat.id, chat.anchorRole, chat.title, appendMessage, updateChatTitle, toast, triggerBlueprintUpdate, cachedProfile]);
+  }, [user, chat.id, chat.anchorRole, chat.title, appendMessage, updateChatTitle, toast, triggerBlueprintUpdate, cachedProfile, whiteboardState, applyWhiteboardOperations]);
 
 
   const handleSendMessage = useCallback(async (input: string, imageUrl?: string, audioDataUri?: string) => {
@@ -233,11 +293,9 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
     
     let messageContent = input;
 
-    // If there's an audio URL, process it first
     if (audioDataUri) {
       try {
         const { transcription, inferredTone } = await analyzeVoiceMessageAction({ audioDataUri });
-        // Combine text input (if any) with the transcription
         const combinedText = [input.trim(), transcription].filter(Boolean).join(' \n\n');
         messageContent = `(Tono: ${inferredTone}) "${combinedText}"`;
       } catch (error) {
@@ -246,10 +304,9 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
           title: "Error de Voz",
           description: "No se pudo procesar el mensaje de voz. Inténtalo de nuevo.",
         });
-        return; // Stop if voice processing fails
+        return;
       }
     }
-
 
     const userMessage: Omit<Message, 'id'> = {
       role: 'user',
@@ -258,7 +315,6 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
       ...(imageUrl && { imageUrl }),
     };
 
-    // Use `allMessages` which includes optimistic messages for context
     const currentMessages = [...allMessages, { ...userMessage, id: uuidv4() }];
     
     await appendMessage(chat.id, userMessage);
@@ -268,7 +324,6 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
 
 
   useEffect(() => {
-    // Clear suggestion timeout on unmount
     return () => {
       if (suggestionTimeoutRef.current) {
         clearTimeout(suggestionTimeoutRef.current);
@@ -285,33 +340,49 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
 
 
   return (
-    <div className="flex flex-col h-full">
-       <header className="flex h-14 items-center justify-between p-2 md:p-4 border-b">
-        <div className="flex items-center gap-2">
-          {isMobile && <SidebarTrigger />}
-           <div className='min-w-0'>
-            <h2 className="text-base md:text-lg font-semibold truncate">
-              {chat.title}
-            </h2>
-            {chat.anchorRole && (
-              <p className='text-xs text-muted-foreground truncate'>Rol: {chat.anchorRole}</p>
-            )}
-           </div>
+    <div className="flex h-full">
+      <div className="flex flex-col h-full flex-1">
+         <header className="flex h-14 items-center justify-between p-2 md:p-4 border-b">
+          <div className="flex items-center gap-2">
+            {isMobile && <SidebarTrigger />}
+             <div className='min-w-0'>
+              <h2 className="text-base md:text-lg font-semibold truncate">
+                {chat.title}
+              </h2>
+              {chat.anchorRole && (
+                <p className='text-xs text-muted-foreground truncate'>Rol: {chat.anchorRole}</p>
+              )}
+             </div>
+          </div>
+          <Button variant="ghost" size="icon" onClick={() => setIsWhiteboardOpen(true)}>
+             <LayoutDashboard className="h-5 w-5" />
+             <span className="sr-only">Abrir Pizarra</span>
+          </Button>
+        </header>
+        <div className="flex-1 overflow-y-auto">
+          <ChatMessages messages={allMessages} isResponding={isResponding || messagesLoading} />
         </div>
-      </header>
-      <div className="flex-1 overflow-y-auto">
-        <ChatMessages messages={allMessages} isResponding={isResponding || messagesLoading} />
+        <div className="mt-auto px-2 py-4 md:px-4 md:py-4 border-t bg-background/95 backdrop-blur-sm">
+          <ChatInput
+            onSendMessage={handleSendMessage}
+            isLoading={isResponding || messagesLoading}
+            suggestions={suggestions}
+            onClearSuggestions={handleClearSuggestions}
+            onRefreshSuggestions={fetchSuggestions}
+            isRefreshingSuggestions={isRefreshingSuggestions}
+          />
+        </div>
       </div>
-      <div className="mt-auto px-2 py-4 md:px-4 md:py-4 border-t bg-background/95 backdrop-blur-sm">
-        <ChatInput
-          onSendMessage={handleSendMessage}
-          isLoading={isResponding || messagesLoading}
-          suggestions={suggestions}
-          onClearSuggestions={handleClearSuggestions}
-          onRefreshSuggestions={fetchSuggestions}
-          isRefreshingSuggestions={isRefreshingSuggestions}
-        />
-      </div>
+      <Sheet open={isWhiteboardOpen} onOpenChange={setIsWhiteboardOpen}>
+          <SheetContent side="right" className="p-0 sm:max-w-xl md:max-w-2xl lg:max-w-3xl !w-[90vw] md:!w-[50vw]">
+               <SheetHeader className="p-4 border-b">
+                <SheetTitle>Pizarra Colaborativa</SheetTitle>
+               </SheetHeader>
+               <div className='h-[calc(100%-4.5rem)] w-full'>
+                 <Whiteboard state={whiteboardState} isLoading={whiteboardLoading} />
+               </div>
+          </SheetContent>
+      </Sheet>
     </div>
   );
 }
