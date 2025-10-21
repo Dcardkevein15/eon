@@ -316,38 +316,36 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
 
 
   return (
-    <div className="flex h-full">
-      <div className="flex flex-col h-full flex-1">
-         <header className="flex h-14 items-center justify-between p-2 md:p-4 border-b">
-          <div className="flex items-center gap-2 min-w-0">
-            {isMobile && <SidebarTrigger />}
-             <div className='min-w-0'>
-              <h2 className="text-base md:text-lg font-semibold truncate">
-                {chat.title}
-              </h2>
-              {chat.anchorRole && (
-                <p className='text-xs text-muted-foreground truncate'>Rol: {chat.anchorRole}</p>
-              )}
-             </div>
-          </div>
-          <Button variant="ghost" size="icon" onClick={() => setIsWhiteboardOpen(true)}>
-             <LayoutDashboard className="h-5 w-5" />
-             <span className="sr-only">Abrir Pizarra</span>
-          </Button>
-        </header>
-        <div className="flex-1 overflow-y-auto">
-          <ChatMessages messages={messages || []} isResponding={isResponding || messagesLoading} />
+    <div className="flex flex-col h-full flex-1">
+       <header className="flex h-14 items-center justify-between p-2 md:p-4 border-b shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          {isMobile && <SidebarTrigger />}
+           <div className='min-w-0'>
+            <h2 className="text-base md:text-lg font-semibold truncate">
+              {chat.title}
+            </h2>
+            {chat.anchorRole && (
+              <p className='text-xs text-muted-foreground truncate'>Rol: {chat.anchorRole}</p>
+            )}
+           </div>
         </div>
-        <div className="mt-auto px-2 py-4 md:px-4 md:py-4 border-t bg-background/95 backdrop-blur-sm">
-          <ChatInput
-            onSendMessage={handleSendMessage}
-            isLoading={isResponding || messagesLoading}
-            suggestions={suggestions}
-            onClearSuggestions={handleClearSuggestions}
-            onRefreshSuggestions={fetchSuggestions}
-            isRefreshingSuggestions={isRefreshingSuggestions}
-          />
-        </div>
+        <Button variant="ghost" size="icon" onClick={() => setIsWhiteboardOpen(true)}>
+           <LayoutDashboard className="h-5 w-5" />
+           <span className="sr-only">Abrir Pizarra</span>
+        </Button>
+      </header>
+      <div className="flex-1 overflow-y-auto">
+        <ChatMessages messages={messages || []} isResponding={isResponding || messagesLoading} />
+      </div>
+      <div className="mt-auto px-2 py-4 md:px-4 md:py-4 border-t bg-background/95 backdrop-blur-sm">
+        <ChatInput
+          onSendMessage={handleSendMessage}
+          isLoading={isResponding || messagesLoading}
+          suggestions={suggestions}
+          onClearSuggestions={handleClearSuggestions}
+          onRefreshSuggestions={fetchSuggestions}
+          isRefreshingSuggestions={isRefreshingSuggestions}
+        />
       </div>
       <Sheet open={isWhiteboardOpen} onOpenChange={setIsWhiteboardOpen}>
           <SheetContent side="right" className="p-0 sm:max-w-xl md:max-w-2xl lg:max-w-3xl !w-[90vw] md:!w-[50vw]">
@@ -364,5 +362,3 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
 }
 
 export default memo(ChatPanel);
-
-    
