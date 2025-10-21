@@ -30,9 +30,13 @@ export async function updateWhiteboard(
   return updateWhiteboardFlow(input);
 }
 
+const ArtDirectorInputSchema = z.object({
+  userRequest: z.string(),
+});
+
 const artDirectorPrompt = ai.definePrompt({
     name: 'whiteboardArtDirectorPrompt',
-    input: { schema: z.object({ userRequest: z.string() }) },
+    input: { schema: ArtDirectorInputSchema },
     output: { schema: z.object({ imagePrompt: z.string() }) },
     prompt: `You are an expert art director for a creative AI. A user wants to create a mind map or diagram. Your job is to translate their simple request into a rich, detailed, and artistic prompt for an image generation model.
 
