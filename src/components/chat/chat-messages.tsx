@@ -22,6 +22,22 @@ const ThinkingAnimation = () => {
                 viewBox="0 0 200 150"
                 preserveAspectRatio="xMidYMid meet"
             >
+                {/* Add filter for fire effect */}
+                <defs>
+                    <filter id="fire-glow">
+                        <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur" />
+                        <feMerge>
+                            <feMergeNode in="blur" />
+                            <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                    </filter>
+                    <filter id="fire-texture" x="-20%" y="-20%" width="140%" height="140%">
+                        <feTurbulence type="fractalNoise" baseFrequency="0.1 0.3" numOctaves="2" seed="2" result="turbulence" />
+                        <feColorMatrix in="turbulence" type="matrix" values="0 0 0 0 1, 0 0 0 0 .5, 0 0 0 0 0, 0 0 0 5 -1" result="fireColor" />
+                         <feComposite in="fireColor" in2="SourceGraphic" operator="in" result="textured"/>
+                    </filter>
+                </defs>
+
                 {/* Stars Background */}
                 <g>
                     {[...Array(50)].map((_, i) => (
@@ -43,26 +59,17 @@ const ThinkingAnimation = () => {
                     ))}
                 </g>
 
-                {/* Buddha Silhouette - More detailed and recognizable */}
+                {/* Buddha Silhouette */}
                  <motion.path
                     d="M100 80 C95 80 90 85 90 90 C90 95 95 100 100 100 C105 100 110 95 110 90 C110 85 105 80 100 80 Z M85 105 C80 105 75 110 75 115 L75 120 L125 120 L125 115 C125 110 120 105 115 105 Z M70 125 L130 125 L125 135 L75 135 Z"
                     fill="hsl(var(--primary))"
                     initial={{ opacity: 0.8 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: 2, repeat: Infinity, repeatType: 'mirror' }}
-                    filter="url(#glow)"
+                    filter="url(#fire-glow)"
                 />
 
                 {/* Expanding Waves */}
-                <defs>
-                    <filter id="glow">
-                        <feGaussianBlur stdDeviation="3.5" result="coloredBlur" />
-                        <feMerge>
-                            <feMergeNode in="coloredBlur" />
-                            <feMergeNode in="SourceGraphic" />
-                        </feMerge>
-                    </filter>
-                </defs>
                 <g transform="translate(100, 90)">
                     {[...Array(3)].map((_, i) => (
                         <motion.circle
@@ -70,7 +77,8 @@ const ThinkingAnimation = () => {
                             r={5}
                             fill="none"
                             stroke="hsl(var(--primary))"
-                            strokeWidth={1.5}
+                            strokeWidth={1}
+                            strokeOpacity={0.7}
                             initial={{ scale: 0, opacity: 1 }}
                             animate={{ scale: 15, opacity: 0 }}
                             transition={{
@@ -81,6 +89,42 @@ const ThinkingAnimation = () => {
                             }}
                         />
                     ))}
+                </g>
+                
+                 {/* Fire Whirlwind Effect */}
+                <g filter="url(#fire-glow)">
+                     <motion.g
+                        initial={{ rotate: 0 }}
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 10, repeat: Infinity, ease: 'linear' }}
+                     >
+                        {[...Array(20)].map((_, i) => (
+                            <motion.circle
+                                key={`fire-${i}`}
+                                r={Math.random() * 3 + 1}
+                                fill="hsl(var(--primary))"
+                                filter="url(#fire-texture)"
+                                initial={{
+                                    cx: 100,
+                                    cy: 90,
+                                    scale: 0,
+                                    opacity: 0,
+                                }}
+                                animate={{
+                                    cx: [100 + Math.cos(i * 0.314) * (20 + i*1.2), 100 + Math.cos(i * 0.314 + 6.28) * (20 + i*1.2)],
+                                    cy: [90 + Math.sin(i * 0.314) * (20 + i*1.2), 90 + Math.sin(i * 0.314 + 6.28) * (20 + i*1.2)],
+                                    scale: [0, 1, 1, 0],
+                                    opacity: [0, 0.8, 0.8, 0],
+                                }}
+                                transition={{
+                                    duration: Math.random() * 2 + 3,
+                                    repeat: Infinity,
+                                    delay: i * 0.1,
+                                    ease: "easeInOut",
+                                }}
+                             />
+                        ))}
+                    </motion.g>
                 </g>
             </svg>
         </div>
