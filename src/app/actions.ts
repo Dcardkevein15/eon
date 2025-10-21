@@ -15,7 +15,7 @@ import { analyzeSentiment as analyzeSentimentFlow } from '@/ai/flows/analyze-sen
 import { getTacticalAdvice as getTacticalAdviceFlow } from '@/ai/flows/get-tactical-advice';
 import { classifyIntent as classifyIntentFlow } from '@/ai/flows/classify-intent';
 import { analyzeVoiceMessage as analyzeVoiceMessageFlow } from '@/ai/flows/analyze-voice-message';
-import { updateWhiteboardFlow } from '@/ai/flows/update-whiteboard';
+import { updateWhiteboard } from '@/ai/flows/update-whiteboard';
 
 
 const expertRoles = [
@@ -265,7 +265,7 @@ export async function analyzeVoiceMessageAction(input: AnalyzeVoiceInput): Promi
 
 export async function updateWhiteboardAction(input: UpdateWhiteboardInput): Promise<UpdateWhiteboardOutput> {
     try {
-        const result = await updateWhiteboardFlow(input);
+        const result = await updateWhiteboard(input);
         return result;
     } catch (error) {
         console.error('Error updating whiteboard:', error);

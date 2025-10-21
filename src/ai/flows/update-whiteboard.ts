@@ -10,22 +10,27 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import {
   UpdateWhiteboardInputSchema,
+  UpdateWhiteboardOutputSchema,
   type UpdateWhiteboardInput,
+  type UpdateWhiteboardOutput,
 } from '@/lib/types';
 import { googleAI } from '@genkit-ai/google-genai';
 
-// Define a new output schema that returns the image URL
-const UpdateWhiteboardOutputSchema = z.object({
-  imageUrl: z.string().describe("The generated image as a data URI."),
-  imagePrompt: z.string().describe("The artistic prompt used for generation."),
-});
-export type UpdateWhiteboardOutput = z.infer<
-  typeof UpdateWhiteboardOutputSchema
->;
 
-export async function updateWhiteboardFlow(
+export async function updateWhiteboard(
   input: UpdateWhiteboardInput
 ): Promise<UpdateWhiteboardOutput> {
+  return updateWhiteboardFlow(input);
+}
+
+
+const updateWhiteboardFlow = ai.defineFlow(
+  {
+    name: 'updateWhiteboardFlow',
+    inputSchema: UpdateWhiteboardInputSchema,
+    outputSchema: UpdateWhiteboardOutputSchema,
+  },
+  async (input) => {
     // 1. Determine the user's core request from the last message.
     const lastMessage = input.conversationHistory.split('\n').pop() || '';
 
@@ -69,4 +74,5 @@ export async function updateWhiteboardFlow(
 
     // 5. Return the data URI and the prompt used.
     return { imageUrl: media.url, imagePrompt };
-}
+  }
+);
