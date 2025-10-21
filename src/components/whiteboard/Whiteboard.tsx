@@ -2,7 +2,8 @@
 'use client';
 
 import React, { useEffect, useState, useRef, useMemo } from 'react';
-import ForceGraph2D, { ForceGraphMethods, NodeObject, LinkObject } from 'react-force-graph-2d';
+import ForceGraph2D, { ForceGraphMethods } from 'react-force-graph-2d';
+import type { NodeObject, LinkObject } from 'react-force-graph-2d';
 import type { WhiteboardState } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 import { BrainCircuit } from 'lucide-react';
@@ -28,7 +29,6 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ state, isLoading }) => {
     // Apply forces after a short delay to allow the graph to initialize
     setTimeout(() => {
         if (fgRef.current) {
-            fgRef.current.d3Force('charge', -200);
             fgRef.current.zoomToFit(400);
         }
     }, 100);
