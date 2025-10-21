@@ -33,7 +33,7 @@ const prompt = ai.definePrompt({
 **Estado Actual de la Pizarra:**
 {{#if currentState}}
 \`\`\`json
-{{{JSON.stringify currentState}}}
+{{{jsonStringify currentState}}}
 \`\`\`
 {{else}}
 La pizarra está actualmente vacía.
@@ -101,12 +101,10 @@ const updateWhiteboardFlow = ai.defineFlow(
     outputSchema: UpdateWhiteboardOutputSchema,
   },
   async (input) => {
-    // Helper to add JSON.stringify to the prompt context
+    // Helper to pass JSON.stringify to the prompt context in a Handlebars-safe way
     const promptData = {
-        ...input,
-        JSON: {
-            stringify: (obj: any) => JSON.stringify(obj, null, 2),
-        },
+      ...input,
+      jsonStringify: (obj: any) => JSON.stringify(obj, null, 2),
     };
 
     const { output } = await prompt(promptData);
@@ -114,7 +112,7 @@ const updateWhiteboardFlow = ai.defineFlow(
       throw new Error('La IA no pudo generar operaciones para la pizarra.');
     }
 
-    // Asegurarse de que los nuevos nodos tengan IDs únicos
+    // Ensure new nodes have unique IDs
     output.operations.forEach(op => {
       if (op.op === 'ADD_NODE' && !op.payload.id) {
         op.payload.id = op.payload.label.toLowerCase().replace(/\s+/g, '-') + '-' + uuidv4().substring(0, 4);
