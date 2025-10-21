@@ -9,10 +9,17 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import {
   UpdateWhiteboardInputSchema,
-  UpdateWhiteboardOutputSchema,
   type UpdateWhiteboardInput,
-  type UpdateWhiteboardOutput,
 } from '@/lib/types';
+
+
+// Define a new output schema that returns the buffer
+const UpdateWhiteboardOutputSchema = z.object({
+    imageBuffer: z.instanceof(Buffer),
+    imagePrompt: z.string(),
+});
+export type UpdateWhiteboardOutput = z.infer<typeof UpdateWhiteboardOutputSchema>;
+
 
 export async function updateWhiteboard(
   input: UpdateWhiteboardInput
@@ -70,7 +77,12 @@ const updateWhiteboardFlow = ai.defineFlow(
       throw new Error('Image generation model failed to return an image.');
     }
 
-    // 4. Return the image data URI.
-    return { imageUrl: media.url };
+    // 4. Convert data URI to a Buffer and return it.
+    const imageBuffer = Buffer.from(
+      media.url.substring(media.url.indexOf(',') + 1),
+      'base64'
+    );
+    
+    return { imageBuffer, imagePrompt };
   }
 );

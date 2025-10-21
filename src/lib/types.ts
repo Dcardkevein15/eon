@@ -437,6 +437,7 @@ export const WhiteboardOperationSchema = z.object({
 export type WhiteboardOperation = z.infer<typeof WhiteboardOperationSchema>;
 
 export const UpdateWhiteboardOutputSchema = z.object({
-  imageUrl: z.string(),
+  imageBuffer: z.instanceof(Buffer),
+  imagePrompt: z.string(),
 });
 export type UpdateWhiteboardOutput = z.infer<typeof UpdateWhiteboardOutputSchema>;

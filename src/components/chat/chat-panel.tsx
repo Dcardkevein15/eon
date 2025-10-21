@@ -9,8 +9,9 @@ import ChatMessages from './chat-messages';
 import ChatInput from './chat-input';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { useAuth, useCollection, useFirestore } from '@/firebase';
+import { useAuth, useCollection, useFirestore, useStorage } from '@/firebase';
 import { collection, query, orderBy, Timestamp, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { updatePsychologicalBlueprint } from '@/ai/flows/update-psychological-blueprint';
 import { v4 as uuidv4 } from 'uuid';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -45,6 +46,7 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
   const isMobile = useIsMobile();
   const { user } = useAuth();
   const firestore = useFirestore();
+  const storage = useStorage();
   const [cachedProfile, setCachedProfile] = useState<ProfileData | null>(null);
   const [optimisticMessages, setOptimisticMessages] = useState<Message[]>([]);
 
@@ -197,13 +199,30 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
       // --- Whiteboard Logic ---
       const lastUserMessage = currentMessages[currentMessages.length - 1]?.content || '';
       if (lastUserMessage.toLowerCase().includes('pizarra') || lastUserMessage.toLowerCase().includes('mapa mental') || lastUserMessage.toLowerCase().includes('diagrama')) {
-          const whiteboardInput = {
-              conversationHistory: updatedMessages.map(m => `${m.role}: ${m.content}`).join('\n'),
-              currentState: whiteboardState || { nodes: [], links: [] },
-          };
-          const { imageUrl } = await updateWhiteboardAction(whiteboardInput);
-          if (imageUrl && whiteboardDocRef) {
-              await setDoc(whiteboardDocRef, { imageUrl }, { merge: true });
+          try {
+              const whiteboardInput = {
+                  conversationHistory: updatedMessages.map(m => `${m.role}: ${m.content}`).join('\n'),
+                  currentState: whiteboardState || { nodes: [], links: [] },
+              };
+              const { imageBuffer } = await updateWhiteboardAction(whiteboardInput);
+              
+              if (imageBuffer && whiteboardDocRef && storage) {
+                  const imageId = uuidv4();
+                  const imagePath = `users/${user.uid}/whiteboards/${chat.id}/${imageId}.png`;
+                  const imageFileRef = storageRef(storage, imagePath);
+                  
+                  await uploadBytes(imageFileRef, imageBuffer);
+                  const downloadURL = await getDownloadURL(imageFileRef);
+
+                  await setDoc(whiteboardDocRef, { imageUrl: downloadURL }, { merge: true });
+              }
+          } catch(e) {
+              console.error("Error updating whiteboard with image:", e);
+              toast({
+                  variant: "destructive",
+                  title: "Error de Pizarra",
+                  description: "No se pudo actualizar la imagen de la pizarra."
+              });
           }
       }
 
@@ -240,7 +259,7 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
           description: "No se pudo obtener una respuesta de la IA. Por favor, inténtalo de nuevo.",
         });
     }
-  }, [user, firestore, chat.id, chat.anchorRole, chat.title, appendMessage, updateChatTitle, toast, triggerBlueprintUpdate, cachedProfile, whiteboardState, whiteboardDocRef]);
+  }, [user, firestore, storage, chat.id, chat.anchorRole, chat.title, appendMessage, updateChatTitle, toast, triggerBlueprintUpdate, cachedProfile, whiteboardState, whiteboardDocRef]);
 
 
   const handleSendMessage = useCallback(async (input: string, imageUrl?: string, audioDataUri?: string) => {
