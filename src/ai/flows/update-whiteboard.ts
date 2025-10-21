@@ -66,6 +66,9 @@ const updateWhiteboardFlow = ai.defineFlow(
     const { media } = await ai.generate({
       model: googleAI.model('imagen-4.0-fast-generate-001'),
       prompt: imagePrompt,
+      config: {
+        responseMimeType: "image/png"
+      }
     });
 
     if (!media?.url) {

@@ -40,6 +40,8 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
   const suggestionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isRefreshingSuggestions, setIsRefreshingSuggestions] = useState(false);
   const [isWhiteboardOpen, setIsWhiteboardOpen] = useState(false);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+
 
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -157,6 +159,32 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
           timestamp: m.timestamp instanceof Timestamp ? m.timestamp.toDate() : m.timestamp,
       }));
 
+      // --- Whiteboard Logic ---
+      const lastUserMessage = currentMessages[currentMessages.length - 1]?.content || '';
+      if (lastUserMessage.toLowerCase().includes('pizarra') || lastUserMessage.toLowerCase().includes('mapa mental') || lastUserMessage.toLowerCase().includes('diagrama') || lastUserMessage.toLowerCase().includes('dibuja')) {
+          setIsGeneratingImage(true);
+          try {
+              const { imageUrl } = await updateWhiteboardAction({
+                  conversationHistory: historyForAI.map(m => `${m.role}: ${m.content}`).join('\n'),
+                  currentState: whiteboardState || null,
+              });
+              
+              if (imageUrl && whiteboardDocRef) {
+                  await setDoc(whiteboardDocRef, { imageUrl }, { merge: true });
+              }
+          } catch(e) {
+              console.error("Error updating whiteboard with image:", e);
+              toast({
+                  variant: "destructive",
+                  title: "Error de Pizarra",
+                  description: "No se pudo actualizar la imagen de la pizarra."
+              });
+          } finally {
+              setIsGeneratingImage(false);
+          }
+      }
+
+
       const { response: aiResponseContent, newRole } = await getAIResponse(
         historyForAI,
         user.uid,
@@ -179,27 +207,6 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
       
       const updatedMessages = [...currentMessages, { ...aiMessage, id: uuidv4() }];
 
-      // --- Whiteboard Logic ---
-      const lastUserMessage = currentMessages[currentMessages.length - 1]?.content || '';
-      if (lastUserMessage.toLowerCase().includes('pizarra') || lastUserMessage.toLowerCase().includes('mapa mental') || lastUserMessage.toLowerCase().includes('diagrama') || lastUserMessage.toLowerCase().includes('dibuja')) {
-          try {
-              const { imageUrl } = await updateWhiteboardAction({
-                  conversationHistory: updatedMessages.map(m => `${m.role}: ${m.content}`).join('\n'),
-                  currentState: whiteboardState || null,
-              });
-              
-              if (imageUrl && whiteboardDocRef) {
-                  await setDoc(whiteboardDocRef, { imageUrl }, { merge: true });
-              }
-          } catch(e) {
-              console.error("Error updating whiteboard with image:", e);
-              toast({
-                  variant: "destructive",
-                  title: "Error de Pizarra",
-                  description: "No se pudo actualizar la imagen de la pizarra."
-              });
-          }
-      }
 
       // Delayed suggestions logic
       const words = aiResponseContent.split(/\s+/).length;
@@ -332,7 +339,7 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
                 <SheetTitle>Pizarra Colaborativa</SheetTitle>
                </SheetHeader>
                <div className='h-[calc(100%-4.5rem)] w-full'>
-                 <Whiteboard state={whiteboardState} isLoading={whiteboardLoading} />
+                 <Whiteboard state={whiteboardState} isLoading={whiteboardLoading || isGeneratingImage} />
                </div>
           </SheetContent>
       </Sheet>
