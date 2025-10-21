@@ -29,7 +29,6 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ state, isLoading }) => {
     setTimeout(() => {
         if (fgRef.current) {
             fgRef.current.d3Force('charge', -200);
-            fgRef.current.d3Force('link', null); // Use default link force initially
             fgRef.current.zoomToFit(400);
         }
     }, 100);
@@ -82,7 +81,6 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ state, isLoading }) => {
         
         const x = myNode.x ?? 0;
         const y = myNode.y ?? 0;
-        const nodeVal = myNode.val ?? 8;
         
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
