@@ -432,7 +432,7 @@ export type UpdateWhiteboardInput = z.infer<typeof UpdateWhiteboardInputSchema>;
 
 
 export const UpdateWhiteboardOutputSchema = z.object({
-    imageUrl: z.string().url(),
+    imageUrl: z.string().describe("The generated image as a data URI."),
     imagePrompt: z.string(),
 });
 export type UpdateWhiteboardOutput = z.infer<typeof UpdateWhiteboardOutputSchema>;

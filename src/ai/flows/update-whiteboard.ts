@@ -3,7 +3,7 @@
 /**
  * @fileOverview A flow to update a collaborative whiteboard based on conversation.
  * This flow now generates a beautiful, artistic image of a mind map,
- * uploads it to Firebase Storage, and returns the public URL.
+ * and returns it as a data URI.
  */
 
 import { ai } from '@/ai/genkit';
@@ -12,37 +12,24 @@ import {
   UpdateWhiteboardInputSchema,
   type UpdateWhiteboardInput,
 } from '@/lib/types';
-import { getAdminApp } from '@/lib/firebase-admin';
-import { getStorage } from 'firebase-admin/storage';
-import { v4 as uuidv4 } from 'uuid';
 import { googleAI } from '@genkit-ai/google-genai';
 
 // Define a new output schema that returns the image URL
 const UpdateWhiteboardOutputSchema = z.object({
-  imageUrl: z.string().url(),
-  imagePrompt: z.string(),
+  imageUrl: z.string().describe("The generated image as a data URI."),
+  imagePrompt: z.string().describe("The artistic prompt used for generation."),
 });
 export type UpdateWhiteboardOutput = z.infer<
   typeof UpdateWhiteboardOutputSchema
 >;
 
-export const updateWhiteboardFlow = ai.defineFlow(
-  {
-    name: 'updateWhiteboardFlow',
-    inputSchema: UpdateWhiteboardInputSchema,
-    outputSchema: UpdateWhiteboardOutputSchema,
-  },
-  async (input) => {
-    // 1. Get Admin App instance
-    const adminApp = getAdminApp();
-    if (!adminApp) {
-      throw new Error('Firebase Admin SDK is not initialized. Check server environment variables.');
-    }
-
-    // 2. Determine the user's core request from the last message.
+export async function updateWhiteboardFlow(
+  input: UpdateWhiteboardInput
+): Promise<UpdateWhiteboardOutput> {
+    // 1. Determine the user's core request from the last message.
     const lastMessage = input.conversationHistory.split('\n').pop() || '';
 
-    // 3. Generate a creative, artistic prompt for the image model.
+    // 2. Generate a creative, artistic prompt for the image model.
     const artDirectorPrompt = `You are an expert art director for a creative AI. A user wants to create a mind map or diagram. Your job is to translate their simple request into a rich, detailed, and artistic prompt for an image generation model.
 
         The image should be:
@@ -80,29 +67,6 @@ export const updateWhiteboardFlow = ai.defineFlow(
       throw new Error('Image generation model failed to return an image.');
     }
 
-    // 5. Convert data URI to a Buffer.
-    const imageBuffer = Buffer.from(
-      media.url.substring(media.url.indexOf(',') + 1),
-      'base64'
-    );
-
-    // 6. Upload the Buffer to Firebase Storage using Admin SDK.
-    const bucket = getStorage(adminApp).bucket('studio-3422235219-dd152.appspot.com');
-    const imageId = uuidv4();
-    const filePath = `whiteboard-images/${imageId}.png`;
-    const file = bucket.file(filePath);
-
-    await file.save(imageBuffer, {
-      metadata: {
-        contentType: 'image/png',
-      },
-    });
-
-    // Make the file public and get the URL
-    await file.makePublic();
-    const imageUrl = file.publicUrl();
-
-    // 7. Return the public URL and the prompt used.
-    return { imageUrl, imagePrompt };
-  }
-);
+    // 5. Return the data URI and the prompt used.
+    return { imageUrl: media.url, imagePrompt };
+}

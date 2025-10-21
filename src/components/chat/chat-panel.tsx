@@ -129,6 +129,7 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
 
   const fetchSuggestions = useCallback(async () => {
     const currentMessages = messages || [];
+    if (currentMessages.length === 0) return;
     // This function can be called to manually refresh suggestions.
     setIsRefreshingSuggestions(true);
     try {
