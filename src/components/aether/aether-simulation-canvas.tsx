@@ -5,6 +5,7 @@ import { Canvas, useFrame, type RootState } from '@react-three/fiber';
 import { Stars, Text, Line, OrbitControls } from '@react-three/drei';
 import type { AetherWorldState, AetherAgent } from '@/lib/types';
 import * as THREE from 'three';
+import ForceGraph2D from 'react-force-graph-2d';
 
 const AGENT_COLOR = new THREE.Color('hsl(var(--primary))');
 const SELECTED_AGENT_COLOR = new THREE.Color('hsl(var(--accent))');

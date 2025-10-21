@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { ForceGraph2D } from 'react-force-graph-2d';
+import ForceGraph2D from 'react-force-graph-2d';
 import type { NodeObject, LinkObject } from 'react-force-graph-2d';
 import type { WhiteboardState } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
