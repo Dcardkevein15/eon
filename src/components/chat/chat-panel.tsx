@@ -17,10 +17,15 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import type { SecurityRuleContext } from '@/firebase/errors';
 import { Button } from '../ui/button';
-import { LayoutDashboard } from 'lucide-react';
+import { LayoutDashboard, Loader2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../ui/sheet';
-import Whiteboard from '../whiteboard/Whiteboard';
 import { useDocument } from '@/firebase/use-doc';
+import dynamic from 'next/dynamic';
+
+const Whiteboard = dynamic(() => import('../whiteboard/Whiteboard'), {
+  ssr: false,
+  loading: () => <div className="flex h-full w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
+});
 
 
 interface ChatPanelProps {
@@ -236,7 +241,7 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
       // --- Whiteboard Logic ---
       const lastUserMessage = currentMessages[currentMessages.length - 1]?.content || '';
       if (lastUserMessage.toLowerCase().includes('pizarra') || lastUserMessage.toLowerCase().includes('mapa mental') || lastUserMessage.toLowerCase().includes('diagrama')) {
-          const whiteboardInput: UpdateWhiteboardInput = {
+          const whiteboardInput = {
               conversationHistory: updatedMessages.map(m => `${m.role}: ${m.content}`).join('\n'),
               currentState: whiteboardState || { nodes: [], links: [] },
           };
