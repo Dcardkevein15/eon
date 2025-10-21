@@ -209,9 +209,8 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
 
     if (audioDataUri) {
       try {
-        const { transcription, inferredTone } = await analyzeVoiceMessageAction({ audioDataUri });
-        const toneText = `(Tono inferido: ${inferredTone})`;
-        messageContent = [toneText, `Transcripción: "${transcription}"`, input.trim()].filter(Boolean).join('\n');
+        const { transcription } = await analyzeVoiceMessageAction({ audioDataUri });
+        messageContent = [`Transcripción: "${transcription}"`, input.trim()].filter(Boolean).join('\n');
       } catch (error) {
         console.error('Error in voice analysis action:', error);
         toast({

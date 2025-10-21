@@ -292,21 +292,14 @@ export async function classifyIntentAction(input: ClassifyIntentInput): Promise<
 }
 
 export async function analyzeVoiceMessageAction(input: AnalyzeVoiceInput): Promise<AnalyzeVoiceOutput> {
-  let transcription = '';
-  let inferredTactic = 'desconocido';
   try {
-      if (input.audioDataUri) {
-          const voiceAnalysis = await analyzeVoiceMessageFlow({ audioDataUri: input.audioDataUri });
-          transcription = voiceAnalysis.transcription;
-          
-          if (transcription) {
-              const intentAnalysis = await classifyIntentAction({ text: transcription });
-              inferredTactic = intentAnalysis.intent;
-          }
-      }
-      return { transcription, inferredTactic };
+    if (input.audioDataUri) {
+      const voiceAnalysis = await analyzeVoiceMessageFlow({ audioDataUri: input.audioDataUri });
+      return { transcription: voiceAnalysis.transcription };
+    }
+    return { transcription: '' };
   } catch (error) {
-      console.error('Error analyzing voice message:', error);
-      return { transcription: '', inferredTactic: 'error de análisis' };
+    console.error('Error analyzing voice message:', error);
+    return { transcription: 'Error al transcribir el audio.' };
   }
 }
