@@ -10,7 +10,7 @@ import ChatInput from './chat-input';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useAuth, useCollection, useFirestore } from '@/firebase';
-import { collection, query, orderBy, Timestamp, doc, getDoc, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { collection, query, orderBy, Timestamp, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { updatePsychologicalBlueprint } from '@/ai/flows/update-psychological-blueprint';
 import { v4 as uuidv4 } from 'uuid';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -31,10 +31,10 @@ const Whiteboard = dynamic(() => import('../whiteboard/Whiteboard'), {
 interface ChatPanelProps {
   chat: Chat;
   appendMessage: (chatId: string, message: Omit<Message, 'id'>) => Promise<void>;
-  updateChatTitle: (chatId: string, title: string) => Promise<void>;
+  updateChat: (chatId: string, data: Partial<Chat>) => Promise<void>;
 }
 
-function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
+function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
   const [isResponding, setIsResponding] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const suggestionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -145,11 +145,19 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
     }
   }, [messages, messagesLoading]);
 
+  // Fetch suggestions for existing chats on load.
   useEffect(() => {
     if (messages && messages.length > 0 && !messagesLoading) {
       fetchSuggestions();
     }
   }, [messages, messagesLoading, fetchSuggestions]);
+  
+  // Also fetch suggestions for newly created empty chats.
+  useEffect(() => {
+    if (messages && messages.length === 0 && !messagesLoading && !isResponding) {
+      fetchSuggestions();
+    }
+  }, [messages, messagesLoading, isResponding, fetchSuggestions]);
 
   const getAIResponseAndUpdate = useCallback(async (currentMessages: Message[]) => {
     if (!user || !firestore) return;
@@ -221,12 +229,12 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
           const userMessage = currentMessages[0];
           const conversationForTitle = `User: ${userMessage.content}\nAssistant: ${aiResponseContent}`;
           const newTitle = await generateChatTitle(conversationForTitle);
-          // Combine title and role update in one call
-          const updates: { title: string; anchorRole?: string } = { title: newTitle };
+          
+          const updates: Partial<Chat> = { title: newTitle };
           if (newRole) {
             updates.anchorRole = newRole;
           }
-          await updateChatTitle(chat.id, newTitle);
+          await updateChat(chat.id, updates);
       }
       
       // Blueprint update
@@ -243,34 +251,37 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
           description: "No se pudo obtener una respuesta de la IA. Por favor, inténtalo de nuevo.",
         });
     }
-  }, [user, firestore, chat.id, chat.anchorRole, chat.title, appendMessage, updateChatTitle, toast, triggerBlueprintUpdate, cachedProfile, whiteboardState, whiteboardDocRef]);
+  }, [user, firestore, chat.id, chat.anchorRole, chat.title, appendMessage, updateChat, toast, triggerBlueprintUpdate, cachedProfile, whiteboardState, whiteboardDocRef]);
 
 
   const handleSendMessage = useCallback(async (input: string, imageUrl?: string, audioDataUri?: string) => {
     const currentMessages = messages || [];
-    if ((!input || !input.trim()) && !imageUrl && !audioDataUri) return;
     if (!user) {
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Debes iniciar sesión para chatear.",
-        });
-        return;
+      toast({ variant: "destructive", title: "Error", description: "Debes iniciar sesión para chatear." });
+      return;
     }
-    
-    let messageContent = input;
 
+    let messageContent = input.trim();
+    
+    // Si no hay texto, ni imagen, ni audio, no hacemos nada.
+    if (!messageContent && !imageUrl && !audioDataUri) return;
+
+    // Si hay audio, lo procesamos.
     if (audioDataUri) {
       try {
         const { transcription, inferredTone } = await analyzeVoiceMessageAction({ audioDataUri });
-        const combinedText = [input.trim(), transcription].filter(Boolean).join(' \n\n');
-        messageContent = `(Tono: ${inferredTone}) "${combinedText}"`;
+        const toneText = `(Tono inferido: ${inferredTone})`;
+        // El contenido del mensaje será la transcripción con el tono,
+        // y el input del usuario (si lo hay) se añade.
+        messageContent = [toneText, `Transcripción: "${transcription}"`, input.trim()].filter(Boolean).join('\n');
       } catch (error) {
+        console.error('Error in voice analysis action:', error);
         toast({
           variant: "destructive",
           title: "Error de Voz",
           description: "No se pudo procesar el mensaje de voz. Inténtalo de nuevo.",
         });
+        // Detenemos la ejecución si el análisis de voz falla, ya que es la intención principal.
         return;
       }
     }

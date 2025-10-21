@@ -237,12 +237,20 @@ export async function classifyIntentAction(input: ClassifyIntentInput): Promise<
 }
 
 export async function analyzeVoiceMessageAction(input: AnalyzeVoiceInput): Promise<AnalyzeVoiceOutput> {
+  let transcription = '';
+  let inferredTone = 'desconocido';
   try {
-    const result = await analyzeVoiceMessageFlow(input);
-    return result;
+      if (input.audioDataUri) {
+          const result = await analyzeVoiceMessageFlow({ audioDataUri: input.audioDataUri });
+          transcription = result.transcription;
+          inferredTone = result.inferredTone;
+      }
+      return { transcription, inferredTone };
   } catch (error) {
-    console.error('Error analyzing voice message:', error);
-    throw new Error('No se pudo procesar el mensaje de voz.');
+      console.error('Error analyzing voice message:', error);
+      // No lanzar error, devolver transcripción vacía y tono desconocido
+      // para que el mensaje de texto (si existe) aún pueda ser procesado.
+      return { transcription: '', inferredTone: 'error de análisis' };
   }
 }
 

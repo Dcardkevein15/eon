@@ -14,7 +14,7 @@ import {z} from 'genkit';
 const GenerateChatTitleInputSchema = z.object({
   conversationHistory: z
     .string()
-    .describe('The first user message and the first assistant response.'),
+    .describe('El primer mensaje del usuario y la primera respuesta del asistente.'),
 });
 export type GenerateChatTitleInput = z.infer<
   typeof GenerateChatTitleInputSchema
@@ -23,7 +23,7 @@ export type GenerateChatTitleInput = z.infer<
 const GenerateChatTitleOutputSchema = z.object({
   title: z
     .string()
-    .describe('A short, descriptive title for the chat (2-5 words).'),
+    .describe('Un título corto y descriptivo para el chat (2-5 palabras).'),
 });
 export type GenerateChatTitleOutput = z.infer<
   typeof GenerateChatTitleOutputSchema
@@ -39,19 +39,19 @@ const prompt = ai.definePrompt({
   name: 'generateChatTitlePrompt',
   input: {schema: GenerateChatTitleInputSchema},
   output: {schema: GenerateChatTitleOutputSchema},
-  prompt: `Based on the following conversation excerpt, create a short, descriptive title of 2 to 5 words. The title should capture the main topic of the conversation.
+  prompt: `Basado en el siguiente extracto de conversación, crea un título corto y descriptivo de 2 a 5 palabras en español. El título debe capturar el tema principal de la conversación.
 
-Conversation:
+Conversación:
 {{{conversationHistory}}}
 
-Example:
-Conversation:
-User: I've been feeling really stressed out at work lately.
-Assistant: I'm sorry to hear that. Can you tell me more about what's been causing the stress?
+Ejemplo:
+Conversación:
+Usuario: Últimamente me he sentido muy estresado en el trabajo.
+Asistente: Lamento oír eso. ¿Puedes contarme más sobre lo que ha estado causando el estrés?
 
-Title:
+Título:
 {
-  "title": "Stress at Work"
+  "title": "Estrés en el Trabajo"
 }
 `,
 });

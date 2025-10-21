@@ -114,10 +114,14 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
         const newChatRef = await addDoc(chatsCollectionRef, newChatData);
         const path = `/c/${newChatRef.id}`;
         
-        await updateDoc(newChatRef, { path });
-
+        // Use a batch to ensure atomicity
+        const batch = writeBatch(firestore);
+        batch.update(newChatRef, { path });
+        
         const messagesColRef = collection(newChatRef, 'messages');
-        await addDoc(messagesColRef, firstMessage);
+        batch.set(doc(messagesColRef), firstMessage);
+
+        await batch.commit();
 
         router.push(path);
         return newChatRef.id;
@@ -164,20 +168,20 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
     [user, firestore]
   );
   
-  const updateChatTitle = useCallback(
-    async (chatId: string, title: string) => {
-      if (!user || !firestore || !title) return;
+  const updateChat = useCallback(
+    async (chatId: string, data: Partial<Chat>) => {
+      if (!user || !firestore) return;
       const chatRef = doc(firestore, `users/${user.uid}/chats`, chatId);
-      updateDoc(chatRef, { title }).catch((serverError) => {
+      updateDoc(chatRef, data).catch((serverError) => {
         if (serverError.code === 'permission-denied') {
           const permissionError = new FirestorePermissionError({
             path: chatRef.path,
             operation: 'update',
-            requestResourceData: { title },
+            requestResourceData: data,
           } satisfies SecurityRuleContext);
           errorEmitter.emit('permission-error', permissionError);
         } else {
-           console.error("Error updating title:", serverError);
+           console.error("Error updating chat:", serverError);
         }
       });
     },
@@ -253,7 +257,7 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
                   key={chatId} // Ensure re-mount when chat changes
                   chat={activeChat}
                   appendMessage={appendMessage}
-                  updateChatTitle={updateChatTitle}
+                  updateChat={updateChat}
                 />
               ) : null // Don't render empty chat when a chat is supposed to be active
             ) : (

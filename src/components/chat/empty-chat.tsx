@@ -47,8 +47,8 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
   const isMobile = useIsMobile();
   const [isCreatingChat, setIsCreatingChat] = useState(false);
   
-  const handleCreateChat = useCallback(async (input: string, imageUrl?: string) => {
-      if ((!input.trim() && !imageUrl) || isCreatingChat) return;
+  const handleCreateChat = useCallback(async (input: string, imageUrl?: string, audioDataUri?: string) => {
+      if ((!input.trim() && !imageUrl && !audioDataUri) || isCreatingChat) return;
 
       setIsCreatingChat(true);
       const firstMessage: Omit<Message, 'id'> = {
@@ -56,9 +56,15 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
           content: input,
           timestamp: Timestamp.now(),
           ...(imageUrl && { imageUrl }),
+          ...(audioDataUri && { content: `[Audio adjunto] ${input}` }),
       };
       
-      await createChat(firstMessage);
+      const newChatId = await createChat(firstMessage);
+      
+      // La redirección ahora es manejada por chat-layout
+      if (!newChatId) {
+        setIsCreatingChat(false); // Reset on failure
+      }
       
   }, [createChat, isCreatingChat]);
 
