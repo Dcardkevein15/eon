@@ -130,7 +130,13 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
   const fetchSuggestions = useCallback(async () => {
     const currentMessages = messages || [];
     if (currentMessages.length === 0 && !messagesLoading) {
-      // Don't fetch for brand new chats, wait for user input
+      // Fetch suggestions for brand new chats
+       try {
+        const newSuggestions = await getSmartComposeSuggestions('');
+        setSuggestions(newSuggestions.slice(0, 3));
+      } catch (error) {
+          console.error("Error fetching initial suggestions", error);
+      }
       return;
     }
     setIsRefreshingSuggestions(true);

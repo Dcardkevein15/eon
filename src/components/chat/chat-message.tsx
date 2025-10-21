@@ -42,7 +42,7 @@ function ChatMessage({ message, isStreaming }: ChatMessageProps) {
       <div className='flex flex-col gap-2' style={{ alignItems: isUser ? 'flex-end': 'flex-start'}}>
         <div
           className={cn(
-            'px-4 py-3 rounded-2xl max-w-xs sm:max-w-md md:max-w-lg lg:max-w-2xl prose prose-sm dark:prose-invert prose-headings:font-semibold prose-p:m-0 prose-headings:m-0 prose-ul:m-0 prose-ol:m-0 prose-p:break-words break-words',
+            'px-4 py-3 rounded-2xl max-w-xs sm:max-w-md md:max-w-lg lg:max-w-2xl prose prose-sm dark:prose-invert prose-headings:font-semibold prose-p:m-0 prose-headings:m-0 prose-ul:m-0 prose-ol:m-0 break-words',
             isUser
               ? 'bg-primary text-primary-foreground rounded-br-none'
               : 'bg-card border rounded-bl-none'
