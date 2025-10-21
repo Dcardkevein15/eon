@@ -234,7 +234,7 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
       }, readingTime);
 
 
-      // Title generation & Role update
+      // Title generation
       if (currentMessages.length === 1 && chat.title === 'Nuevo Chat') {
           const userMessage = currentMessages[0];
           const conversationForTitle = `User: ${userMessage.content}\nAssistant: ${aiResponseContent}`;
@@ -268,16 +268,12 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
 
     let messageContent = input.trim();
     
-    // Si no hay texto, ni imagen, ni audio, no hacemos nada.
     if (!messageContent && !imageUrl && !audioDataUri) return;
 
-    // Si hay audio, lo procesamos.
     if (audioDataUri) {
       try {
         const { transcription, inferredTone } = await analyzeVoiceMessageAction({ audioDataUri });
         const toneText = `(Tono inferido: ${inferredTone})`;
-        // El contenido del mensaje será la transcripción con el tono,
-        // y el input del usuario (si lo hay) se añade.
         messageContent = [toneText, `Transcripción: "${transcription}"`, input.trim()].filter(Boolean).join('\n');
       } catch (error) {
         console.error('Error in voice analysis action:', error);
@@ -286,7 +282,6 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
           title: "Error de Voz",
           description: "No se pudo procesar el mensaje de voz. Inténtalo de nuevo.",
         });
-        // Detenemos la ejecución si el análisis de voz falla, ya que es la intención principal.
         return;
       }
     }
@@ -369,3 +364,5 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
 }
 
 export default memo(ChatPanel);
+
+    

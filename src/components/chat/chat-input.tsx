@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -254,7 +255,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
                 )}
                 {recordedAudioUrl && (
                   <div className="p-2 border rounded-lg bg-card flex items-center gap-2 group">
-                    <audio src={recordedAudioUrl} controls className="h-10" />
+                    <audio src={recordedAudioUrl} controls className="h-10 max-w-full" />
                     <Button 
                       type="button" 
                       variant="ghost" 
@@ -358,3 +359,5 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
 ChatInput.displayName = 'ChatInput';
 
 export default memo(ChatInput);
+
+    

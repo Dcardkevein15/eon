@@ -1,3 +1,4 @@
+
 'use client';
 
 import { cn } from '@/lib/utils';
@@ -38,7 +39,7 @@ function ChatMessage({ message, isStreaming }: ChatMessageProps) {
         </Avatar>
       )}
 
-      <div className='flex flex-col gap-2' style={{ alignItems: isUser ? 'flex-end': 'flex-start'}}>
+      <div className='flex flex-col gap-2 max-w-full' style={{ alignItems: isUser ? 'flex-end': 'flex-start'}}>
         <div
           className={cn(
             'px-4 py-3 rounded-2xl max-w-xs sm:max-w-md md:max-w-lg lg:max-w-2xl overflow-hidden',
@@ -53,7 +54,7 @@ function ChatMessage({ message, isStreaming }: ChatMessageProps) {
               </div>
           )}
           <ReactMarkdown
-            className="prose prose-sm dark:prose-invert prose-headings:font-semibold prose-p:m-0 prose-headings:m-0 prose-ul:m-0 prose-ol:m-0 break-words"
+            className="prose prose-sm dark:prose-invert prose-p:m-0 prose-headings:m-0 prose-ul:m-0 prose-ol:m-0 break-words"
           >
             {message.content}
           </ReactMarkdown>
@@ -75,3 +76,5 @@ function ChatMessage({ message, isStreaming }: ChatMessageProps) {
 }
 
 export default memo(ChatMessage);
+
+    
