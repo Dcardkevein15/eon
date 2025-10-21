@@ -23,7 +23,10 @@ export async function updateWhiteboard(
 
 const prompt = ai.definePrompt({
   name: 'updateWhiteboardPrompt',
-  input: { schema: UpdateWhiteboardInputSchema },
+  input: { schema: z.object({
+    conversationHistory: z.string(),
+    currentStateString: z.string(),
+  }) },
   output: { schema: UpdateWhiteboardOutputSchema },
   prompt: `Eres un asistente de IA experto en organizar información visualmente. Tu tarea es analizar la última petición de un usuario en una conversación y actualizar una pizarra digital (un grafo de nodos y enlaces) para reflejar esa petición.
 
@@ -31,14 +34,7 @@ const prompt = ai.definePrompt({
 {{{conversationHistory}}}
 
 **Estado Actual de la Pizarra:**
-{{#if currentState}}
-\`\`\`json
-{{{jsonStringify currentState}}}
-\`\`\`
-{{else}}
-La pizarra está actualmente vacía.
-{{/if}}
-
+{{{currentStateString}}}
 
 **Petición del Usuario (el último mensaje):**
 Analiza el último mensaje del usuario para entender qué quiere hacer en la pizarra.
@@ -101,10 +97,15 @@ const updateWhiteboardFlow = ai.defineFlow(
     outputSchema: UpdateWhiteboardOutputSchema,
   },
   async (input) => {
-    // Helper to pass JSON.stringify to the prompt context in a Handlebars-safe way
+    // Pre-process the state into a string for the prompt.
+    const currentStateString =
+      input.currentState && (input.currentState.nodes.length > 0 || input.currentState.links.length > 0)
+        ? `\`\`\`json\n${JSON.stringify(input.currentState, null, 2)}\n\`\`\``
+        : 'La pizarra está actualmente vacía.';
+
     const promptData = {
-      ...input,
-      jsonStringify: (obj: any) => JSON.stringify(obj, null, 2),
+      conversationHistory: input.conversationHistory,
+      currentStateString: currentStateString,
     };
 
     const { output } = await prompt(promptData);
