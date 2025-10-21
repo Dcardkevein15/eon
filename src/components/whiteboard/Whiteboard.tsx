@@ -71,20 +71,25 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ state, isLoading }) => {
         const textWidth = ctx.measureText(label).width;
         const bgDimensions = [textWidth, fontSize].map(n => n + fontSize * 0.4);
 
+        const x = node.x ?? 0;
+        const y = node.y ?? 0;
+
         ctx.fillStyle = 'hsla(var(--background), 0.8)';
-        ctx.fillRect(node.x - bgDimensions[0] / 2, node.y - bgDimensions[1] / 2, bgDimensions[0], bgDimensions[1]);
+        ctx.fillRect(x - bgDimensions[0] / 2, y - bgDimensions[1] / 2, bgDimensions[0], bgDimensions[1]);
 
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = node.color || 'hsl(var(--primary))';
-        ctx.fillText(label, node.x, node.y);
+        ctx.fillText(label, x, y);
 
         node.__bckgDimensions = bgDimensions; 
       }}
        nodePointerAreaPaint={(node: any, color, ctx) => {
           ctx.fillStyle = color;
           const bckgDimensions = node.__bckgDimensions;
-          bckgDimensions && ctx.fillRect(node.x - bckgDimensions[0] / 2, node.y - bckgDimensions[1] / 2, bckgDimensions[0], bckgDimensions[1]);
+          const x = node.x ?? 0;
+          const y = node.y ?? 0;
+          bckgDimensions && ctx.fillRect(x - bckgDimensions[0] / 2, y - bckgDimensions[1] / 2, bckgDimensions[0], bckgDimensions[1]);
         }}
     />
   );
