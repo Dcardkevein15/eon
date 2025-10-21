@@ -419,3 +419,13 @@ export const UpdateWhiteboardOutputSchema = z.object({
     imagePrompt: z.string(),
 });
 export type UpdateWhiteboardOutput = z.infer<typeof UpdateWhiteboardOutputSchema>;
+
+
+export type WhiteboardImageRecord = {
+  id: string;
+  imageUrl: string;
+  prompt: string;
+  createdAt: string; // ISO string
+};
+
+    
