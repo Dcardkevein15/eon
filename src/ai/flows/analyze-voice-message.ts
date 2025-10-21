@@ -17,11 +17,11 @@ const AnalyzeVoiceInputSchema = z.object({
 export type AnalyzeVoiceInput = z.infer<typeof AnalyzeVoiceInputSchema>;
 
 const AnalyzeVoiceOutputSchema = z.object({
-  transcription: z.string().describe('The transcribed text from the audio.'),
+  transcription: z.string().describe('El texto transcrito del audio.'),
   inferredTone: z
     .string()
     .describe(
-      'A brief (2-3 word) analysis of the emotional tone based on prosody (pitch, rhythm, volume). E.g., "Hesitant and soft", "Energetic and confident", "Monotone and tired".'
+      'Un análisis breve (2-3 palabras) del tono emocional basado en la prosodia (tono, ritmo, volumen). Ej: "Dudoso y suave", "Enérgico y seguro", "Monótono y cansado".'
     ),
 });
 export type AnalyzeVoiceOutput = z.infer<typeof AnalyzeVoiceOutputSchema>;
@@ -37,12 +37,16 @@ const analyzeVoicePrompt = ai.definePrompt({
   name: 'analyzeVoiceMessagePrompt',
   input: { schema: AnalyzeVoiceInputSchema },
   output: { schema: AnalyzeVoiceOutputSchema },
-  prompt: `You are an expert voice and sentiment analyst. A user has provided an audio message. Your task is to:
-1.  Transcribe the spoken words accurately.
-2.  Analyze the prosody of the voice (pitch, rhythm, volume, pauses) to infer the underlying emotional tone. Do not analyze the words, only the sound of the voice.
-3.  Provide a brief, 2-3 word description of this inferred tone.
+  prompt: `Eres un experto analista de voz y sentimientos. Un usuario ha proporcionado un mensaje de audio. Tu tarea es:
+1.  Transcribir las palabras habladas con precisión.
+2.  Analizar la prosodia de la voz (tono, ritmo, volumen, pausas) para inferir el tono emocional subyacente. No analices las palabras, solo el sonido de la voz.
+3.  Proporcionar una breve descripción de 2-3 palabras de este tono inferido.
 
-Audio message to analyze:
+**IMPORTANTE**: Toda la salida (transcripción y análisis de tono) DEBE estar en español.
+
+Ejemplo de salida para el tono: "Firme y directo", "Vacilante y suave".
+
+Mensaje de audio a analizar:
 {{media url=audioDataUri}}
 `,
 });
