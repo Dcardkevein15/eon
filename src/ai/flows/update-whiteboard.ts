@@ -67,3 +67,4 @@ export async function updateWhiteboard(
   // 5. Return the data URI and the prompt used.
   return { imageUrl: media.url, imagePrompt };
 }
+
