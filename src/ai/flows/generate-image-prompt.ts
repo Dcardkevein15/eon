@@ -8,7 +8,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { googleAI } from '@genkit-ai/google-genai';
 
 const GenerateImagePromptInputSchema = z.object({
   conversationHistory: z.string().describe("The history of the conversation, to provide context for the user's request."),
@@ -48,7 +47,6 @@ const generateArtisticPrompt = ai.definePrompt({
     input: { schema: GenerateImagePromptInputSchema },
     output: { schema: GenerateImagePromptOutputSchema },
     prompt: artDirectorSystemPrompt,
-    model: googleAI.model('gemini-1.5-flash'),
 });
 
 
