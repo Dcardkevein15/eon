@@ -85,7 +85,7 @@ export const updateWhiteboardFlow = ai.defineFlow(
     );
 
     // 6. Upload the Buffer to Firebase Storage using Admin SDK.
-    const bucket = getStorage(adminApp).bucket();
+    const bucket = getStorage(adminApp).bucket('studio-3422235219-dd152.appspot.com');
     const imageId = uuidv4();
     const filePath = `whiteboard-images/${imageId}.png`;
     const file = bucket.file(filePath);
