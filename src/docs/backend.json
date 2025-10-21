@@ -168,15 +168,18 @@
     "providers": ["google.com"]
   },
   "firestore": {
-    "/users/{userId}": { "schema": { "$ref": "#/entities/user" }, "rules": "auth.uid == userId" },
-    "/users/{userId}/chats/{chatId}": { "schema": { "$ref": "#/entities/chat" }, "rules": "auth.uid == userId" },
-    "/users/{userId}/chats/{chatId}/messages/{messageId}": { "schema": { "$ref": "#/entities/message" }, "rules": "auth.uid == userId" },
-    "/users/{userId}/chats/{chatId}/whiteboard/main": { "schema": { "$ref": "#/entities/whiteboardState" }, "rules": "auth.uid == userId" },
-    "/users/{userId}/chatbotState/main": { "schema": { "$ref": "#/entities/chatbotState" }, "rules": "auth.uid == userId" },
-    "/users/{userId}/profile/main": { "schema": { "$ref": "#/entities/userProfile" }, "rules": "auth.uid == userId" },
-    "/users/{userId}/gymSessions/{sessionId}": { "schema": { "$ref": "#/entities/simulationSession" }, "rules": "auth.uid == userId" },
-    "/users/{userId}/gymSessions/{sessionId}/messages/{messageId}": { "schema": { "$ref": "#/entities/message" }, "rules": "auth.uid == userId" },
-    "/users/{userId}/dreams/{dreamId}": { "schema": { "$ref": "#/entities/dreamInterpretation" }, "rules": "auth.uid == userId" },
+    "/users/{userId}": { "schema": { "$ref": "#/entities/user" }, "rules": "request.auth.uid == userId" },
+    "/users/{userId}/chats/{chatId}": { "schema": { "$ref": "#/entities/chat" }, "rules": "request.auth.uid == userId" },
+    "/users/{userId}/chats/{chatId}/messages/{messageId}": { "schema": { "$ref": "#/entities/message" }, "rules": "request.auth.uid == userId" },
+    "/users/{userId}/chats/{chatId}/whiteboard/main": {
+      "schema": { "$ref": "#/entities/whiteboardState" },
+      "rules": "request.auth.uid == userId"
+    },
+    "/users/{userId}/chatbotState/main": { "schema": { "$ref": "#/entities/chatbotState" }, "rules": "request.auth.uid == userId" },
+    "/users/{userId}/profile/main": { "schema": { "$ref": "#/entities/userProfile" }, "rules": "request.auth.uid == userId" },
+    "/users/{userId}/gymSessions/{sessionId}": { "schema": { "$ref": "#/entities/simulationSession" }, "rules": "request.auth.uid == userId" },
+    "/users/{userId}/gymSessions/{sessionId}/messages/{messageId}": { "schema": { "$ref": "#/entities/message" }, "rules": "request.auth.uid == userId" },
+    "/users/{userId}/dreams/{dreamId}": { "schema": { "$ref": "#/entities/dreamInterpretation" }, "rules": "request.auth.uid == userId" },
     
     "/therapists/{therapistId}": {
         "schema": { "$ref": "#/entities/therapist" },
@@ -196,5 +199,3 @@
     }
   }
 }
-
-    
