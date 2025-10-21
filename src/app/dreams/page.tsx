@@ -259,8 +259,8 @@ export default function DreamWeaverPage() {
       if (recordedAudioUrl) {
           const audioDataUri = await blobUrlToDataUri(recordedAudioUrl);
           const voiceAnalysis = await analyzeVoiceMessageAction({ audioDataUri });
-          const toneText = `(Tono inferido de la voz: ${voiceAnalysis.inferredTone})`;
-          dreamDescription = `${toneText}\n\nTranscripción: "${voiceAnalysis.transcription}"\n\nNotas adicionales: ${dreamText}`;
+          const tacticText = `(Táctica de comunicación detectada: ${voiceAnalysis.inferredTactic})`;
+          dreamDescription = `${tacticText}\n\nTranscripción: "${voiceAnalysis.transcription}"\n\nNotas adicionales: ${dreamText}`;
       }
 
       const interpretation = await interpretDreamAction({

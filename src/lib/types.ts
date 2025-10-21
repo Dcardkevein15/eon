@@ -398,6 +398,6 @@ export type AnalyzeVoiceInput = z.infer<typeof AnalyzeVoiceInputSchema>;
 
 export const AnalyzeVoiceOutputSchema = z.object({
   transcription: z.string(),
-  inferredTone: z.string(),
+  inferredTactic: z.string(),
 });
 export type AnalyzeVoiceOutput = z.infer<typeof AnalyzeVoiceOutputSchema>;

@@ -131,7 +131,7 @@ Cada respuesta que generes DEBE seguir esta estructura de tres actos. Es innegoc
 
 **CONDICIÓN INICIAL:** Si el historial de conversación está vacío o es el primer mensaje del usuario, ignora el Acto I y comienza directamente en el Acto II. Preséntate con tu rol y haz una pregunta abierta y relevante. Ejemplo: "Hola, soy ${roleToUse}. Noto que te interesa [tema del mensaje]. ¿Qué aspecto de ello te gustaría explorar hoy?".
 
-*   **Acto I: La Conexión (El "Te Veo").** Si hay historial, comienza validando la emoción o situación actual del usuario, pero DEBES conectarla INMEDIATAMENTE con un dato específico de su Cianotipo Psicológico (el \`profileContext\`). Si el mensaje del usuario incluye un análisis de tono (ej. "(Tono: ...)") úsalo como un dato crucial. Usa frases como: "Noto por tu tono que te sientes [tono inferido], y eso se conecta con tu arquetipo de '[arquetipo del perfil]'..." o "Esta sensación de [emoción actual] es un eco de tu sesgo cognitivo de '[sesgo del perfil]' que hemos identificado...". DEMUESTRA QUE LO RECUERDAS.
+*   **Acto I: La Conexión (El "Te Veo").** Si hay historial, comienza validando la emoción o situación actual del usuario, pero DEBES conectarla INMEDIATAMENTE con un dato específico de su Cianotipo Psicológico (el \`profileContext\`). Si el mensaje del usuario incluye un análisis de táctica o intención (ej. "(Táctica: ...)") úsalo como un dato crucial. Usa frases como: "Noto que al hablar usas una táctica de [táctica], y eso se conecta con tu arquetipo de '[arquetipo del perfil]'..." o "Esta sensación de [emoción actual] es un eco de tu sesgo cognitivo de '[sesgo del perfil]' que hemos identificado...". DEMUESTRA QUE LO RECUERDAS.
 
 *   **Acto II: El Reencuadre (El "Y si...").** Tras establecer la conexión (o como primer paso si el chat es nuevo), ofrece una nueva perspectiva. No des soluciones. Reencuadra el problema de una manera que ilumine una nueva posibilidad, basándote en la tensión de su 'conflicto nuclear' o en una de sus 'fortalezas'. Por ejemplo: "Este patrón, aunque te causa [dolor], también es la fuente de tu fortaleza en [fortaleza del perfil]. Quizás el objetivo no es eliminarlo, sino entender qué intenta proteger."
 
@@ -275,24 +275,26 @@ export async function classifyIntentAction(input: ClassifyIntentInput): Promise<
         return result;
     } catch (error) {
         console.error('Error classifying intent:', error);
-        return { intent: 'unknown' };
+        return { intent: 'desconocido' };
     }
 }
 
 export async function analyzeVoiceMessageAction(input: AnalyzeVoiceInput): Promise<AnalyzeVoiceOutput> {
   let transcription = '';
-  let inferredTone = 'desconocido';
+  let inferredTactic = 'desconocido';
   try {
       if (input.audioDataUri) {
-          const result = await analyzeVoiceMessageFlow({ audioDataUri: input.audioDataUri });
-          transcription = result.transcription;
-          inferredTone = result.inferredTone;
+          const voiceAnalysis = await analyzeVoiceMessageFlow({ audioDataUri: input.audioDataUri });
+          transcription = voiceAnalysis.transcription;
+          
+          if (transcription) {
+              const intentAnalysis = await classifyIntentAction({ text: transcription });
+              inferredTactic = intentAnalysis.intent;
+          }
       }
-      return { transcription, inferredTone };
+      return { transcription, inferredTactic };
   } catch (error) {
       console.error('Error analyzing voice message:', error);
-      // No lanzar error, devolver transcripción vacía y tono desconocido
-      // para que el mensaje de texto (si existe) aún pueda ser procesado.
-      return { transcription: '', inferredTone: 'error de análisis' };
+      return { transcription: '', inferredTactic: 'error de análisis' };
   }
 }
