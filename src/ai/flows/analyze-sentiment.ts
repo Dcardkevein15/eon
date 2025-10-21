@@ -18,9 +18,14 @@ const prompt = ai.definePrompt({
     name: 'analyzeSentimentPrompt',
     input: { schema: AnalyzeSentimentInputSchema },
     output: { schema: AnalyzeSentimentOutputSchema },
-    prompt: `Analiza el sentimiento de la siguiente frase y devuelve un único número de -1.0 (extremadamente negativo) a 1.0 (extremadamente positivo). La respuesta debe ser únicamente el número.
+    prompt: `Analiza el sentimiento del siguiente texto y devuelve un único número de -1.0 (extremadamente negativo) a 1.0 (extremadamente positivo).
 
-Frase: "{{{text}}}"
+Texto: "{{{text}}}"
+
+IMPORTANTE: Tu respuesta DEBE ser únicamente un objeto JSON con la clave "sentiment" y el valor numérico. Por ejemplo:
+{
+  "sentiment": 0.85
+}
 `,
 });
 

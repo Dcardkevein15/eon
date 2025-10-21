@@ -220,7 +220,7 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
             else sentimentText = 'Tono: Neutral';
         }
 
-        messageContent = [`Transcripción: "${transcription}"`, sentimentText, input.trim()].filter(Boolean).join('\n\n');
+        messageContent = [sentimentText, `Transcripción: "${transcription}"`, input.trim()].filter(Boolean).join('\n\n');
 
       } catch (error) {
         console.error('Error in voice analysis action:', error);
