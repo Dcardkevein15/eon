@@ -58,11 +58,11 @@ export const updateWhiteboardFlow = ai.defineFlow(
         *   **Generated Image Prompt:** "A cinematic, 4K, photorealistic render of a conceptual mind map. A central, softly glowing orb labeled 'Preocupaciones' floats in a dark, minimalist space. Luminous, thread-like synapses of energy in pastel colors (soft blue, gentle pink, pale yellow) connect it to smaller, distinct nodes labeled 'Trabajo', 'Familia', 'Futuro', and 'Salud'. The entire structure has a subtle, intricate, and neurological feel, like a beautiful and complex thought captured in motion. Ethereal, soft focus background."
 
         Now, generate ONLY the artistic image prompt for the user's request. Do not add any other text or explanation.`;
-
-    const llmResponse = await googleAI
-      .model('gemini-1.5-flash')
-      .generate(artDirectorPrompt);
-    const imagePrompt = llmResponse.text();
+    
+    const { text: imagePrompt } = await ai.generate({
+        model: googleAI.model('gemini-1.5-flash'),
+        prompt: artDirectorPrompt,
+    });
 
     if (!imagePrompt) {
       throw new Error('Art Director AI failed to generate a prompt.');
