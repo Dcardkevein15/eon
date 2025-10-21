@@ -33,10 +33,16 @@ export const updateWhiteboardFlow = ai.defineFlow(
     outputSchema: UpdateWhiteboardOutputSchema,
   },
   async (input) => {
-    // 1. Determine the user's core request from the last message.
+    // 1. Get Admin App instance
+    const adminApp = getAdminApp();
+    if (!adminApp) {
+      throw new Error('Firebase Admin SDK is not initialized. Check server environment variables.');
+    }
+
+    // 2. Determine the user's core request from the last message.
     const lastMessage = input.conversationHistory.split('\n').pop() || '';
 
-    // 2. Generate a creative, artistic prompt for the image model.
+    // 3. Generate a creative, artistic prompt for the image model.
     const artDirectorPrompt = `You are an expert art director for a creative AI. A user wants to create a mind map or diagram. Your job is to translate their simple request into a rich, detailed, and artistic prompt for an image generation model.
 
         The image should be:
@@ -62,7 +68,7 @@ export const updateWhiteboardFlow = ai.defineFlow(
       throw new Error('Art Director AI failed to generate a prompt.');
     }
 
-    // 3. Generate the image using the artistic prompt.
+    // 4. Generate the image using the artistic prompt.
     const { media } = await ai.generate({
       model: googleAI.model('imagen-4.0-fast-generate-001'),
       prompt: imagePrompt,
@@ -72,17 +78,13 @@ export const updateWhiteboardFlow = ai.defineFlow(
       throw new Error('Image generation model failed to return an image.');
     }
 
-    // 4. Convert data URI to a Buffer.
+    // 5. Convert data URI to a Buffer.
     const imageBuffer = Buffer.from(
       media.url.substring(media.url.indexOf(',') + 1),
       'base64'
     );
 
-    // 5. Upload the Buffer to Firebase Storage using Admin SDK.
-    const adminApp = getAdminApp();
-    if (!adminApp) {
-      throw new Error('Firebase Admin SDK is not initialized. Check server environment variables.');
-    }
+    // 6. Upload the Buffer to Firebase Storage using Admin SDK.
     const bucket = getStorage(adminApp).bucket();
     const imageId = uuidv4();
     const filePath = `whiteboard-images/${imageId}.png`;
@@ -98,7 +100,7 @@ export const updateWhiteboardFlow = ai.defineFlow(
     await file.makePublic();
     const imageUrl = file.publicUrl();
 
-    // 6. Return the public URL and the prompt used.
+    // 7. Return the public URL and the prompt used.
     return { imageUrl, imagePrompt };
   }
 );
