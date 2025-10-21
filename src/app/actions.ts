@@ -16,7 +16,7 @@ import { getTacticalAdvice as getTacticalAdviceFlow } from '@/ai/flows/get-tacti
 import { classifyIntent as classifyIntentFlow } from '@/ai/flows/classify-intent';
 import { analyzeVoiceMessage as analyzeVoiceMessageFlow } from '@/ai/flows/analyze-voice-message';
 import { generateImagePrompt } from '@/ai/flows/generate-image-prompt';
-import { generateImageFromPrompt } from '@/ai/flows/generate-image';
+import { generateImageX } from '@/ai/flows/generate-image-x';
 
 
 const expertRoles = [
@@ -288,7 +288,7 @@ export async function updateWhiteboardAction(input: UpdateWhiteboardInput): Prom
         }
 
         // Step 2: Generate the image from the artistic prompt
-        const { imageUrl } = await generateImageFromPrompt({
+        const { imageUrl } = await generateImageX({
             prompt: artisticPrompt
         });
 
