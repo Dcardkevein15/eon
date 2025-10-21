@@ -171,7 +171,13 @@
     "/users/{userId}": { "schema": { "$ref": "#/entities/user" }, "rules": "auth.uid == userId" },
     "/users/{userId}/chats/{chatId}": { "schema": { "$ref": "#/entities/chat" }, "rules": "auth.uid == userId" },
     "/users/{userId}/chats/{chatId}/messages/{messageId}": { "schema": { "$ref": "#/entities/message" }, "rules": "auth.uid == userId" },
-    "/users/{userId}/chats/{chatId}/whiteboard/main": { "schema": { "$ref": "#/entities/whiteboardState" }, "rules": "auth.uid == userId" },
+    "/users/{userId}/chats/{chatId}/whiteboard/main": {
+      "schema": { "$ref": "#/entities/whiteboardState" },
+      "rules": {
+        "read": "request.auth.uid == userId",
+        "write": "request.auth.uid == userId"
+      }
+    },
     "/users/{userId}/chatbotState/main": { "schema": { "$ref": "#/entities/chatbotState" }, "rules": "auth.uid == userId" },
     "/users/{userId}/profile/main": { "schema": { "$ref": "#/entities/userProfile" }, "rules": "auth.uid == userId" },
     "/users/{userId}/gymSessions/{sessionId}": { "schema": { "$ref": "#/entities/simulationSession" }, "rules": "auth.uid == userId" },
