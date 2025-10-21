@@ -62,7 +62,7 @@ export async function getAIResponse(
   userId: string, 
   anchorRole: string | null,
   userProfile: ProfileData | null
-): Promise<string> {
+): Promise<{ response: string, newRole?: string }> {
     
   const cleanHistory = history.map(m => {
     // La conversión de Timestamp a Date debe ocurrir antes de pasar los datos a la Server Action
@@ -70,11 +70,18 @@ export async function getAIResponse(
     return `[${date.toISOString()}] ${m.role}: ${m.content}`;
   }).join('\n');
   
-  // Asegurar que siempre haya un rol ancla válido
-  const roleToUse = anchorRole && expertRoles.includes(anchorRole) ? anchorRole : 'El Validador Empático';
-  
-  const profileContext = userProfile ? JSON.stringify(userProfile) : 'No hay perfil de usuario disponible.';
+  let roleToUse = anchorRole;
+  let newRole;
 
+  // Si no hay rol ancla y hay historial, determina uno
+  if (!roleToUse && history.length > 0) {
+      newRole = await determineAnchorRole(history[0].content);
+      roleToUse = newRole;
+  } else if (!roleToUse) {
+      roleToUse = 'El Validador Empático'; // Fallback si no hay historial
+  }
+
+  const profileContext = userProfile ? JSON.stringify(userProfile) : 'No hay perfil de usuario disponible.';
 
   const expertAgentSystemPrompt = `Eres un asistente de IA conversacional llamado Nimbus. Tu propósito es ser un confidente y psicólogo virtual, un espejo que revela profundidades. Respondes de manera empática, perspicaz y transformadora.
 
@@ -116,10 +123,12 @@ Asistente:`;
 
   try {
     const { text } = await ai.generate({ prompt: expertAgentSystemPrompt });
-    return text || "No pude generar una respuesta en este momento.";
+    const response = text || "No pude generar una respuesta en este momento.";
+    return { response, newRole };
   } catch (error) {
     console.error("Error getting AI response:", error);
-    return "Lo siento, estoy teniendo problemas para responder en este momento. Por favor, inténtalo de nuevo más tarde.";
+    const response = "Lo siento, estoy teniendo problemas para responder en este momento. Por favor, inténtalo de nuevo más tarde.";
+    return { response };
   }
 }
 

@@ -10,7 +10,7 @@ import ChatInput from './chat-input';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useAuth, useCollection, useFirestore } from '@/firebase';
-import { collection, query, orderBy, Timestamp, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, Timestamp, doc, getDoc, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { updatePsychologicalBlueprint } from '@/ai/flows/update-psychological-blueprint';
 import { v4 as uuidv4 } from 'uuid';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -129,7 +129,10 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
 
   const fetchSuggestions = useCallback(async () => {
     const currentMessages = messages || [];
-    if (currentMessages.length === 0) return;
+    if (currentMessages.length === 0 && !messagesLoading) {
+      // Don't fetch for brand new chats, wait for user input
+      return;
+    }
     setIsRefreshingSuggestions(true);
     try {
         const historyString = currentMessages.map((m) => `${m.role}: ${m.content}`).join('\n');
@@ -140,10 +143,10 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
     } finally {
         setIsRefreshingSuggestions(false);
     }
-  }, [messages]);
+  }, [messages, messagesLoading]);
 
   useEffect(() => {
-    if (messages && messages.length === 0 && !messagesLoading) {
+    if (messages && messages.length > 0 && !messagesLoading) {
       fetchSuggestions();
     }
   }, [messages, messagesLoading, fetchSuggestions]);
@@ -162,13 +165,13 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
           timestamp: m.timestamp instanceof Timestamp ? m.timestamp.toDate() : m.timestamp,
       }));
 
-      const aiResponseContent = await getAIResponse(
+      const { response: aiResponseContent, newRole } = await getAIResponse(
         historyForAI,
         user.uid,
         chat.anchorRole || null,
         cachedProfile
       );
-
+      
       const aiMessage: Omit<Message, 'id'> = {
         role: 'assistant',
         content: aiResponseContent,
@@ -184,12 +187,10 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
       const lastUserMessage = currentMessages[currentMessages.length - 1]?.content || '';
       if (lastUserMessage.toLowerCase().includes('pizarra') || lastUserMessage.toLowerCase().includes('mapa mental') || lastUserMessage.toLowerCase().includes('diagrama')) {
           try {
-              const whiteboardInput = {
+              const { imageUrl } = await updateWhiteboardAction({
                   conversationHistory: updatedMessages.map(m => `${m.role}: ${m.content}`).join('\n'),
-                  // Ensure we send a valid state, even if it's just null
                   currentState: whiteboardState || null,
-              };
-              const { imageUrl } = await updateWhiteboardAction(whiteboardInput);
+              });
               
               if (imageUrl && whiteboardDocRef) {
                   await setDoc(whiteboardDocRef, { imageUrl }, { merge: true });
@@ -215,16 +216,21 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
       }, readingTime);
 
 
-      // Title generation
+      // Title generation & Role update
       if (currentMessages.length === 1 && chat.title === 'Nuevo Chat') {
           const userMessage = currentMessages[0];
           const conversationForTitle = `User: ${userMessage.content}\nAssistant: ${aiResponseContent}`;
           const newTitle = await generateChatTitle(conversationForTitle);
+          // Combine title and role update in one call
+          const updates: { title: string; anchorRole?: string } = { title: newTitle };
+          if (newRole) {
+            updates.anchorRole = newRole;
+          }
           await updateChatTitle(chat.id, newTitle);
       }
       
       // Blueprint update
-      if (updatedMessages.length % 5 === 0) {
+      if (updatedMessages.length > 0 && updatedMessages.length % 5 === 0) {
         triggerBlueprintUpdate(updatedMessages);
       }
 
