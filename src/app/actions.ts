@@ -15,7 +15,8 @@ import { analyzeSentiment as analyzeSentimentFlow } from '@/ai/flows/analyze-sen
 import { getTacticalAdvice as getTacticalAdviceFlow } from '@/ai/flows/get-tactical-advice';
 import { classifyIntent as classifyIntentFlow } from '@/ai/flows/classify-intent';
 import { analyzeVoiceMessage as analyzeVoiceMessageFlow } from '@/ai/flows/analyze-voice-message';
-import { updateWhiteboard } from '@/ai/flows/update-whiteboard';
+import { generateImagePrompt } from '@/ai/flows/generate-image-prompt';
+import { generateImageFromPrompt } from '@/ai/flows/generate-image';
 
 
 const expertRoles = [
@@ -277,8 +278,21 @@ export async function analyzeVoiceMessageAction(input: AnalyzeVoiceInput): Promi
 
 export async function updateWhiteboardAction(input: UpdateWhiteboardInput): Promise<UpdateWhiteboardOutput> {
     try {
-        const result = await updateWhiteboard(input);
-        return result;
+        // Step 1: Generate the artistic prompt
+        const { prompt: artisticPrompt } = await generateImagePrompt({
+            conversationHistory: input.conversationHistory
+        });
+
+        if (!artisticPrompt) {
+            throw new Error('Could not generate an artistic prompt.');
+        }
+
+        // Step 2: Generate the image from the artistic prompt
+        const { imageUrl } = await generateImageFromPrompt({
+            prompt: artisticPrompt
+        });
+
+        return { imageUrl, imagePrompt: artisticPrompt };
     } catch (error) {
         console.error('Error updating whiteboard:', error);
         throw new Error('No se pudo actualizar la pizarra.');
