@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, Play, BrainCircuit, Bot, Sparkles, ChevronLeft, History } from 'lucide-react';
+import { Loader2, Play, BrainCircuit, Bot, Sparkles, ChevronLeft, History, TrendingUp, TrendingDown, PauseCircle } from 'lucide-react';
 import type { TradingSignal, CryptoDebateTurn, TradingAnalysisRecord, FullCryptoAnalysis, Coin, MarketData } from '@/lib/types';
 import { runCryptoAnalysis, getCoinList } from '@/ai/flows/crypto-analysis-flow';
 import Link from 'next/link';
@@ -16,6 +16,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { v4 as uuidv4 } from 'uuid';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 
 const AnalystAvatar = ({ name }: { name: string }) => {
     const isApex = name === 'Apex';
@@ -60,6 +61,44 @@ function useLocalStorage<T>(key: string, initialValue: T) {
 
   return [storedValue, setValue, loading] as const;
 }
+
+const SignalCard = ({ signal }: { signal: TradingSignal }) => {
+    const signalConfig = {
+        COMPRAR: {
+            icon: TrendingUp,
+            color: 'text-green-400',
+            bgColor: 'bg-green-500/10',
+        },
+        VENDER: {
+            icon: TrendingDown,
+            color: 'text-red-400',
+            bgColor: 'bg-red-500/10',
+        },
+        MANTENER: {
+            icon: PauseCircle,
+            color: 'text-amber-400',
+            bgColor: 'bg-amber-500/10',
+        },
+    };
+
+    const { icon: Icon, color, bgColor } = signalConfig[signal.action];
+
+    return (
+        <div className={cn('p-4 rounded-lg border', bgColor, color)}>
+            <div className="flex justify-between items-start gap-4">
+                <div className='flex items-center gap-3'>
+                    <Icon className="w-5 h-5" />
+                    <span className="font-bold text-sm uppercase tracking-wider">{signal.action}</span>
+                </div>
+                <div className="text-right">
+                    <p className="font-bold text-lg text-foreground">${signal.price > 0 ? signal.price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</p>
+                </div>
+            </div>
+            <p className="text-xs text-foreground/70 mt-2">{signal.reasoning}</p>
+        </div>
+    );
+};
+
 
 export default function TradingAnalysisPage() {
     const [isLoading, setIsLoading] = useState(false);
@@ -254,28 +293,11 @@ export default function TradingAnalysisPage() {
                                         <CardTitle className="flex items-center gap-2 text-primary">Señales del Día</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Acción</TableHead>
-                                                    <TableHead>Precio (USD)</TableHead>
-                                                    <TableHead>Justificación</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {analysisResult.signals.map((signal, index) => (
-                                                    <TableRow key={`${signal.crypto}-${index}`}>
-                                                        <TableCell className={signal.action === 'COMPRAR' ? 'text-green-400 font-bold' : signal.action === 'VENDER' ? 'text-red-400 font-bold' : 'text-amber-400 font-bold'}>
-                                                            {signal.action}
-                                                        </TableCell>
-                                                        <TableCell className="font-mono">${signal.price > 0 ? signal.price.toFixed(2) : '-'}</TableCell>
-                                                        <TableCell className="text-xs">
-                                                            {signal.reasoning}
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
+                                        <div className="space-y-3">
+                                            {analysisResult.signals.map((signal, index) => (
+                                                <SignalCard key={index} signal={signal} />
+                                            ))}
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </div>

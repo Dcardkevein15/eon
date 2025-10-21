@@ -336,7 +336,7 @@ export const TradingSignalSchema = z.object({
     action: z.enum(['COMPRAR', 'VENDER', 'MANTENER']).describe("La acción de trading recomendada."),
     price: z.number().describe("El precio de ejecución sugerido en USD. Usa 0 si el precio no está disponible."),
     reasoning: z.string().describe("Una justificación breve y clara para la señal, basada en el análisis."),
-});
+}).extend({}).passthrough();
 export type TradingSignal = z.infer<typeof TradingSignalSchema>;
 
 export const SynthesizerOutputSchema = z.object({
