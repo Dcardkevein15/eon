@@ -12,6 +12,7 @@ interface MyNodeObject extends NodeObject {
   id: string;
   label: string;
   color?: string;
+  val?: number; // Add val for node size
 }
 
 interface WhiteboardProps {
@@ -29,8 +30,10 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ state, isLoading }) => {
 
   const graphData = useMemo(() => {
     if (!state) return { nodes: [], links: [] };
+    // Assign a default value for 'val' if it doesn't exist, for sizing
+    const nodes = state.nodes.map(n => ({ ...n, id: n.id || n.label, val: n.val || 8 }));
     return {
-      nodes: state.nodes.map(n => ({ ...n, id: n.id || n.label })),
+      nodes,
       links: state.links,
     };
   }, [state]);
@@ -58,39 +61,32 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ state, isLoading }) => {
       ref={fgRef}
       graphData={graphData}
       nodeLabel="label"
+      nodeVal="val"
       nodeColor={(node: any) => node.color || 'hsl(var(--primary))'}
       linkColor={() => 'hsl(var(--border))'}
       backgroundColor="hsl(var(--background))"
       cooldownTicks={100}
       onEngineStop={() => fgRef.current?.zoomToFit(400, 100)}
+      nodeCanvasObjectMode={() => 'after'}
       nodeCanvasObject={(node: any, ctx, globalScale) => {
         const label = node.label;
         const fontSize = 12 / globalScale;
         ctx.font = `${fontSize}px Sans-Serif`;
         
-        const textWidth = ctx.measureText(label).width;
-        const bgDimensions = [textWidth, fontSize].map(n => n + fontSize * 0.4);
-
+        // Coordinates are guaranteed to be numbers here by the library's lifecycle
         const x = node.x ?? 0;
         const y = node.y ?? 0;
 
-        ctx.fillStyle = 'hsla(var(--background), 0.8)';
-        ctx.fillRect(x - bgDimensions[0] / 2, y - bgDimensions[1] / 2, bgDimensions[0], bgDimensions[1]);
-
-        ctx.textAlign = 'center';
+        // Determine text position based on node's horizontal position
+        const canvasWidth = ctx.canvas.width;
+        const textIsRight = x < canvasWidth / 2;
+        ctx.textAlign = textIsRight ? 'left' : 'right';
+        const textX = textIsRight ? x + (node.val || 5) + 3 : x - (node.val || 5) - 3;
+        
         ctx.textBaseline = 'middle';
-        ctx.fillStyle = node.color || 'hsl(var(--primary))';
-        ctx.fillText(label, x, y);
-
-        node.__bckgDimensions = bgDimensions; 
+        ctx.fillStyle = 'hsl(var(--foreground))';
+        ctx.fillText(label, textX, y);
       }}
-       nodePointerAreaPaint={(node: any, color, ctx) => {
-          ctx.fillStyle = color;
-          const bckgDimensions = node.__bckgDimensions;
-          const x = node.x ?? 0;
-          const y = node.y ?? 0;
-          bckgDimensions && ctx.fillRect(x - bckgDimensions[0] / 2, y - bckgDimensions[1] / 2, bckgDimensions[0], bckgDimensions[1]);
-        }}
     />
   );
 };
