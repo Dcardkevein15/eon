@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useCallback, memo, useEffect, useMemo, useRef } from 'react';
-import type { Chat, Message, ProfileData, CachedProfile, WhiteboardState, WhiteboardOperation } from '@/lib/types';
+import type { Chat, Message, ProfileData, CachedProfile, WhiteboardState } from '@/lib/types';
 import { generateChatTitle, getAIResponse, getSmartComposeSuggestions, analyzeVoiceMessageAction, updateWhiteboardAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import ChatMessages from './chat-messages';
@@ -162,52 +162,8 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
     }
   }, [messages]);
 
-  const applyWhiteboardOperations = useCallback((operations: WhiteboardOperation[]) => {
-        if (!whiteboardDocRef) return;
-
-        const currentState = whiteboardState || { nodes: [], links: [] };
-        let newNodes = [...currentState.nodes];
-        let newLinks = [...currentState.links];
-
-        operations.forEach(op => {
-            switch (op.op) {
-                case 'ADD_NODE':
-                    if (!newNodes.some(n => n.id === op.payload.id)) {
-                        newNodes.push(op.payload);
-                    }
-                    break;
-                case 'REMOVE_NODE':
-                    newNodes = newNodes.filter(n => n.id !== op.payload.id);
-                    newLinks = newLinks.filter(l => l.source !== op.payload.id && l.target !== op.payload.id);
-                    break;
-                case 'UPDATE_NODE':
-                    newNodes = newNodes.map(n => n.id === op.payload.id ? { ...n, ...op.payload } : n);
-                    break;
-                case 'ADD_LINK':
-                     if (!newLinks.some(l => l.source === op.payload.source && l.target === op.payload.target)) {
-                        newLinks.push(op.payload);
-                    }
-                    break;
-                case 'REMOVE_LINK':
-                    newLinks = newLinks.filter(l => !(l.source === op.payload.source && l.target === op.payload.target));
-                    break;
-                case 'CLEAR':
-                    newNodes = [];
-                    newLinks = [];
-                    break;
-            }
-        });
-
-        const newState = { nodes: newNodes, links: newLinks };
-        setDoc(whiteboardDocRef, newState, { merge: true }).catch(err => {
-             console.error("Failed to update whiteboard state:", err);
-             // Optionally handle permission errors here as in other places
-        });
-  }, [whiteboardState, whiteboardDocRef]);
-
-
   const getAIResponseAndUpdate = useCallback(async (currentMessages: Message[]) => {
-    if (!user) return;
+    if (!user || !firestore) return;
     setIsResponding(true);
     setSuggestions([]);
     if (suggestionTimeoutRef.current) {
@@ -245,8 +201,10 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
               conversationHistory: updatedMessages.map(m => `${m.role}: ${m.content}`).join('\n'),
               currentState: whiteboardState || { nodes: [], links: [] },
           };
-          const { operations } = await updateWhiteboardAction(whiteboardInput);
-          applyWhiteboardOperations(operations);
+          const { imageUrl } = await updateWhiteboardAction(whiteboardInput);
+          if (imageUrl && whiteboardDocRef) {
+              await setDoc(whiteboardDocRef, { imageUrl }, { merge: true });
+          }
       }
 
       // Delayed suggestions logic
@@ -282,7 +240,7 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
           description: "No se pudo obtener una respuesta de la IA. Por favor, inténtalo de nuevo.",
         });
     }
-  }, [user, chat.id, chat.anchorRole, chat.title, appendMessage, updateChatTitle, toast, triggerBlueprintUpdate, cachedProfile, whiteboardState, applyWhiteboardOperations]);
+  }, [user, firestore, chat.id, chat.anchorRole, chat.title, appendMessage, updateChatTitle, toast, triggerBlueprintUpdate, cachedProfile, whiteboardState, whiteboardDocRef]);
 
 
   const handleSendMessage = useCallback(async (input: string, imageUrl?: string, audioDataUri?: string) => {

@@ -2,6 +2,7 @@
 'use server';
 /**
  * @fileOverview A flow to update a collaborative whiteboard based on conversation.
+ * This flow now generates a beautiful, artistic image of a mind map.
  */
 
 import { ai } from '@/ai/genkit';
@@ -9,11 +10,9 @@ import { z } from 'zod';
 import {
   UpdateWhiteboardInputSchema,
   UpdateWhiteboardOutputSchema,
-  WhiteboardStateSchema,
   type UpdateWhiteboardInput,
   type UpdateWhiteboardOutput,
 } from '@/lib/types';
-import { v4 as uuidv4 } from 'uuid';
 
 export async function updateWhiteboard(
   input: UpdateWhiteboardInput
@@ -21,66 +20,28 @@ export async function updateWhiteboard(
   return updateWhiteboardFlow(input);
 }
 
-const prompt = ai.definePrompt({
-  name: 'updateWhiteboardPrompt',
-  input: { schema: z.object({
-    conversationHistory: z.string(),
-    currentStateString: z.string(),
-  }) },
-  output: { schema: UpdateWhiteboardOutputSchema },
-  prompt: `Eres un asistente de IA experto en organizar información visualmente en un mapa mental. Tu tarea es analizar la última petición de un usuario y actualizar una pizarra digital para reflejarla de forma clara, estética y organizada.
+const artDirectorPrompt = ai.definePrompt({
+    name: 'whiteboardArtDirectorPrompt',
+    input: { schema: z.object({ userRequest: z.string() }) },
+    output: { schema: z.object({ imagePrompt: z.string() }) },
+    prompt: `You are an expert art director for a creative AI. A user wants to create a mind map or diagram. Your job is to translate their simple request into a rich, detailed, and artistic prompt for an image generation model.
 
-**Contexto de la Conversación (lo más reciente al final):**
-{{{conversationHistory}}}
+The image should be:
+- **Visually Stunning:** Use terms like 'cinematic lighting', 'intricate details', '4K', 'photorealistic', 'Unreal Engine render'.
+- **Conceptually Rich:** Represent abstract concepts with creative metaphors (e.g., 'glowing neural network', 'constellation of ideas', 'ancient tree with branches of thought').
+- **Well-Structured:** Describe a clear central node and radiating connections.
+- **Aesthetically Pleasing:** Suggest a color palette and style (e.g., 'warm pastel colors', 'cyberpunk neon glow', 'minimalist infographic style').
 
-**Estado Actual de la Pizarra:**
-{{{currentStateString}}}
+**User's Request:** "{{{userRequest}}}"
 
-**Petición del Usuario (el último mensaje):**
-Analiza el último mensaje del usuario para entender qué quiere hacer en la pizarra.
+**Example:**
+*   **User's Request:** "Crea un mapa mental sobre mis preocupaciones."
+*   **Generated Image Prompt:** "A cinematic, 4K, photorealistic render of a conceptual mind map. A central, softly glowing orb labeled 'Preocupaciones' floats in a dark, minimalist space. Luminous, thread-like synapses of energy in pastel colors (soft blue, gentle pink, pale yellow) connect it to smaller, distinct nodes labeled 'Trabajo', 'Familia', 'Futuro', and 'Salud'. The entire structure has a subtle, intricate, and neurological feel, like a beautiful and complex thought captured in motion. Ethereal, soft focus background."
 
-**Instrucciones Generales:**
-- Genera una lista de operaciones para modificar el estado actual.
-- Usa los IDs de los nodos existentes si el usuario se refiere a ellos.
-- **Para nodos nuevos, SIEMPRE genera un ID único usando un formato como "concepto-uuid".**
-- No generes nodos o enlaces que ya existan.
-
-**Instrucciones para crear MAPAS MENTALES:**
-Si el usuario pide crear un mapa mental (ej. "mapa mental de mis preocupaciones"), DEBES seguir estos pasos:
-1.  Crea un nodo central claro. Dale un color primario (ej. 'hsl(var(--primary))').
-2.  Genera entre 3 y 5 nodos secundarios que representen sub-temas del concepto central.
-3.  **Asigna a cada nodo secundario un color DISTINTO y atractivo** de la paleta de la aplicación (ej. 'hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', etc.).
-4.  Conecta CADA nodo secundario al nodo central con un enlace.
-
-**Operaciones Disponibles:**
-- \`ADD_NODE\`: Añade un nuevo nodo. Payload: \`{ id: string, label: string, color?: string }\`.
-- \`REMOVE_NODE\`: Elimina un nodo. Payload: \`{ id: string }\`.
-- \`UPDATE_NODE\`: Actualiza un nodo. Payload: \`{ id: string, label?: string, color?: string }\`.
-- \`ADD_LINK\`: Añade un enlace. Payload: \`{ source: string, target: string }\`.
-- \`REMOVE_LINK\`: Elimina un enlace. Payload: \`{ source: string, target: string }\`.
-- \`CLEAR\`: Elimina todo. Payload: \`{}\`.
-
-**Ejemplo de un BUEN mapa mental para "Mapa mental de mis necesidades":**
-\`\`\`json
-{
-  "operations": [
-    { "op": "CLEAR", "payload": {} },
-    { "op": "ADD_NODE", "payload": { "id": "necesidades-central", "label": "Mis Necesidades", "color": "hsl(var(--primary))" } },
-    { "op": "ADD_NODE", "payload": { "id": "seguridad-1a2b", "label": "Seguridad", "color": "hsl(var(--chart-1))" } },
-    { "op": "ADD_NODE", "payload": { "id": "crecimiento-3c4d", "label": "Crecimiento", "color": "hsl(var(--chart-2))" } },
-    { "op": "ADD_NODE", "payload": { "id": "conexion-5e6f", "label": "Conexión Social", "color": "hsl(var(--chart-3))" } },
-    { "op": "ADD_NODE", "payload": { "id": "descanso-7g8h", "label": "Descanso", "color": "hsl(var(--chart-4))" } },
-    { "op": "ADD_LINK", "payload": { "source": "necesidades-central", "target": "seguridad-1a2b" } },
-    { "op": "ADD_LINK", "payload": { "source": "necesidades-central", "target": "crecimiento-3c4d" } },
-    { "op": "ADD_LINK", "payload": { "source": "necesidades-central", "target": "conexion-5e6f" } },
-    { "op": "ADD_LINK", "payload": { "source": "necesidades-central", "target": "descanso-7g8h" } }
-  ]
-}
-\`\`\`
-
-Ahora, basándote en la petición del usuario, genera la lista de operaciones.
+Now, generate the artistic image prompt for the user's request.
 `,
 });
+
 
 const updateWhiteboardFlow = ai.defineFlow(
   {
@@ -89,29 +50,27 @@ const updateWhiteboardFlow = ai.defineFlow(
     outputSchema: UpdateWhiteboardOutputSchema,
   },
   async (input) => {
-    // Pre-process the state into a string for the prompt.
-    const currentStateString =
-      input.currentState && (input.currentState.nodes.length > 0 || input.currentState.links.length > 0)
-        ? `\`\`\`json\n${JSON.stringify(input.currentState, null, 2)}\n\`\`\``
-        : 'La pizarra está actualmente vacía.';
-
-    const promptData = {
-      conversationHistory: input.conversationHistory,
-      currentStateString: currentStateString,
-    };
-
-    const { output } = await prompt(promptData);
-    if (!output) {
-      throw new Error('La IA no pudo generar operaciones para la pizarra.');
+    // 1. Determine the user's core request from the last message.
+    const lastMessage = input.conversationHistory.split('\n').pop() || '';
+    
+    // 2. Generate a creative, artistic prompt for the image model.
+    const { output: artDirectorOutput } = await artDirectorPrompt({ userRequest: lastMessage });
+    if (!artDirectorOutput) {
+        throw new Error('Art Director AI failed to generate a prompt.');
     }
+    const imagePrompt = artDirectorOutput.imagePrompt;
 
-    // Ensure new nodes have unique IDs if the AI forgets
-    output.operations.forEach(op => {
-      if (op.op === 'ADD_NODE' && !op.payload.id) {
-        op.payload.id = op.payload.label.toLowerCase().replace(/\s+/g, '-') + '-' + uuidv4().substring(0, 4);
-      }
+    // 3. Generate the image using the artistic prompt.
+    const { media } = await ai.generate({
+      model: 'googleai/imagen-4.0-fast-generate-001',
+      prompt: imagePrompt,
     });
 
-    return output;
+    if (!media.url) {
+      throw new Error('Image generation model failed to return an image.');
+    }
+
+    // 4. Return the image data URI.
+    return { imageUrl: media.url };
   }
 );

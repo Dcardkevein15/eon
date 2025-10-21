@@ -418,8 +418,9 @@ export const WhiteboardLinkSchema = z.object({
 export type WhiteboardLink = z.infer<typeof WhiteboardLinkSchema>;
 
 export const WhiteboardStateSchema = z.object({
-  nodes: z.array(WhiteboardNodeSchema),
-  links: z.array(WhiteboardLinkSchema),
+  imageUrl: z.string().optional(),
+  nodes: z.array(WhiteboardNodeSchema).optional(),
+  links: z.array(WhiteboardLinkSchema).optional(),
 });
 export type WhiteboardState = z.infer<typeof WhiteboardStateSchema>;
 
@@ -436,6 +437,6 @@ export const WhiteboardOperationSchema = z.object({
 export type WhiteboardOperation = z.infer<typeof WhiteboardOperationSchema>;
 
 export const UpdateWhiteboardOutputSchema = z.object({
-  operations: z.array(WhiteboardOperationSchema),
+  imageUrl: z.string(),
 });
 export type UpdateWhiteboardOutput = z.infer<typeof UpdateWhiteboardOutputSchema>;
