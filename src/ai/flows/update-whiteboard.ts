@@ -2,7 +2,8 @@
 'use server';
 /**
  * @fileOverview A flow to update a collaborative whiteboard based on conversation.
- * This flow now generates a beautiful, artistic image of a mind map.
+ * This flow now generates a beautiful, artistic image of a mind map,
+ * uploads it to Firebase Storage, and returns the public URL.
  */
 
 import { ai } from '@/ai/genkit';
@@ -11,11 +12,13 @@ import {
   UpdateWhiteboardInputSchema,
   type UpdateWhiteboardInput,
 } from '@/lib/types';
+import { getAdminApp } from '@/lib/firebase-admin';
+import { getStorage } from 'firebase-admin/storage';
+import { v4 as uuidv4 } from 'uuid';
 
-
-// Define a new output schema that returns the buffer
+// Define a new output schema that returns the image URL
 const UpdateWhiteboardOutputSchema = z.object({
-    imageBuffer: z.instanceof(Buffer),
+    imageUrl: z.string().url(),
     imagePrompt: z.string(),
 });
 export type UpdateWhiteboardOutput = z.infer<typeof UpdateWhiteboardOutputSchema>;
@@ -77,12 +80,33 @@ const updateWhiteboardFlow = ai.defineFlow(
       throw new Error('Image generation model failed to return an image.');
     }
 
-    // 4. Convert data URI to a Buffer and return it.
+    // 4. Convert data URI to a Buffer.
     const imageBuffer = Buffer.from(
       media.url.substring(media.url.indexOf(',') + 1),
       'base64'
     );
     
-    return { imageBuffer, imagePrompt };
+    // 5. Upload the Buffer to Firebase Storage using Admin SDK.
+    const adminApp = getAdminApp();
+    if (!adminApp) {
+        throw new Error("Firebase Admin SDK is not initialized.");
+    }
+    const bucket = getStorage(adminApp).bucket();
+    const imageId = uuidv4();
+    const filePath = `whiteboard-images/${imageId}.png`;
+    const file = bucket.file(filePath);
+
+    await file.save(imageBuffer, {
+        metadata: {
+            contentType: 'image/png',
+        },
+    });
+
+    // Make the file public and get the URL
+    await file.makePublic();
+    const imageUrl = file.publicUrl();
+
+    // 6. Return the public URL and the prompt used.
+    return { imageUrl, imagePrompt };
   }
 );

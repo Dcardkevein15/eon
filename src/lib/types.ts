@@ -418,7 +418,7 @@ export const WhiteboardLinkSchema = z.object({
 export type WhiteboardLink = z.infer<typeof WhiteboardLinkSchema>;
 
 export const WhiteboardStateSchema = z.object({
-  imageUrl: z.string().optional(),
+  imageUrl: z.string().url().optional(),
   nodes: z.array(WhiteboardNodeSchema).optional(),
   links: z.array(WhiteboardLinkSchema).optional(),
 });
@@ -426,18 +426,13 @@ export type WhiteboardState = z.infer<typeof WhiteboardStateSchema>;
 
 export const UpdateWhiteboardInputSchema = z.object({
   conversationHistory: z.string(),
-  currentState: WhiteboardStateSchema,
+  currentState: WhiteboardStateSchema.nullable(),
 });
 export type UpdateWhiteboardInput = z.infer<typeof UpdateWhiteboardInputSchema>;
 
-export const WhiteboardOperationSchema = z.object({
-  op: z.enum(['ADD_NODE', 'REMOVE_NODE', 'UPDATE_NODE', 'ADD_LINK', 'REMOVE_LINK', 'CLEAR']),
-  payload: z.any(),
-});
-export type WhiteboardOperation = z.infer<typeof WhiteboardOperationSchema>;
 
 export const UpdateWhiteboardOutputSchema = z.object({
-  imageBuffer: z.instanceof(Buffer),
-  imagePrompt: z.string(),
+    imageUrl: z.string().url(),
+    imagePrompt: z.string(),
 });
 export type UpdateWhiteboardOutput = z.infer<typeof UpdateWhiteboardOutputSchema>;
