@@ -6,6 +6,7 @@ import { ForceGraph2D } from 'react-force-graph-2d';
 import type { NodeObject, LinkObject } from 'react-force-graph-2d';
 import type { WhiteboardState } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
+import { BrainCircuit } from 'lucide-react';
 
 interface MyNodeObject extends NodeObject {
   id: string;
@@ -44,8 +45,10 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ state, isLoading }) => {
 
   if (!state || (state.nodes.length === 0 && state.links.length === 0)) {
     return (
-        <div className="flex items-center justify-center h-full text-center text-muted-foreground p-8">
-            <p>La pizarra está en blanco. Pide a la IA que cree un mapa mental o un diagrama para empezar.</p>
+        <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8 bg-background/50">
+            <BrainCircuit className="w-12 h-12 text-primary/50 mb-4" />
+            <h3 className="font-semibold text-lg text-foreground">Esta es tu Pizarra Colaborativa</h3>
+            <p className="mt-2 max-w-sm">Dile a la IA qué quieres visualizar. Prueba con: <strong className="text-primary/80">"Crea un mapa mental sobre mis metas"</strong>.</p>
         </div>
     );
   }
