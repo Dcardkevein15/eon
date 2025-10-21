@@ -14,111 +14,62 @@ import { Sparkles } from 'lucide-react';
 
 
 const ThinkingAnimation = () => {
-    const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-    const ref = useRef<HTMLDivElement>(null);
-
-    useLayoutEffect(() => {
-        const setCanvasDimensions = () => {
-            if (ref.current) {
-                setDimensions({
-                    width: ref.current.offsetWidth,
-                    height: ref.current.offsetHeight,
-                });
-            }
-        };
-        setCanvasDimensions();
-        window.addEventListener('resize', setCanvasDimensions);
-        return () => window.removeEventListener('resize', setCanvasDimensions);
-    }, []);
-
-    const concepts = [ "Empatía", "Lógica", "Recuerdos", "Patrones", "Contexto", "Posibilidades", "Sentimiento", "Pregunta", "Reflexión" ];
-    
-    const useNodes = (numNodes: number, width: number, height: number) => {
-        const [nodes, setNodes] = useState<{ x: number; y: number; text: string; size: number; }[]>([]);
-
-        useEffect(() => {
-            if (width === 0 || height === 0) return;
-
-            const shuffledConcepts = [...concepts].sort(() => 0.5 - Math.random());
-            const newNodes = Array.from({ length: numNodes }).map((_, i) => ({
-                x: Math.random() * width * 0.8 + width * 0.1,
-                y: Math.random() * height * 0.8 + height * 0.1,
-                text: shuffledConcepts[i % shuffledConcepts.length],
-                size: Math.random() * 8 + 6,
-            }));
-            setNodes(newNodes);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        }, [numNodes, width, height]);
-
-        return nodes;
-    };
-    
-    const nodes = useNodes(7, dimensions.width, dimensions.height);
-
-    const links = [];
-    if(nodes.length > 1) {
-      for (let i = 0; i < nodes.length; i++) {
-          for (let j = i + 1; j < nodes.length; j++) {
-              if (Math.random() > 0.6) {
-                links.push({ source: nodes[i], target: nodes[j] });
-              }
-          }
-      }
-    }
-
     return (
-        <div ref={ref} className="w-full h-full relative overflow-hidden">
-            <AnimatePresence>
-                {dimensions.width > 0 && (
-                    <motion.svg 
-                        width="100%" 
-                        height="100%" 
-                        viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1, transition: { duration: 0.5 } }}
-                    >
-                        {/* Links */}
-                        <g>
-                            {links.map((link, i) => (
-                                <motion.line
-                                    key={`link-${i}`}
-                                    x1={link.source.x} y1={link.source.y}
-                                    x2={link.target.x} y2={link.target.y}
-                                    stroke="hsl(var(--primary))"
-                                    strokeWidth="0.5"
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: [0, 0.15, 0] }}
-                                    transition={{ duration: 2, repeat: Infinity, delay: Math.random() * 2 }}
-                                />
-                            ))}
-                        </g>
-
-                        {/* Nodes and Text */}
-                        <g>
-                            {nodes.map((node, i) => (
-                                <motion.g
-                                    key={`node-${i}`}
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    transition={{ duration: 0.5, delay: i * 0.1 }}
-                                >
-                                    <motion.circle 
-                                      cx={node.x} 
-                                      cy={node.y} 
-                                      r={node.size} 
-                                      fill="hsl(var(--accent) / 0.7)"
-                                      animate={{ scale: [1, 1.05, 1] }}
-                                      transition={{ duration: 3, repeat: Infinity, delay: i * 0.2 }}
-                                    />
-                                    <text x={node.x} y={node.y} textAnchor="middle" dy=".3em" fontSize={node.size * 0.55} fill="hsl(var(--accent-foreground))" fontWeight="500" style={{pointerEvents: 'none'}}>
-                                        {node.text}
-                                    </text>
-                                </motion.g>
-                            ))}
-                        </g>
-                    </motion.svg>
-                )}
-            </AnimatePresence>
+        <div className="w-full h-full relative overflow-hidden flex items-center justify-center">
+            <svg
+                width="80%"
+                height="80%"
+                viewBox="0 0 100 100"
+                style={{ filter: "url(#goo)" }}
+            >
+                {/* Defs for the goo effect */}
+                <defs>
+                    <filter id="goo">
+                        <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur" />
+                        <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -7" result="goo" />
+                        <feBlend in="SourceGraphic" in2="goo" />
+                    </filter>
+                </defs>
+                {/* Animated blobs */}
+                <motion.g>
+                    <motion.circle
+                        cx="50"
+                        cy="50"
+                        r="12"
+                        fill="hsl(var(--primary))"
+                        animate={{
+                            cx: [45, 55, 45],
+                            r: [10, 15, 10],
+                            opacity: [0.8, 1, 0.8],
+                        }}
+                        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                    />
+                    <motion.circle
+                        cx="35"
+                        cy="50"
+                        r="10"
+                        fill="hsl(var(--accent))"
+                        animate={{
+                            cy: [55, 45, 55],
+                            r: [8, 12, 8],
+                            opacity: [0.7, 1, 0.7],
+                        }}
+                        transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
+                    />
+                     <motion.circle
+                        cx="65"
+                        cy="50"
+                        r="10"
+                        fill="hsl(var(--accent))"
+                        animate={{
+                            cy: [45, 55, 45],
+                            r: [12, 8, 12],
+                            opacity: [1, 0.7, 1],
+                        }}
+                        transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
+                    />
+                </motion.g>
+            </svg>
         </div>
     );
 };
@@ -133,12 +84,10 @@ const ThinkingMessage = () => {
                 </AvatarFallback>
             </Avatar>
             <div className={cn(
-                'px-4 py-3 rounded-2xl max-w-xs sm:max-w-md md:max-w-lg lg:max-w-2xl overflow-hidden',
-                'bg-card border rounded-bl-none'
+                'px-4 py-3 rounded-2xl w-48 h-24 overflow-hidden',
+                'bg-card border rounded-bl-none flex items-center justify-center'
             )}>
-                <div className="h-40 w-64 flex items-center justify-center">
-                    <ThinkingAnimation />
-                </div>
+                <ThinkingAnimation />
             </div>
         </div>
     )
