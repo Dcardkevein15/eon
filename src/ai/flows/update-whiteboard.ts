@@ -31,9 +31,14 @@ const prompt = ai.definePrompt({
 {{{conversationHistory}}}
 
 **Estado Actual de la Pizarra:**
+{{#if currentState}}
 \`\`\`json
 {{{JSON.stringify currentState}}}
 \`\`\`
+{{else}}
+La pizarra está actualmente vacía.
+{{/if}}
+
 
 **Petición del Usuario (el último mensaje):**
 Analiza el último mensaje del usuario para entender qué quiere hacer en la pizarra.
