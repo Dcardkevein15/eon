@@ -237,7 +237,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
              <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
             
             {(attachedImage || recordedAudioUrl) && (
-              <div className="flex gap-2 mb-2">
+              <div className="flex flex-col sm:flex-row gap-2 mb-2">
                 {attachedImage && (
                   <div className="relative w-28 h-28 group">
                     <Image src={attachedImage} alt="Preview" layout="fill" className="rounded-lg object-cover" />

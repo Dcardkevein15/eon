@@ -324,7 +324,7 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
     <div className="flex h-full">
       <div className="flex flex-col h-full flex-1">
          <header className="flex h-14 items-center justify-between p-2 md:p-4 border-b">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             {isMobile && <SidebarTrigger />}
              <div className='min-w-0'>
               <h2 className="text-base md:text-lg font-semibold truncate">
