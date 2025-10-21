@@ -26,7 +26,7 @@ const chatSchema = z.object({
 type ChatFormValues = z.infer<typeof chatSchema>;
 
 interface ChatInputProps {
-  onSendMessage: (message: string, imageUrl?: string, audioUrl?: string) => void;
+  onSendMessage: (message: string, imageUrl?: string, audioDataUri?: string) => void;
   isLoading: boolean;
   suggestions: string[];
   onClearSuggestions: () => void;
@@ -45,7 +45,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
     const [attachedImage, setAttachedImage] = useState<string | null>(null);
     const [showSuggestions, setShowSuggestions] = useState(true);
     const [isRecording, setIsRecording] = useState(false);
-    const [recordedAudio, setRecordedAudio] = useState<string | null>(null);
+    const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
     
     useImperativeHandle(ref, () => localTextareaRef.current as HTMLTextAreaElement);
 
@@ -56,22 +56,47 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
 
     const messageValue = form.watch('message');
     const isMessageEmpty = !messageValue || messageValue.trim() === '';
-    const canSubmit = !isLoading && (!isMessageEmpty || !!attachedImage || !!recordedAudio);
+    const canSubmit = !isLoading && (!isMessageEmpty || !!attachedImage || !!recordedAudioUrl);
+
+    const blobUrlToDataUri = (blobUrl: string): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            fetch(blobUrl)
+                .then(res => res.blob())
+                .then(blob => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        resolve(reader.result as string);
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                });
+        });
+    }
+
+    const handleSubmit: SubmitHandler<ChatFormValues> = async (data) => {
+      if (!canSubmit) return;
+      
+      let audioDataUri: string | undefined;
+      if (recordedAudioUrl) {
+          audioDataUri = await blobUrlToDataUri(recordedAudioUrl);
+      }
+      
+      onSendMessage(data.message, attachedImage || undefined, audioDataUri);
+      
+      form.reset();
+      onClearSuggestions();
+      setAttachedImage(null);
+      setRecordedAudioUrl(null);
+      if (recordedAudioUrl) {
+        URL.revokeObjectURL(recordedAudioUrl);
+      }
+    };
 
     const handleSuggestion = (suggestion: string) => {
       if (isLoading) return;
       onSendMessage(suggestion);
       form.reset();
       onClearSuggestions();
-    };
-
-    const handleSubmit: SubmitHandler<ChatFormValues> = (data) => {
-      if (!canSubmit) return;
-      onSendMessage(data.message, attachedImage || undefined, recordedAudio || undefined);
-      form.reset();
-      onClearSuggestions();
-      setAttachedImage(null);
-      setRecordedAudio(null);
     };
 
     const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -96,7 +121,6 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
         };
         reader.readAsDataURL(file);
       }
-      // Reset file input to allow selecting the same file again
       event.target.value = '';
     };
 
@@ -104,7 +128,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
       if (localTextareaRef.current) {
         localTextareaRef.current.style.height = 'auto';
         const scrollHeight = localTextareaRef.current.scrollHeight;
-        const maxHeight = 160; // Approx 4rem * 4 lines
+        const maxHeight = 160; 
         localTextareaRef.current.style.height = `${Math.min(scrollHeight, maxHeight)}px`;
       }
     }, [messageValue]);
@@ -128,7 +152,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
     const handleStartRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorderRef.current = new MediaRecorder(stream);
+            mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
             audioChunksRef.current = [];
             
             mediaRecorderRef.current.addEventListener("dataavailable", event => {
@@ -138,48 +162,30 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
             mediaRecorderRef.current.addEventListener("stop", () => {
                 const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
                 const audioUrl = URL.createObjectURL(audioBlob);
-                setRecordedAudio(audioUrl);
+                setRecordedAudioUrl(audioUrl);
             });
 
             mediaRecorderRef.current.start();
             setIsRecording(true);
         } catch (err) {
             console.error("Error accessing microphone:", err);
-            // You might want to show a toast message to the user here
         }
     };
 
     const handleStopRecording = () => {
         if (mediaRecorderRef.current) {
             mediaRecorderRef.current.stop();
-            // Stop all tracks on the stream to turn off the mic indicator
             mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
             setIsRecording(false);
         }
     };
     
     const clearRecording = () => {
-        setRecordedAudio(null);
-    }
-
-    const sendAudio = () => {
-        if (recordedAudio) {
-            // Convert blob URL to data URI to send to server action
-            fetch(recordedAudio)
-                .then(res => res.blob())
-                .then(blob => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                        onSendMessage(form.getValues('message'), attachedImage || undefined, reader.result as string);
-                        form.reset();
-                        setAttachedImage(null);
-                        setRecordedAudio(null);
-                    };
-                    reader.readAsDataURL(blob);
-                });
+        if (recordedAudioUrl) {
+            URL.revokeObjectURL(recordedAudioUrl);
         }
-    };
-
+        setRecordedAudioUrl(null);
+    }
 
     return (
       <TooltipProvider delayDuration={200}>
@@ -230,7 +236,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
           >
              <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
             
-            {(attachedImage || recordedAudio) && (
+            {(attachedImage || recordedAudioUrl) && (
               <div className="flex gap-2 mb-2">
                 {attachedImage && (
                   <div className="relative w-28 h-28 group">
@@ -246,9 +252,9 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
                     </Button>
                   </div>
                 )}
-                {recordedAudio && (
+                {recordedAudioUrl && (
                   <div className="p-2 border rounded-lg bg-card flex items-center gap-2 group">
-                    <audio src={recordedAudio} controls className="h-10" />
+                    <audio src={recordedAudioUrl} controls className="h-10" />
                     <Button 
                       type="button" 
                       variant="ghost" 

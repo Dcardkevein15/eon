@@ -220,8 +220,8 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
   }, [user, chat.id, chat.anchorRole, chat.title, appendMessage, updateChatTitle, toast, triggerBlueprintUpdate, cachedProfile]);
 
 
-  const handleSendMessage = useCallback(async (input: string, imageUrl?: string, audioUrl?: string) => {
-    if ((!input || !input.trim()) && !imageUrl && !audioUrl) return;
+  const handleSendMessage = useCallback(async (input: string, imageUrl?: string, audioDataUri?: string) => {
+    if ((!input || !input.trim()) && !imageUrl && !audioDataUri) return;
     if (!user) {
         toast({
             variant: "destructive",
@@ -234,9 +234,9 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
     let messageContent = input;
 
     // If there's an audio URL, process it first
-    if (audioUrl) {
+    if (audioDataUri) {
       try {
-        const { transcription, inferredTone } = await analyzeVoiceMessageAction({ audioDataUri: audioUrl });
+        const { transcription, inferredTone } = await analyzeVoiceMessageAction({ audioDataUri });
         // Combine text input (if any) with the transcription
         const combinedText = [input.trim(), transcription].filter(Boolean).join(' \n\n');
         messageContent = `(Tono: ${inferredTone}) "${combinedText}"`;
