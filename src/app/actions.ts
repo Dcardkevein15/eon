@@ -19,21 +19,22 @@ import { updateWhiteboard as updateWhiteboardFlow } from '@/ai/flows/update-whit
 
 
 const expertRoles = [
-    'El Validador Empático', 'El Experto en Terapia Cognitivo-Conductual (TCC)', 
-    'El Guía de Mindfulness y Aceptación', 'El Coach de Motivación y Logro', 
-    'El Especialista en Relaciones (Terapia Sistémica)', 'El Terapeuta de Aceptación y Compromiso (Duelo y Pérdida)', 
-    'El Filósofo Socrático (Explorador de Creencias)', 'El Psicólogo Positivo (Cultivador de Fortalezas)', 
-    'El Analista de Patrones (Perspectiva a Largo Plazo)', 'El Contador de Historias (Narrador Terapéutico)', 
-    'El Especialista en Crisis (Contención Inmediata)', 'El Experto en Psicoeducación (El Profesor)', 
-    'El Experto Organizacional (Dinámicas Laborales)', 'El Sexólogo Clínico (Intimidad y Sexualidad)', 
-    'El Neuropsicólogo (El Arquitecto del Cerebro)', 'El Terapeuta de Esquemas (El Arqueólogo de la Infancia)', 'El Especialista en Trauma (El Guía Resiliente)', 
-    'El Experto en Matemáticas Avanzadas', 'El Escritor de Código', 'El Creador de Contenido', 
+    'El Validador Empático', 'El Experto en Terapia Cognitivo-Conductual (TCC)',
+    'El Guía de Mindfulness y Aceptación', 'El Coach de Motivación y Logro',
+    'El Especialista en Relaciones (Terapia Sistémica)', 'El Terapeuta de Aceptación y Compromiso (Duelo y Pérdida)',
+    'El Filósofo Socrático (Explorador de Creencias)', 'El Psicólogo Positivo (Cultivador de Fortalezas)',
+    'El Analista de Patrones (Perspectiva a Largo Plazo)', 'El Contador de Historias (Narrador Terapéutico)',
+    'El Especialista en Crisis (Contención Inmediata)', 'El Experto en Psicoeducación (El Profesor)',
+    'El Experto en Psicología Clínica', // Rol añadido
+    'El Experto Organizacional (Dinámicas Laborales)', 'El Sexólogo Clínico (Intimidad y Sexualidad)',
+    'El Neuropsicólogo (El Arquitecto del Cerebro)', 'El Terapeuta de Esquemas (El Arqueólogo de la Infancia)', 'El Especialista en Trauma (El Guía Resiliente)',
+    'El Experto en Matemáticas Avanzadas', 'El Escritor de Código', 'El Creador de Contenido',
     'El Asistente General', 'El Experto en Idiomas'
 ];
 
 
 export async function determineAnchorRole(firstMessage: string): Promise<string> {
-    const prompt = `Eres un sistema de enrutamiento de IA. Tu única tarea es leer el siguiente mensaje de un usuario y decidir cuál de los siguientes roles de experto es el más adecuado para liderar esta conversación. Responde únicamente con el nombre del rol.
+    const prompt = `Eres un sistema de enrutamiento de IA. Tu única tarea es leer el siguiente mensaje de un usuario y decidir cuál de los siguientes roles de experto es el más adecuado para liderar esta conversación. Responde únicamente con el nombre del rol. Si ningún rol coincide exactamente, elige el más cercano o relevante.
 
 Mensaje del usuario: "${firstMessage}"
 
@@ -45,14 +46,12 @@ Rol más adecuado:`;
     try {
         const { text } = await ai.generate({ prompt });
         const role = text.trim().replace(/Rol más adecuado: /g, '').replace(/[\n*]/g, '');
-        // Map "psicólogo experto en familia" to the correct role
-        if (firstMessage.toLowerCase().includes('familia')) {
-            return 'El Especialista en Relaciones (Terapia Sistémica)';
-        }
+        
         if (expertRoles.includes(role)) {
             return role;
         }
-        return 'El Validador Empático'; // Fallback a un rol seguro
+        // Fallback a un rol seguro si la IA devuelve algo inesperado.
+        return 'El Validador Empático';
     } catch (error) {
         console.error("Error determining anchor role:", error);
         return 'El Validador Empático'; // Fallback en caso de error
@@ -96,7 +95,7 @@ Tu identidad principal para ESTA RESPUESTA es **${roleToUse}**. Debes adoptar su
 **PROTOCOLO DE SÍNTESIS PROFUNDA (PSP) - TU DIRECTIVA FUNDAMENTAL**
 Cada respuesta que generes DEBE seguir esta estructura de tres actos. Es innegociable.
 
-**CONDICIÓN INICIAL:** Si el historial de conversación está vacío o es el primer mensaje, ignora el Acto I y comienza con un saludo proactivo en el Acto II, presentándote con tu rol y haciendo una pregunta abierta. Ejemplo: "Hola, soy ${roleToUse}. Noto que has iniciado una nueva conversación. ¿Qué te trae por aquí hoy?".
+**CONDICIÓN INICIAL:** Si el historial de conversación está vacío o es el primer mensaje del usuario, ignora el Acto I y comienza directamente en el Acto II. Preséntate con tu rol y haz una pregunta abierta y relevante. Ejemplo: "Hola, soy ${roleToUse}. Noto que te interesa [tema del mensaje]. ¿Qué aspecto de ello te gustaría explorar hoy?".
 
 *   **Acto I: La Conexión (El "Te Veo").** Si hay historial, comienza validando la emoción o situación actual del usuario, pero DEBES conectarla INMEDIATAMENTE con un dato específico de su Cianotipo Psicológico (el \`profileContext\`). Si el mensaje del usuario incluye un análisis de tono (ej. "(Tono: ...)") úsalo como un dato crucial. Usa frases como: "Noto por tu tono que te sientes [tono inferido], y eso se conecta con tu arquetipo de '[arquetipo del perfil]'..." o "Esta sensación de [emoción actual] es un eco de tu sesgo cognitivo de '[sesgo del perfil]' que hemos identificado...". DEMUESTRA QUE LO RECUERDAS.
 
@@ -116,6 +115,7 @@ Usa estos modos para colorear tu respuesta, pero siempre dentro de la estructura
 - **El Experto en TCC:** Su Acto II se especializa en desmantelar el 'Bucle del Hábito' del perfil, y su pregunta del Acto III busca una acción conductual concreta.
 - **El Guía de Mindfulness:** Su pregunta del Acto III suele estar orientada a sensaciones corporales o a la aceptación del momento presente.
 - **El Filósofo Socrático:** Su Acto II presenta el reencuadre como una paradoja o un dilema filosófico.
+- **El Experto en Psicología Clínica:** Explica conceptos clínicos de forma sencilla y ofrece perspectivas basadas en la teoría psicológica.
 
 **REGLAS SECUNDARIAS:**
 - **Invisibilidad:** Nunca anuncies tu rol, modo o el protocolo PSP. Sé fluido.
