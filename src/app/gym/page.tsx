@@ -1,13 +1,12 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { ArrowRight, ChevronLeft, CheckCircle } from 'lucide-react';
+import { ArrowRight, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth, useFirestore, useCollection } from '@/firebase';
-import { collection, addDoc, serverTimestamp, updateDoc, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, updateDoc, query, orderBy, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { SIMULATION_SCENARIOS } from '@/lib/placeholder-data';
 import type { SimulationScenario, SimulationSession, Chat } from '@/lib/types';
@@ -16,9 +15,8 @@ import ChatSidebar from '@/components/chat/chat-sidebar';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import type { SecurityRuleContext } from '@/firebase/errors';
-import { formatDistanceToNow } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
+import SessionCard from '@/components/gym/session-card';
 
 export default function EmotionalGymPage() {
   const router = useRouter();
@@ -39,7 +37,7 @@ export default function EmotionalGymPage() {
     () => (user?.uid && firestore ? query(collection(firestore, `users/${user.uid}/gymSessions`), orderBy('createdAt', 'desc')) : undefined),
     [user?.uid, firestore]
   );
-  const { data: gymSessions, loading: gymLoading } = useCollection<SimulationSession>(gymSessionsQuery);
+  const { data: gymSessions, loading: gymLoading, error } = useCollection<SimulationSession>(gymSessionsQuery);
   // --- End Data Fetching ---
 
   const handleStartSimulation = async (scenario: SimulationScenario) => {
@@ -55,12 +53,16 @@ export default function EmotionalGymPage() {
     setIsCreating(true);
     setSelectedScenario(scenario);
 
+    const now = Timestamp.now();
+    const expirationTime = new Timestamp(now.seconds + 24 * 60 * 60, now.nanoseconds);
+
     const sessionsCollectionRef = collection(firestore, `users/${user.uid}/gymSessions`);
     const newSessionData = {
       userId: user.uid,
       scenarioId: scenario.id,
       scenarioTitle: scenario.title,
-      createdAt: serverTimestamp(),
+      createdAt: now,
+      expiresAt: expirationTime,
       path: '', // This will be updated after creation
     };
 
@@ -89,16 +91,29 @@ export default function EmotionalGymPage() {
       setSelectedScenario(null);
     }
   };
-
-  const getFormattedDate = (timestamp: any) => {
-    if (!timestamp) return 'Fecha desconocida';
+  
+  const removeSession = useCallback(async (sessionId: string) => {
+    if (!user?.uid || !firestore) return;
+    const sessionRef = doc(firestore, `users/${user.uid}/gymSessions`, sessionId);
     try {
-      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-      return formatDistanceToNow(date, { addSuffix: true, locale: es });
-    } catch {
-      return 'Fecha inválida';
+        await deleteDoc(sessionRef);
+    } catch (serverError: any) {
+         if (serverError.code === 'permission-denied') {
+            const permissionError = new FirestorePermissionError({
+              path: sessionRef.path,
+              operation: 'delete',
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+        } else {
+            console.error('Error deleting session:', serverError);
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: 'No se pudo eliminar la sesión.'
+            });
+        }
     }
-  };
+}, [user?.uid, firestore, toast]);
 
   return (
     <SidebarProvider>
@@ -132,35 +147,18 @@ export default function EmotionalGymPage() {
                   <h2 className="text-xl font-semibold tracking-tight mb-4">Continuar Práctica</h2>
                   {gymLoading ? (
                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <Skeleton className="h-40 w-full" />
-                        <Skeleton className="h-40 w-full" />
-                        <Skeleton className="h-40 w-full" />
+                        <Skeleton className="h-48 w-full" />
+                        <Skeleton className="h-48 w-full" />
+                        <Skeleton className="h-48 w-full" />
                      </div>
                   ) : gymSessions && gymSessions.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {gymSessions.map((session) => (
-                        <Card key={session.id} className="flex flex-col hover:border-primary/50 hover:shadow-lg transition-all">
-                          <CardHeader>
-                            <CardTitle className="truncate">{session.scenarioTitle}</CardTitle>
-                            <CardDescription>{getFormattedDate(session.createdAt)}</CardDescription>
-                          </CardHeader>
-                          <CardContent className="flex-grow">
-                             {session.completedAt && (
-                                <div className='flex items-center text-sm text-green-400'>
-                                   <CheckCircle className='w-4 h-4 mr-2'/>
-                                   <span>Completado</span>
-                                </div>
-                             )}
-                          </CardContent>
-                          <CardFooter>
-                            <Button asChild className="w-full">
-                              <Link href={session.path}>
-                                {session.completedAt ? 'Revisar Sesión' : 'Continuar Práctica'}
-                                <ArrowRight className="ml-2 h-4 w-4" />
-                              </Link>
-                            </Button>
-                          </CardFooter>
-                        </Card>
+                        <SessionCard 
+                            key={session.id} 
+                            session={session} 
+                            onDelete={removeSession} 
+                        />
                       ))}
                     </div>
                   ) : (
@@ -173,13 +171,12 @@ export default function EmotionalGymPage() {
                    <h2 className="text-xl font-semibold tracking-tight mb-4">Empezar Nueva Simulación</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {SIMULATION_SCENARIOS.map((scenario) => (
-                      <Card key={scenario.id} className="flex flex-col hover:border-accent/50 hover:shadow-lg transition-all bg-card/50">
-                        <CardHeader>
-                          <CardTitle>{scenario.title}</CardTitle>
-                          <CardDescription>{scenario.description}</CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex-grow" />
-                        <CardFooter>
+                      <div key={scenario.id} className="flex flex-col border rounded-lg overflow-hidden bg-card/50 hover:border-accent/50 hover:shadow-lg transition-all">
+                        <div className="p-6">
+                          <h3 className="font-semibold">{scenario.title}</h3>
+                          <p className="text-sm text-muted-foreground mt-2">{scenario.description}</p>
+                        </div>
+                        <div className="p-6 pt-0 mt-auto">
                           <Button 
                             onClick={() => handleStartSimulation(scenario)} 
                             className="w-full"
@@ -189,8 +186,8 @@ export default function EmotionalGymPage() {
                             {isCreating && selectedScenario?.id === scenario.id ? 'Iniciando...' : 'Empezar Práctica'}
                             {!(isCreating && selectedScenario?.id === scenario.id) && <ArrowRight className="ml-2 h-4 w-4" />}
                           </Button>
-                        </CardFooter>
-                      </Card>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>

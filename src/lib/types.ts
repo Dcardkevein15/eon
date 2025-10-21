@@ -1,4 +1,5 @@
 
+
 import { Timestamp } from 'firebase/firestore';
 import { z } from 'zod';
 
@@ -168,6 +169,7 @@ export type SimulationSession = {
   scenarioId: string;
   scenarioTitle: string;
   createdAt: Timestamp;
+  expiresAt: Timestamp;
   completedAt?: Timestamp;
   feedback?: string;
   path: string;
