@@ -45,7 +45,7 @@ export async function updateWhiteboard(
       prompt: artDirectorPrompt,
   });
   
-  const imagePrompt = llmResponse.output?.message.content[0].text;
+  const imagePrompt = llmResponse.text;
 
   if (!imagePrompt) {
     throw new Error('Art Director AI failed to generate a prompt.');
