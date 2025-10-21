@@ -159,9 +159,19 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
           timestamp: m.timestamp instanceof Timestamp ? m.timestamp.toDate() : m.timestamp,
       }));
 
-      // --- Whiteboard Logic ---
-      const lastUserMessage = currentMessages[currentMessages.length - 1]?.content || '';
-      if (lastUserMessage.toLowerCase().includes('pizarra') || lastUserMessage.toLowerCase().includes('mapa mental') || lastUserMessage.toLowerCase().includes('diagrama') || lastUserMessage.toLowerCase().includes('dibuja')) {
+      const { response: aiResponseContent, newRole } = await getAIResponse(
+        historyForAI,
+        user.uid,
+        chat.anchorRole || null,
+        cachedProfile
+      );
+      
+      if (newRole && newRole !== chat.anchorRole) {
+        await updateChat(chat.id, { anchorRole: newRole });
+      }
+
+      // Special handling for the visual artist role
+      if (newRole === 'El Artista de Conceptos' || chat.anchorRole === 'El Artista de Conceptos') {
           setIsGeneratingImage(true);
           try {
               const { imageUrl } = await updateWhiteboardAction({
@@ -184,17 +194,6 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
           }
       }
 
-
-      const { response: aiResponseContent, newRole } = await getAIResponse(
-        historyForAI,
-        user.uid,
-        chat.anchorRole || null,
-        cachedProfile
-      );
-      
-      if (newRole && newRole !== chat.anchorRole) {
-        await updateChat(chat.id, { anchorRole: newRole });
-      }
 
       const aiMessage: Omit<Message, 'id'> = {
         role: 'assistant',
@@ -326,7 +325,7 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
       <div className="mt-auto px-2 py-4 md:px-4 md:py-4 border-t bg-background/95 backdrop-blur-sm">
         <ChatInput
           onSendMessage={handleSendMessage}
-          isLoading={isResponding || messagesLoading}
+          isLoading={isResponding || messagesLoading || isGeneratingImage}
           suggestions={suggestions}
           onClearSuggestions={handleClearSuggestions}
           onRefreshSuggestions={fetchSuggestions}

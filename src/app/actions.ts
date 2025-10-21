@@ -25,16 +25,20 @@ const expertRoles = [
     'El Filósofo Socrático (Explorador de Creencias)', 'El Psicólogo Positivo (Cultivador de Fortalezas)',
     'El Analista de Patrones (Perspectiva a Largo Plazo)', 'El Contador de Historias (Narrador Terapéutico)',
     'El Especialista en Crisis (Contención Inmediata)', 'El Experto en Psicoeducación (El Profesor)',
-    'El Experto en Psicología Clínica', // Rol añadido
+    'El Experto en Psicología Clínica',
     'El Experto Organizacional (Dinámicas Laborales)', 'El Sexólogo Clínico (Intimidad y Sexualidad)',
     'El Neuropsicólogo (El Arquitecto del Cerebro)', 'El Terapeuta de Esquemas (El Arqueólogo de la Infancia)', 'El Especialista en Trauma (El Guía Resiliente)',
-    'El Experto en Matemáticas Avanzadas', 'El Escritor de Código', 'El Creador de Contenido',
+    'El Artista de Conceptos', // Nuevo rol para generación de imágenes
     'El Asistente General', 'El Experto en Idiomas'
 ];
 
 
 export async function determineAnchorRole(firstMessage: string): Promise<string> {
-    const prompt = `Eres un sistema de enrutamiento de IA. Tu única tarea es leer el siguiente mensaje de un usuario y decidir cuál de los siguientes roles de experto es el más adecuado para liderar esta conversación. Responde únicamente con el nombre del rol. Si ningún rol coincide exactamente, elige el más cercano o relevante.
+    const prompt = `Eres un sistema de enrutamiento de IA. Tu única tarea es leer el siguiente mensaje de un usuario y decidir cuál de los siguientes roles de experto es el más adecuado para liderar esta conversación. Responde únicamente con el nombre del rol.
+
+**Reglas de Enrutamiento Especiales:**
+- Si el usuario pide dibujar, crear una imagen, generar un mapa mental, visualizar algo o cualquier solicitud de naturaleza gráfica, DEBES responder con "El Artista de Conceptos".
+- Si ningún otro rol coincide, elige "El Validador Empático".
 
 Mensaje del usuario: "${firstMessage}"
 
@@ -50,7 +54,6 @@ Rol más adecuado:`;
         if (expertRoles.includes(role)) {
             return role;
         }
-        // Fallback a un rol seguro si la IA devuelve algo inesperado.
         return 'El Validador Empático';
     } catch (error) {
         console.error("Error determining anchor role:", error);
@@ -85,6 +88,15 @@ export async function getAIResponse(
   }
 
   const roleToUse = newRole || currentAnchorRole || 'El Validador Empático';
+  
+  // *** Special Flow for Image Generation ***
+  if (roleToUse === 'El Artista de Conceptos') {
+      // Don't generate a conversational response.
+      // The whiteboard update is triggered in the client-side `ChatPanel` component.
+      // Return a canned response to notify the user.
+      const response = "Entendido. Iniciando la creación visual. El resultado aparecerá en tu Pizarra Colaborativa en un momento.";
+      return { response, newRole };
+  }
 
   const profileContext = userProfile ? JSON.stringify(userProfile) : 'No hay perfil de usuario disponible.';
 
@@ -116,10 +128,10 @@ Usa estos modos para colorear tu respuesta, pero siempre dentro de la estructura
 - **El Guía de Mindfulness:** Su pregunta del Acto III suele estar orientada a sensaciones corporales o a la aceptación del momento presente.
 - **El Filósofo Socrático:** Su Acto II presenta el reencuadre como una paradoja o un dilema filosófico.
 - **El Experto en Psicología Clínica:** Explica conceptos clínicos de forma sencilla y ofrece perspectivas basadas en la teoría psicológica.
+- **El Artista de Conceptos:** NO usas este prompt. Tu única función es activar el flujo de generación de imágenes, y devuelves una respuesta fija.
 
 **REGLAS SECUNDARIAS:**
 - **Invisibilidad:** Nunca anuncies tu rol, modo o el protocolo PSP. Sé fluido.
-- **Transición para Tareas:** Si el usuario pide una tarea concreta (código, traducción, actualización de pizarra), ejecútala brevemente y DE INMEDIATO retorna al PSP con una pregunta conectora. Ejemplo: "Aquí tienes la traducción. Curiosamente, la palabra que elegiste, 'límite', es central en tu conflicto nuclear. ¿Qué sientes al verla en otro idioma?".
 - **Síntesis Total:** Cada palabra tuya debe estar informada por el \`profileContext\`. Eres un especialista con memoria perfecta de tu paciente.
 
 **Perfil Psicológico del Usuario (Contexto de Memoria):**
