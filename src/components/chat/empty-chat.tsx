@@ -51,20 +51,14 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
       if ((!input.trim() && !imageUrl) || isCreatingChat) return;
 
       setIsCreatingChat(true);
-      const firstMessage: Message = {
-          id: uuidv4(),
+      const firstMessage: Omit<Message, 'id'> = {
           role: 'user',
           content: input,
-          timestamp: new Date(), // Use JS Date for localStorage
+          timestamp: Timestamp.now(),
           ...(imageUrl && { imageUrl }),
       };
       
-      // Store the first message and redirect immediately for instant UI update
-      sessionStorage.setItem('pending_chat_message', JSON.stringify(firstMessage));
-      
-      // The createChat function will handle DB creation and final redirection
-      // but we don't wait for it to finish here.
-      createChat(firstMessage);
+      await createChat(firstMessage);
       
   }, [createChat, isCreatingChat]);
 

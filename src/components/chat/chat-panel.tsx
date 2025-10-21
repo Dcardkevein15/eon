@@ -46,7 +46,6 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
   const { user } = useAuth();
   const firestore = useFirestore();
   const [cachedProfile, setCachedProfile] = useState<ProfileData | null>(null);
-  const [optimisticMessages, setOptimisticMessages] = useState<Message[]>([]);
 
   // --- Whiteboard State ---
   const whiteboardDocRef = useMemo(() =>
@@ -70,10 +69,6 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
   
   const { data: messages, loading: messagesLoading } = useCollection<Message>(messagesQuery);
   
-  const allMessages = useMemo(() => {
-    return messages && messages.length > 0 ? messages : optimisticMessages;
-  }, [messages, optimisticMessages]);
-  
   useEffect(() => {
     if (user) {
       const storageKey = `psych-profile-${user.uid}`;
@@ -89,22 +84,6 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
       }
     }
   }, [user]);
-
-  useEffect(() => {
-    const pendingMessageJSON = sessionStorage.getItem('pending_chat_message');
-    if (pendingMessageJSON) {
-      sessionStorage.removeItem('pending_chat_message');
-      try {
-        const pendingMessage = JSON.parse(pendingMessageJSON) as Message;
-        pendingMessage.timestamp = new Date(pendingMessage.timestamp);
-        setOptimisticMessages([pendingMessage]);
-        getAIResponseAndUpdate([pendingMessage]);
-      } catch (e) {
-        console.error("Failed to parse pending message", e);
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chat.id]);
 
   const triggerBlueprintUpdate = useCallback(async (currentMessages: Message[]) => {
       if (!user) return;
@@ -149,10 +128,11 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
   }, [user, firestore]);
 
   const fetchSuggestions = useCallback(async () => {
-    if (!messages || messages.length === 0) return;
+    const currentMessages = messages || [];
+    if (currentMessages.length === 0) return;
     setIsRefreshingSuggestions(true);
     try {
-        const historyString = messages.map((m) => `${m.role}: ${m.content}`).join('\n');
+        const historyString = currentMessages.map((m) => `${m.role}: ${m.content}`).join('\n');
         const newSuggestions = await getSmartComposeSuggestions(historyString);
         setSuggestions(newSuggestions.slice(0, 3));
     } catch (error) {
@@ -161,6 +141,12 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
         setIsRefreshingSuggestions(false);
     }
   }, [messages]);
+
+  useEffect(() => {
+    if (messages && messages.length === 0 && !messagesLoading) {
+      fetchSuggestions();
+    }
+  }, [messages, messagesLoading, fetchSuggestions]);
 
   const getAIResponseAndUpdate = useCallback(async (currentMessages: Message[]) => {
     if (!user || !firestore) return;
@@ -255,6 +241,7 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
 
 
   const handleSendMessage = useCallback(async (input: string, imageUrl?: string, audioDataUri?: string) => {
+    const currentMessages = messages || [];
     if ((!input || !input.trim()) && !imageUrl && !audioDataUri) return;
     if (!user) {
         toast({
@@ -288,13 +275,11 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
       timestamp: Timestamp.now(),
       ...(imageUrl && { imageUrl }),
     };
-
-    const currentMessages = [...allMessages, { ...userMessage, id: uuidv4() }];
     
     await appendMessage(chat.id, userMessage);
-    await getAIResponseAndUpdate(currentMessages);
+    await getAIResponseAndUpdate([...currentMessages, { ...userMessage, id: uuidv4() }]);
 
-  }, [user, allMessages, appendMessage, chat.id, getAIResponseAndUpdate, toast]);
+  }, [user, messages, appendMessage, chat.id, getAIResponseAndUpdate, toast]);
 
 
   useEffect(() => {
@@ -334,7 +319,7 @@ function ChatPanel({ chat, appendMessage, updateChatTitle }: ChatPanelProps) {
           </Button>
         </header>
         <div className="flex-1 overflow-y-auto">
-          <ChatMessages messages={allMessages} isResponding={isResponding || messagesLoading} />
+          <ChatMessages messages={messages || []} isResponding={isResponding || messagesLoading} />
         </div>
         <div className="mt-auto px-2 py-4 md:px-4 md:py-4 border-t bg-background/95 backdrop-blur-sm">
           <ChatInput

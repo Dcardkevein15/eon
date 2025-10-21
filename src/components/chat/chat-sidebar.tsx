@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Plus, Trash2, History, Briefcase, UserCircle, Dumbbell, Star, BarChartHorizontal } from 'lucide-react';
+import { Plus, Trash2, History, Briefcase, UserCircle, Dumbbell, Star, BarChartHorizontal, Loader2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +38,7 @@ interface ChatSidebarProps {
   isLoading: boolean;
   removeChat: (chatId: string) => void;
   clearChats: () => void;
+  startNewChat: () => Promise<void>;
 }
 
 function ChatSidebar({
@@ -45,15 +46,28 @@ function ChatSidebar({
   activeChatId,
   isLoading,
   removeChat,
-  clearChats
+  clearChats,
+  startNewChat
 }: ChatSidebarProps) {
   const [isClient, setIsClient] = useState(false);
   const { user } = useAuth();
   const pathname = usePathname();
+  const [isCreatingChat, setIsCreatingChat] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  const handleNewChat = async () => {
+    setIsCreatingChat(true);
+    try {
+      await startNewChat();
+    } catch (error) {
+      console.error("Failed to start new chat", error);
+    } finally {
+      setIsCreatingChat(false);
+    }
+  };
   
   const sortedChats = useMemo(() => {
     return [...chats].sort((a, b) => {
@@ -98,11 +112,9 @@ function ChatSidebar({
       <SidebarContent className="flex-1">
         <ScrollArea className="h-full px-2">
            <div className="p-2 space-y-2">
-             <Button asChild className="w-full justify-center" variant={pathname === '/' || pathname.startsWith('/c/') ? 'default' : 'secondary'}>
-                <Link href="/">
-                  <Plus className="mr-2 h-4 w-4" />
-                  NUEVA CONVERSACIÓN
-                </Link>
+             <Button onClick={handleNewChat} disabled={isCreatingChat} className="w-full justify-center" variant={pathname === '/' || pathname.startsWith('/c/') ? 'default' : 'secondary'}>
+                {isCreatingChat ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+                {isCreatingChat ? 'Creando...' : 'NUEVA CONVERSACIÓN'}
               </Button>
               {user && navItems.map((item) => (
                  <Button 

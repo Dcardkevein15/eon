@@ -61,6 +61,38 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
     [chats, chatId]
   );
 
+  const startNewChat = useCallback(async () => {
+    if (!user || !firestore) return;
+
+    const newChatData = {
+      title: 'Nuevo Chat',
+      userId: user.uid,
+      createdAt: serverTimestamp(),
+      path: '',
+      latestMessageAt: serverTimestamp(),
+      anchorRole: 'El Validador Empático', // Default role
+    };
+
+    const chatsCollectionRef = collection(firestore, `users/${user.uid}/chats`);
+    try {
+      const newChatRef = await addDoc(chatsCollectionRef, newChatData);
+      const path = `/c/${newChatRef.id}`;
+      await updateDoc(newChatRef, { path });
+      router.push(path);
+    } catch (serverError: any) {
+        if (serverError.code === 'permission-denied') {
+          const permissionError = new FirestorePermissionError({
+            path: chatsCollectionRef.path,
+            operation: 'create',
+            requestResourceData: newChatData,
+          } satisfies SecurityRuleContext);
+          errorEmitter.emit('permission-error', permissionError);
+        } else {
+           console.error("Error creating chat:", serverError);
+        }
+    }
+  }, [user, firestore, router]);
+
   const createChat = useCallback(
     async (firstMessage: Omit<Message, 'id'>): Promise<string | undefined> => {
       if (!user || !firestore) return;
@@ -210,6 +242,7 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
             isLoading={loading}
             removeChat={removeChat}
             clearChats={clearChats}
+            startNewChat={startNewChat}
           />
         </Sidebar>
         <SidebarInset>
