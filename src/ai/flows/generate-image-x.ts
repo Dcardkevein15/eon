@@ -21,7 +21,7 @@ export type GenerateImageOutput = z.infer<typeof GenerateImageOutputSchema>;
 
 export async function generateImageX(input: GenerateImageInput): Promise<GenerateImageOutput> {
   const { media } = await ai.generate({
-    model: googleAI.model('imagen-4.0-fast-generate-001'),
+    model: 'googleai/gemini-pro-vision',
     prompt: input.prompt,
     config: {
       responseMimeType: 'image/png', // Crucial for ensuring correct image output
