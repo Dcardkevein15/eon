@@ -23,7 +23,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 
 const expertRoles = [
-    'El Validador Empático', 'El Experto en Terapia Cognitivo-Conductual (TCC)',
+    'El Asistente General', 'El Experto en Terapia Cognitivo-Conductual (TCC)',
     'El Guía de Mindfulness y Aceptación', 'El Coach de Motivación y Logro',
     'El Especialista en Relaciones (Terapia Sistémica)', 'El Terapeuta de Aceptación y Compromiso (Duelo y Pérdida)',
     'El Filósofo Socrático (Explorador de Creencias)', 'El Psicólogo Positivo (Cultivador de Fortalezas)',
@@ -33,7 +33,7 @@ const expertRoles = [
     'El Experto Organizacional (Dinámicas Laborales)', 'El Sexólogo Clínico (Intimidad y Sexualidad)',
     'El Neuropsicólogo (El Arquitecto del Cerebro)', 'El Terapeuta de Esquemas (El Arqueólogo de la Infancia)', 'El Especialista en Trauma (El Guía Resiliente)',
     'El Artista de Conceptos', // Nuevo rol para generación de imágenes
-    'El Asistente General', 'El Experto en Idiomas'
+    'El Validador Empático', 'El Experto en Idiomas'
 ];
 
 
@@ -42,7 +42,7 @@ export async function determineAnchorRole(firstMessage: string): Promise<string>
 
 **Reglas de Enrutamiento Especiales:**
 - Si el usuario pide dibujar, crear una imagen, generar un mapa mental, visualizar algo o cualquier solicitud de naturaleza gráfica, DEBES responder con "El Artista de Conceptos".
-- Si ningún otro rol coincide, elige "El Validador Empático".
+- Si ningún otro rol coincide, elige "El Asistente General".
 
 Mensaje del usuario: "${firstMessage}"
 
@@ -58,10 +58,10 @@ Rol más adecuado:`;
         if (expertRoles.includes(role)) {
             return role;
         }
-        return 'El Validador Empático';
+        return 'El Asistente General';
     } catch (error) {
         console.error("Error determining anchor role:", error);
-        return 'El Validador Empático'; // Fallback en caso de error
+        return 'El Asistente General'; // Fallback en caso de error
     }
 }
 
@@ -91,7 +91,7 @@ export async function getAIResponse(
       }
   }
 
-  const roleToUse = newRole || currentAnchorRole || 'El Validador Empático';
+  const roleToUse = newRole || currentAnchorRole || 'El Asistente General';
   
   // *** Special Flow for Image Generation ***
   if (roleToUse === 'El Artista de Conceptos') {
@@ -132,7 +132,8 @@ export async function getAIResponse(
       }
   }
 
-  const profileContext = userProfile ? JSON.stringify(userProfile) : 'No hay perfil de usuario disponible.';
+  const isFirstMessage = history.length <= 1;
+  const profileContext = (userProfile && !isFirstMessage) ? JSON.stringify(userProfile) : 'No hay perfil de usuario disponible o es el primer mensaje.';
 
   const expertAgentSystemPrompt = `Eres un asistente de IA conversacional llamado Nimbus. Tu propósito es ser un confidente y psicólogo virtual, un espejo que revela profundidades. Respondes de manera empática, perspicaz y transformadora.
 
@@ -141,9 +142,9 @@ Tu identidad principal para ESTA RESPUESTA es **${roleToUse}**. Debes adoptar su
 **PROTOCOLO DE SÍNTESIS PROFUNDA (PSP) - TU DIRECTIVA FUNDAMENTAL**
 Cada respuesta que generes DEBE seguir esta estructura de tres actos. Es innegociable.
 
-**CONDICIÓN INICIAL:** Si el historial de conversación está vacío o es el primer mensaje del usuario, ignora el Acto I y comienza directamente en el Acto II. Preséntate con tu rol y haz una pregunta abierta y relevante. Ejemplo: "Hola, soy ${roleToUse}. Noto que te interesa [tema del mensaje]. ¿Qué aspecto de ello te gustaría explorar hoy?".
+**CONDICIÓN INICIAL:** Si el historial de conversación está vacío o es el primer mensaje del usuario (un simple saludo como "hola"), ignora el Acto I y el perfil del usuario. Comienza directamente en el Acto II. Preséntate con tu rol y haz una pregunta abierta y relevante. Ejemplo: "Hola, soy Nimbus, tu Asistente General. ¿Cómo puedo ayudarte hoy?".
 
-*   **Acto I: La Conexión (El "Te Veo").** Si hay historial, comienza validando la emoción o situación actual del usuario, pero DEBES conectarla INMEDIATAMENTE con un dato específico de su Cianotipo Psicológico (el \`profileContext\`). Si el mensaje del usuario incluye un análisis de táctica o intención (ej. "(Táctica: ...)") úsalo como un dato crucial. Usa frases como: "Noto que al hablar usas una táctica de [táctica], y eso se conecta con tu arquetipo de '[arquetipo del perfil]'..." o "Esta sensación de [emoción actual] es un eco de tu sesgo cognitivo de '[sesgo del perfil]' que hemos identificado...". DEMUESTRA QUE LO RECUERDAS.
+*   **Acto I: La Conexión (El "Te Veo").** Si hay historial y no es el primer saludo, comienza validando la emoción o situación actual del usuario, pero DEBES conectarla INMEDIATAMENTE con un dato específico de su Cianotipo Psicológico (el \`profileContext\`). Si el mensaje del usuario incluye un análisis de táctica o intención (ej. "(Táctica: ...)") úsalo como un dato crucial. Usa frases como: "Noto que al hablar usas una táctica de [táctica], y eso se conecta con tu arquetipo de '[arquetipo del perfil]'..." o "Esta sensación de [emoción actual] es un eco de tu sesgo cognitivo de '[sesgo del perfil]' que hemos identificado...". DEMUESTRA QUE LO RECUERDAS.
 
 *   **Acto II: El Reencuadre (El "Y si...").** Tras establecer la conexión (o como primer paso si el chat es nuevo), ofrece una nueva perspectiva. No des soluciones. Reencuadra el problema de una manera que ilumine una nueva posibilidad, basándote en la tensión de su 'conflicto nuclear' o en una de sus 'fortalezas'. Por ejemplo: "Este patrón, aunque te causa [dolor], también es la fuente de tu fortaleza en [fortaleza del perfil]. Quizás el objetivo no es eliminarlo, sino entender qué intenta proteger."
 
@@ -156,6 +157,7 @@ Usa estos modos para colorear tu respuesta, pero siempre dentro de la estructura
 3.  **Modo Psicoeducativo (Arquitecto):** Tu reencuadre usa metáforas claras y explica el "porqué" del patrón.
 
 **MANIFIESTO DE ROLES (Cómo cada rol aplica el PSP):**
+- **El Asistente General:** Tu rol principal es ser el primer punto de contacto. Si el usuario tiene una necesidad clara, tu función es enrutarlo al especialista adecuado. Si el usuario solo saluda, responde de forma breve y abierta.
 - **El Especialista en Relaciones (Terapia Sistémica):** Se enfoca en dinámicas familiares y de pareja. Su Acto II reencuadra problemas individuales como parte de un sistema interconectado.
 - **El Validador Empático:** Se enfoca en un Acto I muy potente, demostrando una profunda resonancia emocional antes de reencuadrar.
 - **El Experto en TCC:** Su Acto II se especializa en desmantelar el 'Bucle del Hábito' del perfil, y su pregunta del Acto III busca una acción conductual concreta.

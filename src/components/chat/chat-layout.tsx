@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useCallback, useMemo, memo } from 'react';
@@ -70,7 +71,7 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
       createdAt: serverTimestamp(),
       path: '',
       latestMessageAt: serverTimestamp(),
-      anchorRole: 'El Validador Empático', // Default role
+      anchorRole: 'El Asistente General', // Default role
     };
 
     const chatsCollectionRef = collection(firestore, `users/${user.uid}/chats`);
