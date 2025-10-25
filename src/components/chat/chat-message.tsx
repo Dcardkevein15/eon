@@ -4,12 +4,14 @@
 import { cn } from '@/lib/utils';
 import type { Message } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User, Sparkles } from 'lucide-react';
+import { User, Sparkles, Copy, Check } from 'lucide-react';
 import { useAuth } from '@/firebase';
 import ReactMarkdown from 'react-markdown';
 import { memo, useState } from 'react';
 import Image from 'next/image';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 // Componente para el cursor parpadeante
 const BlinkingCursor = () => (
@@ -23,14 +25,27 @@ interface ChatMessageProps {
 
 function ChatMessage({ message, isStreaming }: ChatMessageProps) {
   const { user: authUser } = useAuth();
+  const { toast } = useToast();
   const isUser = message.role === 'user';
   const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+
+  const handleCopy = () => {
+    if (!message.content) return;
+    navigator.clipboard.writeText(message.content).then(() => {
+        setIsCopied(true);
+        toast({
+            title: "Texto copiado",
+        });
+        setTimeout(() => setIsCopied(false), 2000);
+    });
+  };
 
   return (
     <>
       <div
         className={cn(
-          'flex items-start space-x-2 md:space-x-4 animate-in fade-in duration-300',
+          'group/message flex items-start space-x-2 md:space-x-4 animate-in fade-in duration-300',
           isUser ? 'justify-end' : 'justify-start'
         )}
       >
@@ -42,7 +57,7 @@ function ChatMessage({ message, isStreaming }: ChatMessageProps) {
           </Avatar>
         )}
 
-        <div className='flex flex-col gap-2 max-w-full' style={{ alignItems: isUser ? 'flex-end': 'flex-start'}}>
+        <div className='relative flex flex-col gap-2 max-w-full' style={{ alignItems: isUser ? 'flex-end': 'flex-start'}}>
           <div
             className={cn(
               'px-4 py-3 rounded-2xl max-w-xs sm:max-w-md md:max-w-lg lg:max-w-2xl overflow-hidden',
@@ -63,6 +78,18 @@ function ChatMessage({ message, isStreaming }: ChatMessageProps) {
             </ReactMarkdown>
             {isStreaming && <BlinkingCursor />}
           </div>
+           {/* Botón de copiar */}
+          {!isStreaming && message.content && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-0 right-0 h-7 w-7 opacity-0 group-hover/message:opacity-100 transition-opacity duration-200"
+                onClick={handleCopy}
+              >
+                {isCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4 text-muted-foreground" />}
+                <span className="sr-only">Copiar mensaje</span>
+              </Button>
+            )}
         </div>
 
 
@@ -88,5 +115,3 @@ function ChatMessage({ message, isStreaming }: ChatMessageProps) {
 }
 
 export default memo(ChatMessage);
-
-    
