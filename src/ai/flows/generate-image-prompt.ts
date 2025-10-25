@@ -42,18 +42,30 @@ The user's request is the last message in the following conversation history. Us
 
 Now, generate ONLY the artistic image prompt for the user's request. Do not add any other text or explanation.`;
 
-const generateArtisticPrompt = ai.definePrompt({
-    name: 'generateImageArtisticPrompt',
-    input: { schema: GenerateImagePromptInputSchema },
-    output: { schema: GenerateImagePromptOutputSchema },
-    prompt: artDirectorSystemPrompt,
-});
+export const generateImagePromptFlow = ai.defineFlow(
+  {
+    name: 'generateImagePromptFlow',
+    inputSchema: GenerateImagePromptInputSchema,
+    outputSchema: GenerateImagePromptOutputSchema,
+  },
+  async (input) => {
+    const { output } = await ai.generate({
+        prompt: artDirectorSystemPrompt,
+        model: 'googleai/gemini-pro',
+        input,
+        output: {
+            schema: GenerateImagePromptOutputSchema
+        }
+    });
+
+    if (!output) {
+      throw new Error('Art Director AI failed to generate a prompt.');
+    }
+    return output;
+  }
+);
 
 
 export async function generateImagePrompt(input: GenerateImagePromptInput): Promise<GenerateImagePromptOutput> {
-  const { output } = await generateArtisticPrompt(input);
-  if (!output) {
-    throw new Error('Art Director AI failed to generate a prompt.');
-  }
-  return output;
+  return generateImagePromptFlow(input);
 }

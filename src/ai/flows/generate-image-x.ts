@@ -2,7 +2,6 @@
 'use server';
 /**
  * @fileOverview A simple, robust flow to generate an image from a given prompt.
- * This is a replacement for the previous generate-image.ts flow.
  */
 
 import { ai } from '@/ai/genkit';

@@ -95,6 +95,7 @@ export async function getAIResponse(
   // *** Special Flow for Image Generation ***
   if (roleToUse === 'El Artista de Conceptos') {
       try {
+          // 1. Generate the artistic prompt
           const { prompt: artisticPrompt } = await generateImagePrompt({
               conversationHistory: cleanHistory
           });
@@ -103,10 +104,12 @@ export async function getAIResponse(
               throw new Error('Could not generate an artistic prompt.');
           }
           
+          // 2. Generate the image from the prompt
           const { imageUrl: imageDataUri } = await generateImageX({
               prompt: artisticPrompt
           });
           
+          // 3. Upload to Firebase Storage from the server
           const adminApp = getAdminApp();
           if (!adminApp) throw new Error("La configuración de Firebase Admin no está disponible.");
 
@@ -115,6 +118,7 @@ export async function getAIResponse(
           const filePath = `generated-images/${userId}/${imageId}.png`;
           const file = bucket.file(filePath);
 
+          // Convert data URI to buffer
           const imageBuffer = Buffer.from(imageDataUri.split(',')[1], 'base64');
           
           await file.save(imageBuffer, {
@@ -123,9 +127,10 @@ export async function getAIResponse(
               },
           });
           
-          // Make the file public to get a permanent URL
+          // 4. Get the public URL
           await file.makePublic();
           
+          // 5. Return the public URL to the client
           return {
               response: "Aquí tienes la visualización que pediste.",
               imageUrl: file.publicUrl(),
