@@ -124,8 +124,10 @@ export async function getAIResponse(
 
       } catch (error) {
           console.error('Error in image generation flow:', error);
+          // Fallback to a placeholder image and a clear message.
           return {
-              response: "Lo siento, tuve un problema al generar la imagen. Por favor, intenta describir tu idea de otra manera.",
+              response: "No se pudo generar la imagen en este momento. Por favor, intenta de nuevo más tarde.",
+              imageUrl: "https://placehold.co/1024x576/000000/FFFFFF/png?text=Error+de+Imagen",
               newRole: newRole
           };
       }
