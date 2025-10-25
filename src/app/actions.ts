@@ -17,8 +17,7 @@ import { classifyIntent as classifyIntentFlow } from '@/ai/flows/classify-intent
 import { analyzeVoiceMessage as analyzeVoiceMessageFlow } from '@/ai/flows/analyze-voice-message';
 import { generateImagePrompt } from '@/ai/flows/generate-image-prompt';
 import { generateImageX } from '@/ai/flows/generate-image-x';
-import { getStorage, ref, uploadString, getDownloadURL } from 'firebase/storage';
-import { getApp } from 'firebase/app';
+import { getAdminApp } from '@/lib/firebase-admin';
 import { v4 as uuidv4 } from 'uuid';
 
 
@@ -107,18 +106,29 @@ export async function getAIResponse(
           const { imageUrl: imageDataUri } = await generateImageX({
               prompt: artisticPrompt
           });
-
-          // Server-side upload to Firebase Storage
-          const storage = getStorage(getApp());
-          const imageId = uuidv4();
-          const storageRef = ref(storage, `generated-images/${userId}/${imageId}.png`);
           
-          await uploadString(storageRef, imageDataUri, 'data_url');
-          const downloadURL = await getDownloadURL(storageRef);
+          const adminApp = getAdminApp();
+          if (!adminApp) throw new Error("La configuración de Firebase Admin no está disponible.");
+
+          const bucket = adminApp.storage().bucket("studio-3422235219-dd152.appspot.com");
+          const imageId = uuidv4();
+          const filePath = `generated-images/${userId}/${imageId}.png`;
+          const file = bucket.file(filePath);
+
+          const imageBuffer = Buffer.from(imageDataUri.split(',')[1], 'base64');
+          
+          await file.save(imageBuffer, {
+              metadata: {
+                  contentType: 'image/png',
+              },
+          });
+          
+          // Make the file public to get a permanent URL
+          await file.makePublic();
           
           return {
               response: "Aquí tienes la visualización que pediste.",
-              imageUrl: downloadURL, // Return the permanent URL
+              imageUrl: file.publicUrl(),
               newRole: newRole
           };
 
