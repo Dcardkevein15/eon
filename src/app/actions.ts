@@ -127,13 +127,16 @@ export async function getAIResponse(
               },
           });
           
-          // 4. Get the public URL
-          await file.makePublic();
+          // 4. Get a signed URL for the image
+          const [signedUrl] = await file.getSignedUrl({
+            action: 'read',
+            expires: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+          });
           
-          // 5. Return the public URL to the client
+          // 5. Return the signed URL to the client
           return {
               response: "Aquí tienes la visualización que pediste.",
-              imageUrl: file.publicUrl(),
+              imageUrl: signedUrl,
               newRole: newRole
           };
 
@@ -328,3 +331,5 @@ export async function analyzeVoiceMessageAction(input: AnalyzeVoiceInput): Promi
     return { transcription: 'Error al transcribir el audio.' };
   }
 }
+
+    
