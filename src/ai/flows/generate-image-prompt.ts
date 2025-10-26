@@ -24,7 +24,7 @@ export type GenerateImagePromptOutput = z.infer<typeof GenerateImagePromptOutput
 const artDirectorPrompt = ai.definePrompt({
     name: 'artDirectorPrompt',
     input: { schema: GenerateImagePromptInputSchema },
-    output: { schema: GenerateImage.outputSchema },
+    output: { schema: GenerateImagePromptOutputSchema },
     prompt: `You are an expert art director for a creative AI. A user wants to create a mind map or diagram. Your job is to translate their simple request into a rich, detailed, and artistic prompt for an image generation model.
 
 The image should be:
