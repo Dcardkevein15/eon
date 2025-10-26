@@ -21,7 +21,11 @@ const GenerateImagePromptOutputSchema = z.object({
 export type GenerateImagePromptOutput = z.infer<typeof GenerateImagePromptOutputSchema>;
 
 
-const artDirectorSystemPrompt = `You are an expert art director for a creative AI. A user wants to create a mind map or diagram. Your job is to translate their simple request into a rich, detailed, and artistic prompt for an image generation model.
+const artDirectorPrompt = ai.definePrompt({
+    name: 'artDirectorPrompt',
+    input: { schema: GenerateImagePromptInputSchema },
+    output: { schema: GenerateImage.outputSchema },
+    prompt: `You are an expert art director for a creative AI. A user wants to create a mind map or diagram. Your job is to translate their simple request into a rich, detailed, and artistic prompt for an image generation model.
 
 The image should be:
 - **Visually Stunning:** Use terms like 'cinematic lighting', 'intricate details', '4K', 'photorealistic', 'Unreal Engine render'.
@@ -40,7 +44,9 @@ The user's request is the last message in the following conversation history. Us
 *   **User's Request:** "Crea un mapa mental sobre mis preocupaciones."
 *   **Generated Image Prompt:** "A cinematic, 4K, photorealistic render of a conceptual mind map. A central, softly glowing orb labeled 'Preocupaciones' floats in a dark, minimalist space. Luminous, thread-like synapses of energy in pastel colors (soft blue, gentle pink, pale yellow) connect it to smaller, distinct nodes labeled 'Trabajo', 'Familia', 'Futuro', and 'Salud'. The entire structure has a subtle, intricate, and neurological feel, like a beautiful and complex thought captured in motion. Ethereal, soft focus background."
 
-Now, generate ONLY the artistic image prompt for the user's request. Do not add any other text or explanation.`;
+Now, generate ONLY the artistic image prompt for the user's request. Do not add any other text or explanation.`,
+});
+
 
 export const generateImagePromptFlow = ai.defineFlow(
   {
@@ -49,15 +55,7 @@ export const generateImagePromptFlow = ai.defineFlow(
     outputSchema: GenerateImagePromptOutputSchema,
   },
   async (input) => {
-    const { output } = await ai.generate({
-        prompt: artDirectorSystemPrompt,
-        model: 'googleai/gemini-pro',
-        input,
-        output: {
-            schema: GenerateImagePromptOutputSchema
-        }
-    });
-
+    const { output } = await artDirectorPrompt(input);
     if (!output) {
       throw new Error('Art Director AI failed to generate a prompt.');
     }

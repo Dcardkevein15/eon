@@ -103,6 +103,7 @@ export async function getAIResponse(
           if (!artisticPrompt) {
               throw new Error('Could not generate an artistic prompt.');
           }
+          console.log("Generated Artistic Prompt:", artisticPrompt);
           
           // 2. Generate the image from the prompt
           const { imageUrl: imageDataUri } = await generateImageX({
