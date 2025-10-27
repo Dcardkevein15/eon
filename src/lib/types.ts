@@ -14,7 +14,6 @@ export type Message = {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Timestamp | Date;
-  imageUrl?: string;
 };
 
 export type Chat = {

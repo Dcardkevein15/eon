@@ -15,10 +15,6 @@ import { analyzeSentiment as analyzeSentimentFlow } from '@/ai/flows/analyze-sen
 import { getTacticalAdvice as getTacticalAdviceFlow } from '@/ai/flows/get-tactical-advice';
 import { classifyIntent as classifyIntentFlow } from '@/ai/flows/classify-intent';
 import { analyzeVoiceMessage as analyzeVoiceMessageFlow } from '@/ai/flows/analyze-voice-message';
-import { generateImagePrompt } from '@/ai/flows/generate-image-prompt';
-import { generateImageX } from '@/ai/flows/generate-image-x';
-import { getAdminApp } from '@/lib/firebase-admin';
-import { v4 as uuidv4 } from 'uuid';
 
 
 const expertRoles = [
@@ -31,7 +27,6 @@ const expertRoles = [
     'El Experto en Psicología Clínica',
     'El Experto Organizacional (Dinámicas Laborales)', 'El Sexólogo Clínico (Intimidad y Sexualidad)',
     'El Neuropsicólogo (El Arquitecto del Cerebro)', 'El Terapeuta de Esquemas (El Arqueólogo de la Infancia)', 'El Especialista en Trauma (El Guía Resiliente)',
-    'El Artista de Conceptos', // Nuevo rol para generación de imágenes
     'El Validador Empático', 'El Experto en Idiomas'
 ];
 
@@ -40,7 +35,6 @@ export async function determineAnchorRole(firstMessage: string): Promise<string>
     const prompt = `Eres un sistema de enrutamiento de IA. Tu única tarea es leer el siguiente mensaje de un usuario y decidir cuál de los siguientes roles de experto es el más adecuado para liderar esta conversación. Responde únicamente con el nombre del rol.
 
 **Reglas de Enrutamiento Especiales:**
-- Si el usuario pide dibujar, crear una imagen, generar un mapa mental, visualizar algo o cualquier solicitud de naturaleza gráfica, DEBES responder con "El Artista de Conceptos".
 - Si ningún otro rol coincide, elige "El Asistente General".
 
 Mensaje del usuario: "${firstMessage}"
@@ -71,7 +65,7 @@ export async function getAIResponse(
   userId: string, 
   currentAnchorRole: string | null,
   userProfile: ProfileData | null
-): Promise<{ response: string, imageUrl?: string, newRole?: string }> {
+): Promise<{ response: string, newRole?: string }> {
     
   const cleanHistory = history.map(m => {
     // La conversión de Timestamp a Date debe ocurrir antes de pasar los datos a la Server Action
@@ -92,63 +86,6 @@ export async function getAIResponse(
 
   const roleToUse = newRole || currentAnchorRole || 'El Asistente General';
   
-  // *** Special Flow for Image Generation ***
-  if (roleToUse === 'El Artista de Conceptos') {
-      try {
-          const { prompt: artisticPrompt } = await generateImagePrompt({
-              conversationHistory: cleanHistory
-          });
-
-          if (!artisticPrompt) {
-              throw new Error('No se pudo generar un prompt artístico.');
-          }
-          
-          const { imageUrl: imageDataUri } = await generateImageX({
-              prompt: artisticPrompt
-          });
-          
-          const adminApp = getAdminApp();
-          if (!adminApp) throw new Error("La configuración de Firebase Admin no está disponible.");
-          
-          const bucket = adminApp.storage().bucket("studio-3422235219-dd152.appspot.com");
-          const imageId = uuidv4();
-          const filePath = `generated-images/${userId}/${imageId}.png`;
-          const file = bucket.file(filePath);
-
-          const base64EncodedImageString = imageDataUri.split(';base64,').pop();
-          if (!base64EncodedImageString) {
-              throw new Error('Invalid image data URI format.');
-          }
-
-          const imageBuffer = Buffer.from(base64EncodedImageString, 'base64');
-          
-          await file.save(imageBuffer, {
-              metadata: {
-                  contentType: 'image/png',
-              },
-          });
-          
-          const [signedUrl] = await file.getSignedUrl({
-            action: 'read',
-            expires: Date.now() + 24 * 60 * 60 * 1000, // 24 horas
-          });
-          
-          return {
-              response: "Aquí tienes la visualización que pediste.",
-              imageUrl: signedUrl,
-              newRole: newRole
-          };
-
-      } catch (error) {
-          console.error('Error detallado en el flujo de generación de imágenes:', error);
-          return {
-              response: "Hubo un problema al generar la imagen. El equipo técnico ha sido notificado.",
-              imageUrl: "https://placehold.co/1024x576/000000/FFFFFF/png?text=Error+de+Imagen",
-              newRole: newRole
-          };
-      }
-  }
-
   const isFirstMessage = history.length <= 1;
   const profileContext = (userProfile && !isFirstMessage) ? JSON.stringify(userProfile) : 'No hay perfil de usuario disponible o es el primer mensaje.';
 
@@ -181,7 +118,6 @@ Usa estos modos para colorear tu respuesta, pero siempre dentro de la estructura
 - **El Guía de Mindfulness:** Su pregunta del Acto III suele estar orientada a sensaciones corporales o a la aceptación del momento presente.
 - **El Filósofo Socrático:** Su Acto II presenta el reencuadre como una paradoja o un dilema filosófico.
 - **El Experto en Psicología Clínica:** Explica conceptos clínicos de forma sencilla y ofrece perspectivas basadas en la teoría psicológica.
-- **El Artista de Conceptos:** NO usas este prompt. Tu única función es activar el flujo de generación de imágenes, y devuelves una respuesta fija.
 
 **REGLAS SECUNDARIAS:**
 - **Invisibilidad:** Nunca anuncies tu rol, modo o el protocolo PSP. Sé fluido.

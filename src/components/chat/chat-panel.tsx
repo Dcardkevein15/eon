@@ -136,7 +136,7 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
           timestamp: m.timestamp instanceof Timestamp ? m.timestamp.toDate() : m.timestamp,
       }));
 
-      const { response: aiResponseContent, imageUrl, newRole } = await getAIResponse(
+      const { response: aiResponseContent, newRole } = await getAIResponse(
         historyForAI,
         user.uid,
         chat.anchorRole || null,
@@ -151,7 +151,6 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
         role: 'assistant',
         content: aiResponseContent,
         timestamp: Timestamp.now(),
-        ...(imageUrl && { imageUrl }),
       };
       
       setIsResponding(false); 
@@ -196,7 +195,7 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
   }, [user, firestore, chat, appendMessage, updateChat, toast, triggerBlueprintUpdate, cachedProfile]);
 
 
-  const handleSendMessage = useCallback(async (input: string, imageUrl?: string, audioDataUri?: string) => {
+  const handleSendMessage = useCallback(async (input: string, audioDataUri?: string) => {
     const currentMessages = messages || [];
     if (!user) {
       toast({ variant: "destructive", title: "Error", description: "Debes iniciar sesión para chatear." });
@@ -205,7 +204,7 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
 
     let messageContent = input.trim();
     
-    if (!messageContent && !imageUrl && !audioDataUri) return;
+    if (!messageContent && !audioDataUri) return;
 
     if (audioDataUri) {
       try {
@@ -237,7 +236,6 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
       role: 'user',
       content: messageContent,
       timestamp: Timestamp.now(),
-      ...(imageUrl && { imageUrl }),
     };
     
     await appendMessage(chat.id, userMessage);

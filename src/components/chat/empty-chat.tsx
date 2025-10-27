@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
@@ -47,15 +48,14 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
   const isMobile = useIsMobile();
   const [isCreatingChat, setIsCreatingChat] = useState(false);
   
-  const handleCreateChat = useCallback(async (input: string, imageUrl?: string, audioDataUri?: string) => {
-      if ((!input.trim() && !imageUrl && !audioDataUri) || isCreatingChat) return;
+  const handleCreateChat = useCallback(async (input: string, audioDataUri?: string) => {
+      if ((!input.trim() && !audioDataUri) || isCreatingChat) return;
 
       setIsCreatingChat(true);
       const firstMessage: Omit<Message, 'id'> = {
           role: 'user',
           content: input,
           timestamp: Timestamp.now(),
-          ...(imageUrl && { imageUrl }),
           ...(audioDataUri && { content: `[Audio adjunto] ${input}` }),
       };
       

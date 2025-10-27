@@ -12,13 +12,12 @@ import {
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Send, Sparkles, Paperclip, X, RefreshCw, Mic, Square, Trash2 } from 'lucide-react';
+import { Send, Sparkles, X, RefreshCw, Mic, Square, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem } from '@/components/ui/form';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
-import Image from 'next/image';
 
 const chatSchema = z.object({
   message: z.string(),
@@ -27,7 +26,7 @@ const chatSchema = z.object({
 type ChatFormValues = z.infer<typeof chatSchema>;
 
 interface ChatInputProps {
-  onSendMessage: (message: string, imageUrl?: string, audioDataUri?: string) => void;
+  onSendMessage: (message: string, audioDataUri?: string) => void;
   isLoading: boolean;
   suggestions: string[];
   onClearSuggestions: () => void;
@@ -38,12 +37,10 @@ interface ChatInputProps {
 const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
   ({ onSendMessage, isLoading, suggestions, onClearSuggestions, onRefreshSuggestions, isRefreshingSuggestions }, ref) => {
     const localTextareaRef = useRef<HTMLTextAreaElement>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
 
     const [isFocused, setIsFocused] = useState(false);
-    const [attachedImage, setAttachedImage] = useState<string | null>(null);
     const [showSuggestions, setShowSuggestions] = useState(true);
     const [isRecording, setIsRecording] = useState(false);
     const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
@@ -57,7 +54,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
 
     const messageValue = form.watch('message');
     const isMessageEmpty = !messageValue || messageValue.trim() === '';
-    const canSubmit = !isLoading && (!isMessageEmpty || !!attachedImage || !!recordedAudioUrl);
+    const canSubmit = !isLoading && (!isMessageEmpty || !!recordedAudioUrl);
 
     const blobUrlToDataUri = (blobUrl: string): Promise<string> => {
         return new Promise((resolve, reject) => {
@@ -82,11 +79,10 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
           audioDataUri = await blobUrlToDataUri(recordedAudioUrl);
       }
       
-      onSendMessage(data.message, attachedImage || undefined, audioDataUri);
+      onSendMessage(data.message, audioDataUri);
       
       form.reset();
       onClearSuggestions();
-      setAttachedImage(null);
       setRecordedAudioUrl(null);
       if (recordedAudioUrl) {
         URL.revokeObjectURL(recordedAudioUrl);
@@ -109,22 +105,6 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
       }
     };
     
-    const handleAttachClick = () => {
-      fileInputRef.current?.click();
-    };
-
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          setAttachedImage(e.target?.result as string);
-        };
-        reader.readAsDataURL(file);
-      }
-      event.target.value = '';
-    };
-
     useEffect(() => {
       if (localTextareaRef.current) {
         localTextareaRef.current.style.height = 'auto';
@@ -235,24 +215,8 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
             onSubmit={form.handleSubmit(handleSubmit)}
             className="w-full"
           >
-             <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
-            
-            {(attachedImage || recordedAudioUrl) && (
+            {recordedAudioUrl && (
               <div className="flex flex-col sm:flex-row gap-2 mb-2">
-                {attachedImage && (
-                  <div className="relative w-28 h-28 group">
-                    <Image src={attachedImage} alt="Preview" layout="fill" className="rounded-lg object-cover" />
-                    <Button 
-                      type="button" 
-                      variant="destructive" 
-                      size="icon" 
-                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => setAttachedImage(null)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
                 {recordedAudioUrl && (
                   <div className="p-2 border rounded-lg bg-card flex items-center gap-2 group">
                     <audio src={recordedAudioUrl} controls className="h-10 max-w-full" />
@@ -292,17 +256,6 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
                                 <p>{showSuggestions && suggestions.length > 0 ? 'Ocultar' : 'Mostrar'} Sugerencias</p>
                               </TooltipContent>
                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={handleAttachClick}>
-                                  <Paperclip className="h-5 w-5" />
-                                  <span className="sr-only">Adjuntar archivo</span>
-                                </Button>
-                              </TooltipTrigger>
-                               <TooltipContent>
-                                <p>Adjuntar archivo</p>
-                              </TooltipContent>
-                            </Tooltip>
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                 <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={isRecording ? handleStopRecording : handleStartRecording} disabled={isLoading}>
@@ -359,5 +312,3 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
 ChatInput.displayName = 'ChatInput';
 
 export default memo(ChatInput);
-
-    

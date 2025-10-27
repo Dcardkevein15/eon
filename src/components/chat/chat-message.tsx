@@ -8,8 +8,6 @@ import { User, Sparkles, Copy, Check } from 'lucide-react';
 import { useAuth } from '@/firebase';
 import ReactMarkdown from 'react-markdown';
 import { memo, useState } from 'react';
-import Image from 'next/image';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
@@ -27,7 +25,6 @@ function ChatMessage({ message, isStreaming }: ChatMessageProps) {
   const { user: authUser } = useAuth();
   const { toast } = useToast();
   const isUser = message.role === 'user';
-  const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
   const handleCopy = () => {
@@ -66,11 +63,6 @@ function ChatMessage({ message, isStreaming }: ChatMessageProps) {
                 : 'bg-card border rounded-bl-none'
             )}
           >
-            {message.imageUrl && (
-                <div className="relative aspect-video mb-2 not-prose cursor-pointer" onClick={() => setIsViewerOpen(true)}>
-                    <Image src={message.imageUrl} alt="Contenido generado por IA" fill className="rounded-lg object-contain" />
-                </div>
-            )}
             <ReactMarkdown
               className="prose prose-sm dark:prose-invert prose-p:m-0 prose-headings:m-0 prose-ul:m-0 prose-ol:m-0 break-words"
             >
@@ -102,14 +94,6 @@ function ChatMessage({ message, isStreaming }: ChatMessageProps) {
           </Avatar>
         )}
       </div>
-
-      {message.imageUrl && (
-        <Dialog open={isViewerOpen} onOpenChange={setIsViewerOpen}>
-          <DialogContent className="max-w-4xl w-full h-[80vh] p-0 border-0 bg-transparent">
-             <Image src={message.imageUrl} alt="Contenido generado por IA en pantalla completa" fill className="object-contain" />
-          </DialogContent>
-        </Dialog>
-      )}
     </>
   );
 }
