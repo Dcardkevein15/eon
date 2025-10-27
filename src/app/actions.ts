@@ -95,22 +95,19 @@ export async function getAIResponse(
   // *** Special Flow for Image Generation ***
   if (roleToUse === 'El Artista de Conceptos') {
       try {
-          // 1. Generate the artistic prompt
           const { prompt: artisticPrompt } = await generateImagePrompt({
               conversationHistory: cleanHistory
           });
 
           if (!artisticPrompt) {
-              throw new Error('Could not generate an artistic prompt.');
+              throw new Error('No se pudo generar un prompt artístico.');
           }
           console.log("Generated Artistic Prompt:", artisticPrompt);
           
-          // 2. Generate the image from the prompt
           const { imageUrl: imageDataUri } = await generateImageX({
               prompt: artisticPrompt
           });
           
-          // 3. Upload to Firebase Storage from the server
           const adminApp = getAdminApp();
           if (!adminApp) throw new Error("La configuración de Firebase Admin no está disponible.");
 
@@ -119,7 +116,6 @@ export async function getAIResponse(
           const filePath = `generated-images/${userId}/${imageId}.png`;
           const file = bucket.file(filePath);
 
-          // Convert data URI to buffer
           const imageBuffer = Buffer.from(imageDataUri.split(',')[1], 'base64');
           
           await file.save(imageBuffer, {
@@ -128,13 +124,11 @@ export async function getAIResponse(
               },
           });
           
-          // 4. Get a signed URL for the image
           const [signedUrl] = await file.getSignedUrl({
             action: 'read',
-            expires: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+            expires: Date.now() + 24 * 60 * 60 * 1000, // 24 horas
           });
           
-          // 5. Return the signed URL to the client
           return {
               response: "Aquí tienes la visualización que pediste.",
               imageUrl: signedUrl,
@@ -142,10 +136,9 @@ export async function getAIResponse(
           };
 
       } catch (error) {
-          console.error('Error in image generation flow:', error);
-          // Fallback to a placeholder image and a clear message.
+          console.error('Error detallado en el flujo de generación de imágenes:', error);
           return {
-              response: "No se pudo generar la imagen en este momento. Por favor, intenta de nuevo más tarde.",
+              response: "Hubo un problema al generar la imagen. El equipo técnico ha sido notificado.",
               imageUrl: "https://placehold.co/1024x576/000000/FFFFFF/png?text=Error+de+Imagen",
               newRole: newRole
           };

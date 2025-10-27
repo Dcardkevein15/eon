@@ -4,7 +4,7 @@ import * as admin from 'firebase-admin';
 let adminApp: admin.app.App | undefined;
 
 function initializeAdminApp() {
-    // Prevent re-initialization if already initialized
+    // Evita la reinicialización si ya existe una app de admin.
     if (admin.apps.length > 0 && admin.apps[0]) {
         return admin.apps[0];
     }
@@ -20,7 +20,7 @@ function initializeAdminApp() {
         const serviceAccountJson = Buffer.from(serviceAccountBase64, 'base64').toString('utf-8');
         const serviceAccount = JSON.parse(serviceAccountJson);
 
-        // Initialize the app with the service account and storage bucket
+        // Inicializa la app con la cuenta de servicio y, crucialmente, el bucket de almacenamiento.
         return admin.initializeApp({
             credential: admin.credential.cert(serviceAccount),
             storageBucket: "studio-3422235219-dd152.appspot.com"
