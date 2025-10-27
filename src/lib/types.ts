@@ -269,6 +269,7 @@ export const AetherAgentSchema = z.object({
   position: z.object({ x: z.number(), y: z.number(), z: z.number() }),
   status: z.string(),
   thought: z.string(),
+  action: z.string(),
   lastAction: z.string(),
 });
 export type AetherAgent = z.infer<typeof AetherAgentSchema>;
