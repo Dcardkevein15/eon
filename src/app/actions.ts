@@ -102,7 +102,6 @@ export async function getAIResponse(
           if (!artisticPrompt) {
               throw new Error('No se pudo generar un prompt artístico.');
           }
-          console.log("Generated Artistic Prompt:", artisticPrompt);
           
           const { imageUrl: imageDataUri } = await generateImageX({
               prompt: artisticPrompt
@@ -116,7 +115,6 @@ export async function getAIResponse(
           const filePath = `generated-images/${userId}/${imageId}.png`;
           const file = bucket.file(filePath);
 
-          // Correctly extract the Base64 part of the data URI
           const base64EncodedImageString = imageDataUri.split(';base64,').pop();
           if (!base64EncodedImageString) {
               throw new Error('Invalid image data URI format.');
