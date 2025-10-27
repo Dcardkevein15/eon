@@ -116,7 +116,13 @@ export async function getAIResponse(
           const filePath = `generated-images/${userId}/${imageId}.png`;
           const file = bucket.file(filePath);
 
-          const imageBuffer = Buffer.from(imageDataUri.split(',')[1], 'base64');
+          // Correctly extract the Base64 part of the data URI
+          const base64EncodedImageString = imageDataUri.split(';base64,').pop();
+          if (!base64EncodedImageString) {
+              throw new Error('Invalid image data URI format.');
+          }
+
+          const imageBuffer = Buffer.from(base64EncodedImageString, 'base64');
           
           await file.save(imageBuffer, {
               metadata: {
@@ -325,5 +331,7 @@ export async function analyzeVoiceMessageAction(input: AnalyzeVoiceInput): Promi
     return { transcription: 'Error al transcribir el audio.' };
   }
 }
+
+    
 
     
