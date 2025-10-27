@@ -110,7 +110,7 @@ export async function getAIResponse(
           
           const adminApp = getAdminApp();
           if (!adminApp) throw new Error("La configuración de Firebase Admin no está disponible.");
-
+          
           const bucket = adminApp.storage().bucket("studio-3422235219-dd152.appspot.com");
           const imageId = uuidv4();
           const filePath = `generated-images/${userId}/${imageId}.png`;
