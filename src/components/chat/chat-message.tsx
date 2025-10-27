@@ -71,11 +71,11 @@ function ChatMessage({ message, isStreaming }: ChatMessageProps) {
             {isStreaming && <BlinkingCursor />}
           </div>
            {/* Botón de copiar */}
-          {!isStreaming && message.content && (
+          {!isStreaming && message.content && !isUser && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute top-0 right-0 h-7 w-7 opacity-0 group-hover/message:opacity-100 transition-opacity duration-200"
+                className="absolute -top-2 -right-10 h-7 w-7 opacity-0 group-hover/message:opacity-100 transition-opacity duration-200"
                 onClick={handleCopy}
               >
                 {isCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4 text-muted-foreground" />}

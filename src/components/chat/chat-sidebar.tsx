@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Plus, Trash2, History, Briefcase, UserCircle, Dumbbell, Star, BarChartHorizontal, Loader2 } from 'lucide-react';
+import { Plus, Trash2, History, Briefcase, UserCircle, Dumbbell, Star, BarChartHorizontal, Loader2, Video } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -91,6 +91,7 @@ function ChatSidebar({
   };
   
   const navItems = [
+    { href: "/vision", icon: Video, label: "Visión IA" },
     { href: "/gym", icon: Dumbbell, label: "Gimnasio Emocional" },
     { href: "/profile", icon: UserCircle, label: "Perfil Psicológico" },
     { href: "/marketplace", icon: Briefcase, label: "Marketplace" },

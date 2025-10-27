@@ -35,7 +35,7 @@ const analyzeVoicePrompt = ai.definePrompt({
   output: { schema: AnalyzeVoiceOutputSchema },
   prompt: `Eres un experto transcriptor de audio. Tu única tarea es transcribir con la mayor precisión posible las palabras habladas en el siguiente mensaje de audio.
 
-**IMPORTANTE**: La transcripción DEBE estar en español.
+**IMPORTANTE**: La transcripción DEBE estar en el idioma original del audio.
 
 Mensaje de audio a analizar:
 {{media url=audioDataUri}}
