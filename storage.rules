@@ -1,18 +1,22 @@
+
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Las imágenes generadas se guardan en una ruta específica por usuario.
-    // Solo el usuario autenticado puede escribir en su propia carpeta.
-    // Los archivos son públicos para lectura para poder mostrarlos en el chat.
-    match /generated-images/{userId}/{allPaths=**} {
+    // Allow read access to all files for simplicity.
+    // In a production app, you might want to restrict this further.
+    match /{allPaths=**} {
       allow read;
+    }
+    
+    // Allow authenticated users to write to their own `generated-images` folder.
+    match /generated-images/{userId}/{allPaths=**} {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
-
-    // Por defecto, denegar todas las demás lecturas y escrituras en el bucket.
-    match /{allPaths=**} {
-      allow read, write: if false;
+    
+    // Allow authenticated users to upload their application documents.
+    match /applications/{userId}/{allPaths=**} {
+       allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
