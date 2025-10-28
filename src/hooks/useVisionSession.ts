@@ -12,7 +12,7 @@ interface UseVisionSessionProps {
     videoRef: React.RefObject<HTMLVideoElement>;
 }
 
-export function useVisionSession({ videoRef }: UseVisionSessionProps) {
+export const useVoiceSession = ({ videoRef }: UseVisionSessionProps) => {
     const { user } = useAuth();
     const { toast } = useToast();
 
@@ -26,12 +26,10 @@ export function useVisionSession({ videoRef }: UseVisionSessionProps) {
     const [isRecording, setIsRecording] = useState(false);
 
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-    const audioContextRef = useRef<AudioContext | null>(null);
-    const audioChunksRef = useRef<Blob[]>([]);
     const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
 
-    // Load user profile from localStorage
     useEffect(() => {
         if (user) {
             const key = `psych-profile-${user.uid}`;
@@ -65,6 +63,11 @@ export function useVisionSession({ videoRef }: UseVisionSessionProps) {
           profile
       );
       
+      if (!textResponse && !audioDataUri) {
+          setAiState('listening');
+          return;
+      }
+
       const aiMessage: Message = { id: Date.now().toString(), role: 'assistant', content: textResponse, timestamp: new Date() };
       setConversation(prev => [...prev, aiMessage]);
 
@@ -120,7 +123,6 @@ export function useVisionSession({ videoRef }: UseVisionSessionProps) {
              mediaRecorderRef.current.stop();
         }
 
-        audioContextRef.current?.close();
         audioPlayerRef.current?.pause();
         
         setPermissionStatus('idle');
@@ -128,17 +130,29 @@ export function useVisionSession({ videoRef }: UseVisionSessionProps) {
 
     const toggleRecording = async () => {
         if (isRecording) {
-            // Stop recording
             if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
                 mediaRecorderRef.current.stop();
             }
             setIsRecording(false);
         } else {
-            // Start recording
             if (!streamRef.current) return;
-
-            // Let browser pick the format
-            mediaRecorderRef.current = new MediaRecorder(streamRef.current);
+            
+            // Let browser pick the best supported format
+            const options = { mimeType: 'audio/webm' };
+            let recorder;
+            try {
+                recorder = new MediaRecorder(streamRef.current, options);
+            } catch (e) {
+                console.warn("audio/webm not supported, trying default");
+                try {
+                    recorder = new MediaRecorder(streamRef.current);
+                } catch(e2) {
+                    console.error("MediaRecorder not supported", e2);
+                    toast({ variant: 'destructive', title: 'Error de Grabación', description: 'Tu navegador no soporta la grabación de audio.' });
+                    return;
+                }
+            }
+            mediaRecorderRef.current = recorder;
             
             audioChunksRef.current = [];
 
@@ -163,15 +177,16 @@ export function useVisionSession({ videoRef }: UseVisionSessionProps) {
                       const newConversation = [...conversation, userMessage];
                       setConversation(newConversation);
                       await processAIResponse(newConversation);
+                    } else {
+                      // If transcription is empty, just go back to listening
+                      setAiState('listening');
                     }
                 } catch (e) {
                     console.error("Error processing audio:", e);
                     toast({ variant: 'destructive', title: 'Error', description: 'No se pudo procesar tu voz.' });
+                    setAiState('listening');
                 } finally {
                     setIsProcessing(false);
-                    if (isSessionActive) {
-                        setAiState('listening');
-                    }
                 }
             };
             
