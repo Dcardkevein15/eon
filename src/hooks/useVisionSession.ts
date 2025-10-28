@@ -86,12 +86,13 @@ export const useVoiceSession = ({ videoRef }: UseVisionSessionProps) => {
         if (isSessionActive) return;
         setPermissionStatus('prompt');
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            streamRef.current = stream;
+            // Only request video here to show the user's face. Audio will be requested on record.
+            const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            streamRef.current = videoStream;
             setPermissionStatus('granted');
             
             if (videoRef.current) {
-                videoRef.current.srcObject = stream;
+                videoRef.current.srcObject = videoStream;
             }
 
             setIsSessionActive(true);
@@ -100,9 +101,10 @@ export const useVoiceSession = ({ videoRef }: UseVisionSessionProps) => {
         } catch (error) {
             console.error('Error accessing media devices.', error);
             setPermissionStatus('denied');
-            toast({ variant: 'destructive', title: 'Acceso Denegado', description: 'Por favor, permite el acceso a la cámara y el micrófono en los ajustes de tu navegador.' });
+            toast({ variant: 'destructive', title: 'Acceso a Cámara Denegado', description: 'Por favor, permite el acceso a la cámara en los ajustes de tu navegador.' });
         }
     }, [isSessionActive, toast, videoRef]);
+
 
     const stopSession = () => {
         setIsSessionActive(false);
@@ -127,41 +129,40 @@ export const useVoiceSession = ({ videoRef }: UseVisionSessionProps) => {
         
         setPermissionStatus('idle');
     };
-
-    const toggleRecording = async () => {
+    
+    const toggleRecording = useCallback(async () => {
         if (isRecording) {
-            if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
                 mediaRecorderRef.current.stop();
             }
             setIsRecording(false);
-        } else {
-            if (!streamRef.current) return;
-            
-            // Let browser pick the best supported format
-            const options = { mimeType: 'audio/webm' };
-            let recorder;
-            try {
-                recorder = new MediaRecorder(streamRef.current, options);
-            } catch (e) {
-                console.warn("audio/webm not supported, trying default");
-                try {
-                    recorder = new MediaRecorder(streamRef.current);
-                } catch(e2) {
-                    console.error("MediaRecorder not supported", e2);
-                    toast({ variant: 'destructive', title: 'Error de Grabación', description: 'Tu navegador no soporta la grabación de audio.' });
-                    return;
-                }
+            return;
+        }
+
+        try {
+            // Request audio stream right before recording
+            const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+            // If there's a video stream, combine them. Otherwise, just use audio.
+            const tracks = [...audioStream.getAudioTracks()];
+            if (streamRef.current) {
+                tracks.push(...streamRef.current.getVideoTracks());
             }
+            const combinedStream = new MediaStream(tracks);
+
+            const recorder = new MediaRecorder(combinedStream);
             mediaRecorderRef.current = recorder;
-            
             audioChunksRef.current = [];
 
-            mediaRecorderRef.current.ondataavailable = (event) => {
+            recorder.ondataavailable = (event) => {
                 if (event.data.size > 0) audioChunksRef.current.push(event.data);
             };
 
-            mediaRecorderRef.current.onstop = async () => {
+            recorder.onstop = async () => {
                 const audioBlob = new Blob(audioChunksRef.current);
+                // Stop only the audio track to allow video to continue
+                audioStream.getTracks().forEach(track => track.stop());
+
                 if (audioBlob.size === 0) return;
 
                 setIsProcessing(true);
@@ -178,7 +179,6 @@ export const useVoiceSession = ({ videoRef }: UseVisionSessionProps) => {
                       setConversation(newConversation);
                       await processAIResponse(newConversation);
                     } else {
-                      // If transcription is empty, just go back to listening
                       setAiState('listening');
                     }
                 } catch (e) {
@@ -190,10 +190,15 @@ export const useVoiceSession = ({ videoRef }: UseVisionSessionProps) => {
                 }
             };
             
-            mediaRecorderRef.current.start();
+            recorder.start();
             setIsRecording(true);
+
+        } catch (err) {
+            console.error("Failed to start MediaRecorder:", err);
+            toast({ variant: 'destructive', title: 'Error de Grabación', description: 'No se pudo iniciar la grabación. Asegúrate de permitir el acceso al micrófono.' });
+            setIsRecording(false);
         }
-    };
+    }, [isRecording, conversation, user, profile, toast]);
 
 
     return {
@@ -207,4 +212,4 @@ export const useVoiceSession = ({ videoRef }: UseVisionSessionProps) => {
         toggleRecording,
         isProcessing,
     };
-}
+};
