@@ -16,6 +16,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import type { SecurityRuleContext } from '@/firebase/errors';
+import { Button } from '@/components/ui/button';
+import { Image as ImageIcon } from 'lucide-react';
+import ImageWhiteboard from '@/components/chat/image-whiteboard';
 
 interface ChatPanelProps {
   chat: Chat;
@@ -28,6 +31,7 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const suggestionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isRefreshingSuggestions, setIsRefreshingSuggestions] = useState(false);
+  const [isWhiteboardOpen, setIsWhiteboardOpen] = useState(false);
 
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -275,6 +279,17 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
             )}
            </div>
         </div>
+         <div className="flex items-center gap-2">
+            <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsWhiteboardOpen(true)}
+                className="text-muted-foreground hover:text-foreground"
+            >
+                <ImageIcon className="h-5 w-5" />
+                <span className="sr-only">Abrir Pizarra de Imagen</span>
+            </Button>
+        </div>
       </header>
       <div className="flex-1 overflow-y-auto">
         <ChatMessages messages={messages || []} isResponding={isResponding || messagesLoading} />
@@ -289,6 +304,11 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
           isRefreshingSuggestions={isRefreshingSuggestions}
         />
       </div>
+      <ImageWhiteboard
+        isOpen={isWhiteboardOpen}
+        onClose={() => setIsWhiteboardOpen(false)}
+        conversationHistory={messages ? messages.map(m => `${m.role}: ${m.content}`).join('\n') : ''}
+      />
     </div>
   );
 }
