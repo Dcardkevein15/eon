@@ -259,35 +259,6 @@ export const ClassifyIntentOutputSchema = z.object({
 });
 export type ClassifyIntentOutput = z.infer<typeof ClassifyIntentOutputSchema>;
 
-// --- Aether Simulation Types ---
-export const AetherAgentSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  archetype: z.string(),
-  primaryGoal: z.string(),
-  greatestFear: z.string(),
-  position: z.object({ x: z.number(), y: z.number(), z: z.number() }),
-  status: z.string(),
-  thought: z.string(),
-  action: z.string(),
-  lastAction: z.string(),
-});
-export type AetherAgent = z.infer<typeof AetherAgentSchema>;
-
-export const AetherEventSchema = z.object({
-  tick: z.number(),
-  description: z.string(),
-});
-export type AetherEvent = z.infer<typeof AetherEventSchema>;
-
-export const AetherWorldStateSchema = z.object({
-  tick: z.number(),
-  eventLog: z.array(AetherEventSchema),
-  supervisorAnalysis: z.string(),
-  agents: z.array(AetherAgentSchema),
-});
-export type AetherWorldState = z.infer<typeof AetherWorldStateSchema>;
-
 // --- Trading Analysis Types ---
 export const CoinSchema = z.object({
     id: z.string(),
