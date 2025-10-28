@@ -229,10 +229,10 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
                     <div className="grid grid-cols-2 gap-2">
                         <TooltipProvider>
                         {history.map(item => (
-                            <Card key={item.id} className="relative group overflow-hidden">
+                            <Card key={item.id} className="relative group overflow-hidden aspect-square">
                                 <Image src={item.imageUrl} alt={item.prompt} layout="fill" objectFit="cover" />
-                                <div className="absolute inset-0 bg-black/70 flex flex-col justify-end p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <p className="text-xs text-white/80 font-semibold truncate">{item.prompt}</p>
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col justify-end p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <p className="text-xs text-white/90 font-semibold truncate">{item.prompt}</p>
                                     <div className="flex gap-1 mt-1">
                                         <Tooltip>
                                             <TooltipTrigger asChild>
