@@ -2,13 +2,11 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '@/firebase';
-import { analyzeVoiceMessageAction, getAIResponse } from '@/app/actions';
-import { generateSpeech } from '@/ai/flows/speech';
+import { getAIResponse } from '@/ai/flows/vision/voice-chat';
 import type { Message, ProfileData, CachedProfile } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { analyzeVoiceMessageAction } from '@/app/actions';
 
-const VAD_THRESHOLD = 0.2; // Voice Activity Detection threshold
-const SILENCE_TIMEOUT = 1200; // ms
 
 interface UseVisionSessionProps {
     videoRef: React.RefObject<HTMLVideoElement>;
@@ -25,15 +23,13 @@ export function useVisionSession({ videoRef }: UseVisionSessionProps) {
     const [aiState, setAiState] = useState<'listening' | 'thinking' | 'speaking'>('listening');
     const [conversation, setConversation] = useState<Message[]>([]);
     const [transcript, setTranscript] = useState('');
+    const [isRecording, setIsRecording] = useState(false);
 
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioContextRef = useRef<AudioContext | null>(null);
-    const analyserRef = useRef<AnalyserNode | null>(null);
-    const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
-    const isSpeakingRef = useRef(false);
-    const animationFrameIdRef = useRef<number | null>(null);
+    const streamRef = useRef<MediaStream | null>(null);
 
     // Load user profile from localStorage
     useEffect(() => {
@@ -62,7 +58,7 @@ export function useVisionSession({ videoRef }: UseVisionSessionProps) {
     const processAIResponse = async (currentConversation: Message[]) => {
       if (!user) return;
       
-      const { response: textResponse } = await getAIResponse(
+      const { response: textResponse, audioUrl: audioDataUri } = await getAIResponse(
           currentConversation.map(m => ({ ...m, timestamp: new Date() })),
           user.uid,
           currentConversation[0]?.anchorRole || null,
@@ -72,106 +68,31 @@ export function useVisionSession({ videoRef }: UseVisionSessionProps) {
       const aiMessage: Message = { id: Date.now().toString(), role: 'assistant', content: textResponse, timestamp: new Date() };
       setConversation(prev => [...prev, aiMessage]);
 
-      const { media } = await generateSpeech(textResponse);
-      
       setAiState('speaking');
-      isSpeakingRef.current = true;
       
-      const audio = new Audio(media);
+      const audio = new Audio(audioDataUri);
       audioPlayerRef.current = audio;
       audio.play();
       
       audio.onended = () => {
           setAiState('listening');
-          isSpeakingRef.current = false;
       };
     };
-
-    const stopRecording = useCallback(async () => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-            mediaRecorderRef.current.stop();
-        }
-        if (silenceTimerRef.current) {
-            clearTimeout(silenceTimerRef.current);
-            silenceTimerRef.current = null;
-        }
-
-        if (isSpeakingRef.current || audioChunksRef.current.length === 0) return;
-        
-        setIsProcessing(true);
-        setAiState('thinking');
-        
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const audioDataUri = await blobToDataUri(audioBlob);
-        
-        try {
-            const { transcription } = await analyzeVoiceMessageAction({ audioDataUri });
-
-            if (transcription && transcription.trim().length > 0) {
-              setTranscript(transcription);
-              const userMessage: Message = { id: Date.now().toString(), role: 'user', content: transcription, timestamp: new Date() };
-              const newConversation = [...conversation, userMessage];
-              setConversation(newConversation);
-              await processAIResponse(newConversation);
-            }
-        } catch (e) {
-            console.error("Error processing audio:", e);
-            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo procesar tu voz.' });
-        } finally {
-            setIsProcessing(false);
-            if(isSessionActive) {
-                if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'inactive') {
-                    mediaRecorderRef.current.start(1000);
-                }
-            }
-        }
-    }, [conversation, isSessionActive, processAIResponse, toast, user]);
-
-    const monitorAudio = useCallback(() => {
-      if (analyserRef.current && mediaRecorderRef.current?.state === 'recording' && !isSpeakingRef.current) {
-        const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
-        analyserRef.current.getByteTimeDomainData(dataArray);
-        const volume = dataArray.reduce((acc, val) => acc + Math.abs(val - 128), 0) / dataArray.length / 128;
-
-        if (volume > VAD_THRESHOLD) {
-          if (silenceTimerRef.current) {
-            clearTimeout(silenceTimerRef.current);
-            silenceTimerRef.current = null;
-          }
-        } else {
-          if (!silenceTimerRef.current) {
-            silenceTimerRef.current = setTimeout(stopRecording, SILENCE_TIMEOUT);
-          }
-        }
-      }
-      animationFrameIdRef.current = requestAnimationFrame(monitorAudio);
-    }, [stopRecording]);
 
     const startSession = useCallback(async () => {
         if (isSessionActive) return;
         setPermissionStatus('prompt');
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            streamRef.current = stream;
             setPermissionStatus('granted');
             
             if (videoRef.current) {
                 videoRef.current.srcObject = stream;
             }
 
-            mediaRecorderRef.current = new MediaRecorder(stream);
-            audioContextRef.current = new AudioContext();
-            const source = audioContextRef.current.createMediaStreamSource(stream);
-            analyserRef.current = audioContextRef.current.createAnalyser();
-            analyserRef.current.fftSize = 512;
-            source.connect(analyserRef.current);
-
-            mediaRecorderRef.current.ondataavailable = (event) => {
-                if (event.data.size > 0) audioChunksRef.current.push(event.data);
-            };
-
-            mediaRecorderRef.current.onstart = () => audioChunksRef.current = [];
-            
             setIsSessionActive(true);
+            setAiState('listening');
 
         } catch (error) {
             console.error('Error accessing media devices.', error);
@@ -179,38 +100,19 @@ export function useVisionSession({ videoRef }: UseVisionSessionProps) {
             toast({ variant: 'destructive', title: 'Acceso Denegado', description: 'Por favor, permite el acceso a la cámara y el micrófono en los ajustes de tu navegador.' });
         }
     }, [isSessionActive, toast, videoRef]);
-    
-    useEffect(() => {
-        if (isSessionActive) {
-            if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'inactive') {
-                mediaRecorderRef.current.start(1000);
-            }
-            monitorAudio();
-        }
-
-        return () => {
-            if (animationFrameIdRef.current) {
-                cancelAnimationFrame(animationFrameIdRef.current);
-            }
-        };
-    }, [isSessionActive, monitorAudio]);
-
 
     const stopSession = () => {
-        if (animationFrameIdRef.current) {
-            cancelAnimationFrame(animationFrameIdRef.current);
-        }
-        if (silenceTimerRef.current) {
-            clearTimeout(silenceTimerRef.current);
-        }
-        
         setIsSessionActive(false);
         setConversation([]);
         setTranscript('');
+        setIsRecording(false);
 
-        if (videoRef.current?.srcObject) {
-            const stream = videoRef.current.srcObject as MediaStream;
-            stream.getTracks().forEach(track => track.stop());
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
+        }
+        
+        if (videoRef.current) {
             videoRef.current.srcObject = null;
         }
         
@@ -220,10 +122,64 @@ export function useVisionSession({ videoRef }: UseVisionSessionProps) {
 
         audioContextRef.current?.close();
         audioPlayerRef.current?.pause();
-        isSpeakingRef.current = false;
         
         setPermissionStatus('idle');
     };
+
+    const toggleRecording = async () => {
+        if (isRecording) {
+            // Stop recording
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+                mediaRecorderRef.current.stop();
+            }
+            setIsRecording(false);
+        } else {
+            // Start recording
+            if (!streamRef.current) return;
+
+            // Let browser pick the format
+            mediaRecorderRef.current = new MediaRecorder(streamRef.current);
+            
+            audioChunksRef.current = [];
+
+            mediaRecorderRef.current.ondataavailable = (event) => {
+                if (event.data.size > 0) audioChunksRef.current.push(event.data);
+            };
+
+            mediaRecorderRef.current.onstop = async () => {
+                const audioBlob = new Blob(audioChunksRef.current);
+                if (audioBlob.size === 0) return;
+
+                setIsProcessing(true);
+                setAiState('thinking');
+                
+                try {
+                    const audioDataUri = await blobToDataUri(audioBlob);
+                    const { transcription } = await analyzeVoiceMessageAction({ audioDataUri });
+                    
+                    if (transcription && transcription.trim().length > 0) {
+                      setTranscript(transcription);
+                      const userMessage: Message = { id: Date.now().toString(), role: 'user', content: transcription, timestamp: new Date() };
+                      const newConversation = [...conversation, userMessage];
+                      setConversation(newConversation);
+                      await processAIResponse(newConversation);
+                    }
+                } catch (e) {
+                    console.error("Error processing audio:", e);
+                    toast({ variant: 'destructive', title: 'Error', description: 'No se pudo procesar tu voz.' });
+                } finally {
+                    setIsProcessing(false);
+                    if (isSessionActive) {
+                        setAiState('listening');
+                    }
+                }
+            };
+            
+            mediaRecorderRef.current.start();
+            setIsRecording(true);
+        }
+    };
+
 
     return {
         isSessionActive,
@@ -232,5 +188,8 @@ export function useVisionSession({ videoRef }: UseVisionSessionProps) {
         transcript,
         startSession,
         stopSession,
+        isRecording,
+        toggleRecording,
+        isProcessing,
     };
 }

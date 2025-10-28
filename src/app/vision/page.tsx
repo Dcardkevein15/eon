@@ -3,12 +3,13 @@
 import { useRef } from 'react';
 import { useAuth } from '@/firebase';
 import { Button } from '@/components/ui/button';
-import { Loader2, AlertTriangle, User, ChevronLeft } from 'lucide-react';
+import { Loader2, AlertTriangle, User, ChevronLeft, Mic, Square } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useVisionSession } from '@/hooks/useVisionSession';
+import { useVoiceSession } from '@/hooks/useVisionSession';
 import AIVisualizer from '@/components/vision/AIVisualizer';
+import { cn } from '@/lib/utils';
 
 
 export default function VisionPage() {
@@ -21,8 +22,11 @@ export default function VisionPage() {
     startSession,
     stopSession,
     permissionStatus,
-    transcript
-  } = useVisionSession({ videoRef });
+    transcript,
+    isRecording,
+    toggleRecording,
+    isProcessing,
+  } = useVoiceSession({ videoRef });
 
 
   if (authLoading) {
@@ -64,7 +68,7 @@ export default function VisionPage() {
           >
             <h1 className="text-4xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-b from-foreground to-muted-foreground">Visión IA</h1>
             <p className="text-muted-foreground mb-8 max-w-sm mx-auto">Inicia una conversación cara a cara con tu asistente, que podrá verte y escucharte en tiempo real.</p>
-            <Button onClick={startSession} size="lg" disabled={authLoading}>
+            <Button onClick={startSession} size="lg" disabled={authLoading || permissionStatus === 'prompt'}>
               {permissionStatus === 'prompt' ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
               Iniciar Sesión de Visión
             </Button>
@@ -91,16 +95,30 @@ export default function VisionPage() {
             </div>
 
             <div className="flex flex-col items-center gap-4">
-              <div className="relative w-48 h-36 rounded-xl overflow-hidden border-2 border-primary shadow-lg">
+               <div className="relative w-48 h-36 rounded-xl overflow-hidden border-2 border-primary shadow-lg">
                   <video ref={videoRef} autoPlay muted className="w-full h-full object-cover transform scaleX(-1)" />
                   <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-black/50 p-1 rounded-md">
                       <User className="w-4 h-4"/>
                       <p className="text-xs font-bold">{user?.displayName?.split(' ')[0]}</p>
                   </div>
               </div>
-               <Button onClick={stopSession} variant="destructive">
-                  Finalizar Sesión
-               </Button>
+              <div className="flex items-center gap-2">
+                 <Button 
+                    onClick={toggleRecording} 
+                    variant="outline"
+                    size="lg"
+                    className={cn(
+                      "rounded-full w-20 h-20",
+                      isRecording ? "bg-red-500/20 text-red-400 border-red-500/50" : "bg-background text-foreground",
+                    )}
+                    disabled={isProcessing || aiState === 'speaking'}
+                 >
+                    {isRecording ? <Square className="w-8 h-8 fill-current" /> : <Mic className="w-8 h-8"/>}
+                 </Button>
+                 <Button onClick={stopSession} variant="destructive">
+                    Finalizar Sesión
+                 </Button>
+              </div>
             </div>
           </motion.div>
         )}
