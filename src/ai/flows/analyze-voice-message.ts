@@ -2,10 +2,11 @@
 'use server';
 
 /**
- * @fileOverview Transcribes an audio message. The emotional tone analysis has been deprecated.
+ * @fileOverview Transcribes an audio message.
  */
 
 import { ai } from '@/ai/genkit';
+import { googleAI } from '@genkit-ai/google-genai';
 import { z } from 'zod';
 
 const AnalyzeVoiceInputSchema = z.object({
@@ -22,25 +23,30 @@ const AnalyzeVoiceOutputSchema = z.object({
 });
 export type AnalyzeVoiceOutput = z.infer<typeof AnalyzeVoiceOutputSchema>;
 
+
 export async function analyzeVoiceMessage(
   input: AnalyzeVoiceInput
-): Promise<z.infer<typeof AnalyzeVoiceOutputSchema>> {
-  return analyzeVoiceMessageFlow(input);
+): Promise<AnalyzeVoiceOutput> {
+  // Directly use ai.generate for transcription
+  const { text } = await ai.generate({
+    model: googleAI.model('gemini-1.5-flash'), // Or another suitable model
+    prompt: [
+        { text: "Tu única tarea es transcribir con la mayor precisión posible las palabras habladas en el siguiente mensaje de audio. La transcripción DEBE estar en el idioma original del audio." },
+        { media: { url: input.audioDataUri } }
+    ],
+  });
+
+  const transcription = text.trim();
+
+  // Validate the output against the Zod schema
+  const result = AnalyzeVoiceOutputSchema.safeParse({ transcription });
+  if (!result.success) {
+    console.error("Transcription output validation failed:", result.error);
+    throw new Error("La salida de la transcripción no tiene el formato esperado.");
+  }
+
+  return result.data;
 }
-
-
-const analyzeVoicePrompt = ai.definePrompt({
-  name: 'analyzeVoiceMessagePrompt',
-  input: { schema: AnalyzeVoiceInputSchema },
-  output: { schema: AnalyzeVoiceOutputSchema },
-  prompt: `Eres un experto transcriptor de audio. Tu única tarea es transcribir con la mayor precisión posible las palabras habladas en el siguiente mensaje de audio.
-
-**IMPORTANTE**: La transcripción DEBE estar en el idioma original del audio.
-
-Mensaje de audio a analizar:
-{{media url=audioDataUri}}
-`,
-});
 
 const analyzeVoiceMessageFlow = ai.defineFlow(
   {
@@ -49,10 +55,7 @@ const analyzeVoiceMessageFlow = ai.defineFlow(
     outputSchema: AnalyzeVoiceOutputSchema,
   },
   async (input) => {
-    const { output } = await analyzeVoicePrompt(input);
-    if (!output) {
-      throw new Error('Could not transcribe voice message.');
-    }
-    return output;
+    // The logic is now in the main function, this just wraps it.
+    return analyzeVoiceMessage(input);
   }
 );
