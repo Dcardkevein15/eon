@@ -13,25 +13,11 @@ import Image from 'next/image';
 import { v4 as uuidv4 } from 'uuid';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from '@/components/ui/skeleton';
 
-// --- TYPES AND STATE MANAGEMENT ---
-
-interface ImageWhiteboardProps {
-  isOpen: boolean;
-  onClose: () => void;
-  conversationHistory: string;
-}
-
-type GenerationState = 'idle' | 'prompting' | 'generating' | 'done' | 'error';
-
+// --- TYPES ---
 type ImageHistoryItem = {
   id: string;
   prompt: string;
@@ -40,17 +26,108 @@ type ImageHistoryItem = {
   createdAt: string;
 };
 
-// --- MAIN COMPONENT ---
+type GenerationState = 'idle' | 'prompting' | 'generating' | 'done' | 'error';
 
-export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }: ImageWhiteboardProps) {
+// --- INDEXEDDB HOOK ---
+function useImageHistoryStore() {
+  const [history, setHistory] = useState<ImageHistoryItem[]>([]);
+  const [db, setDb] = useState<IDBDatabase | null>(null);
+
+  useEffect(() => {
+    const request = indexedDB.open('ImageHistoryDB', 1);
+    
+    request.onupgradeneeded = (event) => {
+      const dbInstance = (event.target as IDBOpenDBRequest).result;
+      if (!dbInstance.objectStoreNames.contains('images')) {
+        dbInstance.createObjectStore('images', { keyPath: 'id' });
+      }
+    };
+
+    request.onsuccess = (event) => {
+      const dbInstance = (event.target as IDBOpenDBRequest).result;
+      setDb(dbInstance);
+      
+      // Load initial data
+      const transaction = dbInstance.transaction('images', 'readonly');
+      const store = transaction.objectStore('images');
+      const getAllRequest = store.getAll();
+      
+      getAllRequest.onsuccess = () => {
+        const sortedHistory = getAllRequest.result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setHistory(sortedHistory);
+      };
+    };
+    
+    request.onerror = (event) => {
+      console.error('IndexedDB error:', (event.target as IDBOpenDBRequest).error);
+    };
+  }, []);
+
+  const addImage = async (item: ImageHistoryItem) => {
+    if (!db) return;
+
+    const transaction = db.transaction('images', 'readwrite');
+    const store = transaction.objectStore('images');
+    
+    // Add new item
+    store.put(item);
+    
+    // Enforce history limit (e.g., 20 items)
+    const countRequest = store.count();
+    countRequest.onsuccess = () => {
+      if (countRequest.result > 20) {
+        const cursorRequest = store.openCursor(null, 'next'); // 'next' gives oldest items first
+        let toDelete = countRequest.result - 20;
+        cursorRequest.onsuccess = (event) => {
+          const cursor = (event.target as IDBRequest).result;
+          if (cursor && toDelete > 0) {
+            cursor.delete();
+            toDelete--;
+            cursor.continue();
+          }
+        }
+      }
+    };
+
+    return new Promise<void>((resolve) => {
+      transaction.oncomplete = () => {
+        const newHistory = [item, ...history].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 20);
+        setHistory(newHistory);
+        resolve();
+      };
+      transaction.onerror = () => resolve(); // Resolve even on error
+    });
+  };
+
+  const deleteImage = async (id: string) => {
+    if (!db) return;
+
+    const transaction = db.transaction('images', 'readwrite');
+    const store = transaction.objectStore('images');
+    store.delete(id);
+
+    return new Promise<void>((resolve) => {
+      transaction.oncomplete = () => {
+        setHistory(prev => prev.filter(item => item.id !== id));
+        resolve();
+      };
+       transaction.onerror = () => resolve();
+    });
+  };
+
+  return { history, addImage, deleteImage };
+}
+
+
+// --- MAIN COMPONENT ---
+export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }: { isOpen: boolean; onClose: () => void; conversationHistory: string }) {
   const [prompt, setPrompt] = useState('');
   const [currentArtisticPrompt, setCurrentArtisticPrompt] = useState('');
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
   const [state, setState] = useState<GenerationState>('idle');
   const { toast } = useToast();
   
-  // The history is now managed purely by React state and will reset on page refresh.
-  const [history, setHistory] = useState<ImageHistoryItem[]>([]);
+  const { history, addImage, deleteImage } = useImageHistoryStore();
 
   const handleGenerateImage = async () => {
     if (!prompt.trim()) {
@@ -63,25 +140,24 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
     setCurrentArtisticPrompt('');
 
     try {
-      // 1. Generate the artistic prompt
+      // 1. Generate artistic prompt
       const artDirectorResponse = await generateImagePrompt({
         conversationHistory: `${conversationHistory}\nuser: Crea una imagen sobre: ${prompt}`,
       });
       const artisticPrompt = artDirectorResponse.prompt;
       setCurrentArtisticPrompt(artisticPrompt);
 
-      // 2. Generate the image
+      // 2. Generate image
       setState('generating');
       const imageResponse = await generateImageX({ prompt: artisticPrompt });
       
-      // 3. **CRITICAL VALIDATION**: Ensure we have a valid URL before proceeding
-      if (!imageResponse.imageUrl) {
+      if (!imageResponse.imageUrl || !imageResponse.imageUrl.startsWith('data:image')) {
         throw new Error('La IA no devolvió una URL de imagen válida.');
       }
       const generatedImageUrl = imageResponse.imageUrl;
       setCurrentImageUrl(generatedImageUrl);
 
-      // 4. Add to history ONLY after successful generation and validation
+      // 3. Add to history via IndexedDB hook
       const newHistoryItem: ImageHistoryItem = {
         id: uuidv4(),
         prompt,
@@ -89,8 +165,7 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
         imageUrl: generatedImageUrl,
         createdAt: new Date().toISOString(),
       };
-      
-      setHistory(prev => [newHistoryItem, ...prev.slice(0, 19)]);
+      await addImage(newHistoryItem);
 
       setState('done');
     } catch (error: any) {
@@ -111,7 +186,7 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
   };
 
   const handleDeleteFromHistory = (id: string) => {
-    setHistory(prev => prev.filter(item => item.id !== id));
+    deleteImage(id);
   };
   
   const handleClose = () => {
@@ -132,7 +207,7 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
             Pizarra de Creación
           </DialogTitle>
           <DialogDescription>
-            Usa la IA para crear imágenes o revisa tus creaciones de la sesión actual.
+            Usa la IA para crear imágenes o revisa tus creaciones. Las imágenes se guardan en tu navegador.
           </DialogDescription>
         </DialogHeader>
         
@@ -145,13 +220,13 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
                     </TabsTrigger>
                     <TabsTrigger value="history">
                         <History className="mr-2 h-4 w-4"/>
-                        Historial
+                        Historial ({history.length})
                     </TabsTrigger>
                 </TabsList>
             </div>
 
             {/* Create Tab */}
-            <TabsContent value="create" className="flex-1 flex flex-col gap-4 p-6 pt-2 m-0">
+            <TabsContent value="create" className="flex-1 flex flex-col gap-4 p-6 pt-4 m-0">
                 <div className="flex gap-2">
                     <Input
                         value={prompt}
@@ -215,11 +290,11 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
             </TabsContent>
 
             {/* History Tab */}
-            <TabsContent value="history" className="flex-1 flex flex-col overflow-y-hidden m-0 pt-2">
+            <TabsContent value="history" className="flex-1 flex flex-col overflow-y-hidden m-0 pt-4">
                 <ScrollArea className="h-full px-6 pb-6">
                     {history.length > 0 ? (
                         <>
-                        <p className="text-xs text-muted-foreground text-center mb-4">El historial se reinicia al recargar la página.</p>
+                        <p className="text-xs text-muted-foreground text-center mb-4">Mostrando las últimas 20 imágenes guardadas en tu navegador.</p>
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             <TooltipProvider>
                             {history.filter(item => item.imageUrl).map(item => (
@@ -229,7 +304,7 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
                                       alt={item.prompt} 
                                       layout="fill" 
                                       objectFit="cover"
-                                      unoptimized // Important for data URIs
+                                      unoptimized
                                     />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col justify-end p-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <p className="text-xs text-white/90 font-semibold truncate">{item.prompt}</p>
