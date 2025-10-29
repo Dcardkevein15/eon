@@ -9,17 +9,19 @@ import ChatSidebar from '@/components/chat/chat-sidebar';
 import { useAuth, useCollection, useFirestore } from '@/firebase';
 import { collection, query, where, orderBy } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, ChevronLeft } from 'lucide-react';
+import { PlusCircle, ChevronLeft, Route } from 'lucide-react';
 import TherapistEditModal from '@/components/marketplace/therapist-edit-modal';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ApplicationList from '@/components/admin/application-list';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useTour } from '@/hooks/use-interactive-tour';
 
 export default function MarketplacePage() {
   const { user, userRoles, loading: authLoading } = useAuth();
   const firestore = useFirestore();
   const isAdmin = userRoles?.includes('admin') ?? false;
+  const { startTour } = useTour('marketplace');
 
   const [filters, setFilters] = useState({
     specialty: '',
@@ -125,6 +127,10 @@ export default function MarketplacePage() {
                     {isAdmin ? 'Portal de Administración' : 'Encuentra tu Terapeuta'}
                   </h1>
                 </div>
+                 <Button variant="ghost" size="icon" onClick={startTour}>
+                    <Route className="h-5 w-5 text-muted-foreground" />
+                    <span className="sr-only">Iniciar Recorrido</span>
+                </Button>
               </div>
             </div>
             

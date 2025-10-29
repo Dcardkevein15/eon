@@ -3,42 +3,49 @@
 import { useState, useEffect, useCallback } from 'react';
 import { tourSteps, type TourStep } from '@/components/tour/tour-steps';
 
-const TOUR_STORAGE_KEY = 'interactive-tour-view-count';
 const MAX_AUTO_SHOW_COUNT = 7;
 
-export function useTour() {
+export function useTour(tourKey: keyof typeof tourSteps = 'main') {
   const [isActive, setIsActive] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [viewCount, setViewCount] = useState(0);
+  
+  const TOUR_STORAGE_KEY = `interactive-tour-view-count-${tourKey}`;
+  const steps = tourSteps[tourKey] || [];
 
   useEffect(() => {
-    try {
-        const storedCount = localStorage.getItem(TOUR_STORAGE_KEY);
-        const count = storedCount ? parseInt(storedCount, 10) : 0;
-        setViewCount(count);
+    // Only run this on the client
+    if (typeof window === 'undefined') return;
 
-        if (count < MAX_AUTO_SHOW_COUNT) {
-            // Automatically start the tour for new users
-            startTour();
-        }
+    try {
+      const storedCount = localStorage.getItem(TOUR_STORAGE_KEY);
+      const count = storedCount ? parseInt(storedCount, 10) : 0;
+      setViewCount(count);
+
+      if (count < MAX_AUTO_SHOW_COUNT) {
+        // Automatically start the tour for new users of this section
+        startTour();
+      }
     } catch (error) {
-        console.error("Could not access localStorage for tour:", error);
+      console.error("Could not access localStorage for tour:", error);
     }
-  }, []);
+  }, [tourKey]); // Re-run when the tourKey changes
 
   const incrementViewCount = useCallback(() => {
     try {
-        const newCount = viewCount + 1;
-        localStorage.setItem(TOUR_STORAGE_KEY, newCount.toString());
-        setViewCount(newCount);
+      const newCount = viewCount + 1;
+      localStorage.setItem(TOUR_STORAGE_KEY, newCount.toString());
+      setViewCount(newCount);
     } catch (error) {
-        console.error("Could not update localStorage for tour:", error);
+      console.error("Could not update localStorage for tour:", error);
     }
-  }, [viewCount]);
+  }, [viewCount, TOUR_STORAGE_KEY]);
 
   const startTour = () => {
-    setCurrentStep(0);
-    setIsActive(true);
+    if (steps.length > 0) {
+      setCurrentStep(0);
+      setIsActive(true);
+    }
   };
 
   const endTour = () => {
@@ -49,7 +56,7 @@ export function useTour() {
   };
 
   const nextStep = () => {
-    if (currentStep < tourSteps.length - 1) {
+    if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
       endTour();
@@ -69,9 +76,9 @@ export function useTour() {
     nextStep,
     prevStep,
     currentStep,
-    step: tourSteps[currentStep] as TourStep | undefined,
+    step: steps[currentStep] as TourStep | undefined,
     isFirst: currentStep === 0,
-    isLast: currentStep === tourSteps.length - 1,
+    isLast: currentStep === steps.length - 1,
     isTourActive: isActive, // Exporting an alias for clarity
   };
 }

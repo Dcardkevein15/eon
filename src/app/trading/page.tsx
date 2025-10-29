@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, Play, BrainCircuit, Bot, Sparkles, ChevronLeft, History, TrendingUp, TrendingDown, PauseCircle } from 'lucide-react';
+import { Loader2, Play, BrainCircuit, Bot, Sparkles, ChevronLeft, History, TrendingUp, TrendingDown, PauseCircle, Route } from 'lucide-react';
 import type { TradingSignal, CryptoDebateTurn, TradingAnalysisRecord, FullCryptoAnalysis, Coin, MarketData } from '@/lib/types';
 import { runCryptoAnalysis, getCoinList } from '@/ai/flows/crypto-analysis-flow';
 import Link from 'next/link';
@@ -17,6 +17,7 @@ import { es } from 'date-fns/locale';
 import { v4 as uuidv4 } from 'uuid';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { useTour } from '@/hooks/use-interactive-tour';
 
 const AnalystAvatar = ({ name }: { name: string }) => {
     const isApex = name === 'Apex';
@@ -112,6 +113,7 @@ export default function TradingAnalysisPage() {
     const [coins, setCoins] = useState<Coin[]>([]);
     const [selectedCoinId, setSelectedCoinId] = useState('bitcoin');
     const [selectedDays, setSelectedDays] = useState('30');
+    const { startTour } = useTour('trading');
 
     useEffect(() => {
         const fetchCoins = async () => {
@@ -135,7 +137,6 @@ export default function TradingAnalysisPage() {
         try {
             const result: FullCryptoAnalysis = await runCryptoAnalysis({
                 crypto_id: selectedCoinId,
-                days: selectedDays,
             });
             
             setAnalysisResult(result);
@@ -154,7 +155,7 @@ export default function TradingAnalysisPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [selectedCoinId, selectedDays, setAnalysisHistory]);
+    }, [selectedCoinId, setAnalysisHistory]);
     
     const loadHistoryRecord = (record: TradingAnalysisRecord) => {
         setIsViewingHistory(true);
@@ -193,18 +194,7 @@ export default function TradingAnalysisPage() {
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <Select value={selectedDays} onValueChange={setSelectedDays}>
-                                <SelectTrigger className="w-[140px]">
-                                    <SelectValue placeholder="Temporalidad" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="1">24 horas</SelectItem>
-                                    <SelectItem value="7">7 días</SelectItem>
-                                    <SelectItem value="30">30 días</SelectItem>
-                                    <SelectItem value="90">90 días</SelectItem>
-                                    <SelectItem value="365">1 año</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            
                             <Sheet>
                                 <SheetTrigger asChild>
                                      <Button variant="outline" disabled={isHistoryLoading}>
@@ -236,6 +226,10 @@ export default function TradingAnalysisPage() {
                                     </ScrollArea>
                                 </SheetContent>
                             </Sheet>
+                            <Button variant="ghost" size="icon" onClick={startTour}>
+                                <Route className="h-5 w-5 text-muted-foreground" />
+                                <span className="sr-only">Iniciar Recorrido</span>
+                            </Button>
                             <Button onClick={handleStartAnalysis} disabled={isLoading}>
                                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />}
                                 {isLoading ? 'Analizando...' : 'Iniciar Análisis'}

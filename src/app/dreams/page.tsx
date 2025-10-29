@@ -7,7 +7,7 @@ import { interpretDreamAction, analyzeVoiceMessageAction } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ChevronLeft, Loader2, Wand2, Info, BookOpen, Trash2, Mic, Square } from 'lucide-react';
+import { ChevronLeft, Loader2, Wand2, Info, BookOpen, Trash2, Mic, Square, Route } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Sidebar, SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -39,6 +39,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 import DreamSpecialistSelection from '@/components/dreams/DreamSpecialistSelection';
+import { useTour } from '@/hooks/use-interactive-tour';
 
 // Custom hook for managing state in localStorage
 function useLocalStorage<T>(key: string, initialValue: T) {
@@ -169,6 +170,7 @@ export default function DreamWeaverPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const { startTour } = useTour('dreams');
 
   const [dreamText, setDreamText] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -266,8 +268,7 @@ export default function DreamWeaverPage() {
       if (recordedAudioUrl) {
           const audioDataUri = await blobUrlToDataUri(recordedAudioUrl);
           const voiceAnalysis = await analyzeVoiceMessageAction({ audioDataUri });
-          const tacticText = `(El usuario usa esta táctica de comunicación al narrar: ${voiceAnalysis.inferredTactic})`;
-          dreamDescription = `${tacticText}\n\nTranscripción de la narración: "${voiceAnalysis.transcription}"\n\nNotas adicionales del usuario: ${dreamText}`;
+          dreamDescription = `Transcripción de la narración: "${voiceAnalysis.transcription}"\n\nNotas adicionales del usuario: ${dreamText}`;
       }
 
       const interpretation = await interpretDreamAction({
@@ -343,18 +344,24 @@ export default function DreamWeaverPage() {
                             </Button>
                             <h1 className="text-xl font-bold tracking-tight">Portal de Sueños</h1>
                         </div>
-                        <div className="md:hidden">
-                            <Sheet open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
-                                <Sheet.Trigger asChild>
-                                    <Button variant="ghost" size="icon">
-                                        <BookOpen className="h-5 w-5" />
-                                        <span className="sr-only">Abrir diario de sueños</span>
-                                    </Button>
-                                </Sheet.Trigger>
-                                <SheetContent className="p-0 w-[85vw] sm:w-96">
-                                     <DreamHistorySidebar dreams={dreamHistory} isLoading={isLoadingHistory} onSelectDream={handleSelectDream} onDeleteDream={handleDeleteDream} />
-                                </SheetContent>
-                            </Sheet>
+                         <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="icon" onClick={startTour}>
+                                <Route className="h-5 w-5 text-muted-foreground" />
+                                <span className="sr-only">Iniciar Recorrido</span>
+                            </Button>
+                            <div className="md:hidden">
+                                <Sheet open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
+                                    <Sheet.Trigger asChild>
+                                        <Button variant="ghost" size="icon">
+                                            <BookOpen className="h-5 w-5" />
+                                            <span className="sr-only">Abrir diario de sueños</span>
+                                        </Button>
+                                    </Sheet.Trigger>
+                                    <SheetContent className="p-0 w-[85vw] sm:w-96">
+                                         <DreamHistorySidebar dreams={dreamHistory} isLoading={isLoadingHistory} onSelectDream={handleSelectDream} onDeleteDream={handleDeleteDream} />
+                                    </SheetContent>
+                                </Sheet>
+                            </div>
                         </div>
                     </div>
                 </div>

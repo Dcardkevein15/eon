@@ -55,7 +55,7 @@ function ChatSidebar({
   const { user } = useAuth();
   const pathname = usePathname();
   const [isCreatingChat, setIsCreatingChat] = useState(false);
-  const { startTour, isTourActive } = useTour();
+  const { startTour: startMainTour } = useTour('main');
 
   useEffect(() => {
     setIsClient(true);
@@ -94,10 +94,10 @@ function ChatSidebar({
   };
   
   const navItems = [
-    { href: "/gym", icon: Dumbbell, label: "Gimnasio Emocional", id: 'gym-nav' },
     { href: "/profile", icon: UserCircle, label: "Perfil Psicológico", id: 'profile-nav' },
-    { href: "/marketplace", icon: Briefcase, label: "Marketplace", id: 'marketplace-nav' },
+    { href: "/gym", icon: Dumbbell, label: "Gimnasio Emocional", id: 'gym-nav' },
     { href: "/dreams", icon: Star, label: "Portal de Sueños", id: 'dreams-nav' },
+    { href: "/marketplace", icon: Briefcase, label: "Marketplace", id: 'marketplace-nav' },
     { href: "/trading", icon: BarChartHorizontal, label: "Análisis Pro", id: 'trading-nav' },
   ];
 
@@ -219,9 +219,9 @@ function ChatSidebar({
                 </AlertDialogContent>
               </AlertDialog>
             )}
-             <Button variant="ghost" className="w-full justify-start" id="start-tour-button" onClick={() => startTour()}>
+             <Button variant="ghost" className="w-full justify-start" id="start-tour-button" onClick={() => startMainTour()}>
                 <Route className="mr-2 h-4 w-4" />
-                Iniciar Recorrido
+                Iniciar Recorrido Principal
              </Button>
          </div>
         <UserButton />
