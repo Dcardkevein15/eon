@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth, useCollection, useFirestore } from '@/firebase';
-import { collection, getDocs, query, orderBy, limit, Timestamp, doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, Timestamp } from 'firebase/firestore';
 import type { Chat, Message, ProfileData, CachedProfile } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -84,7 +84,9 @@ export default function PsychologicalProfile() {
         
         messagesSnapshot.forEach(doc => {
           const msg = doc.data() as Message;
-          const date = (msg.timestamp as Timestamp).toDate();
+          const date = msg.timestamp && typeof (msg.timestamp as any).toDate === 'function'
+              ? (msg.timestamp as Timestamp).toDate()
+              : new Date(msg.timestamp as any);
           fullChatHistory += `[${date.toISOString()}] ${msg.role}: ${msg.content}\n`;
         });
 
