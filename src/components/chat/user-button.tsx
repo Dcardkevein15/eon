@@ -20,14 +20,12 @@ import { updateProfile } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useTheme } from 'next-themes';
 import Link from 'next/link';
-import { useTour } from '@/hooks/use-interactive-tour';
 
 export default function UserButton() {
   const { user, loading, signInWithGoogle, signOut, auth, userRoles } = useAuth();
   const storage = useStorage();
   const { toast } = useToast();
   const { setTheme, theme } = useTheme();
-  const { startTour } = useTour();
   
   const [isClient, setIsClient] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -144,10 +142,6 @@ export default function UserButton() {
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-           <DropdownMenuItem onClick={startTour}>
-            <Route className="mr-2 h-4 w-4" />
-            <span>Iniciar Tour Guiado</span>
-          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
             {theme === 'dark' ? (
               <Sun className="mr-2 h-4 w-4" />

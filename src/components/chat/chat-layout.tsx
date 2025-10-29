@@ -28,7 +28,6 @@ import { cn } from '@/lib/utils';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { determineAnchorRole } from '@/app/actions';
-import InteractiveTour from '@/components/tour/interactive-tour';
 
 interface ChatLayoutProps {
   chatId?: string;
@@ -244,7 +243,6 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
 
   return (
     <SidebarProvider>
-      {isClient && <InteractiveTour />}
       <div className="bg-background text-foreground">
         <Sidebar>
           <ChatSidebar
