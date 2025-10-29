@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Wand2, Download, Trash2, History, Image as ImageIcon, Sparkles, ImageOff, X } from 'lucide-react';
+import { Loader2, Wand2, Download, Trash2, History, Image as ImageIcon, Sparkles, X } from 'lucide-react';
 import { generateImagePrompt } from '@/ai/flows/generate-image-prompt';
 import { generateImageX } from '@/ai/flows/generate-image-x';
 import { useToast } from '@/hooks/use-toast';
@@ -224,8 +224,8 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
                 </div>
 
                 {/* Create Tab */}
-                <TabsContent value="create" className="flex-1 flex flex-col gap-4 p-1 m-0">
-                    <div className="flex gap-2 mt-4">
+                <TabsContent value="create" className="flex-1 flex flex-col gap-4 p-1 mt-4">
+                    <div className="flex gap-2">
                         <Input
                             value={prompt}
                             onChange={(e) => setPrompt(e.target.value)}
@@ -289,7 +289,7 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
                 </TabsContent>
 
                 {/* History Tab */}
-                <TabsContent value="history" className="flex-1 flex flex-col overflow-y-hidden m-0">
+                <TabsContent value="history" className="flex-1 flex flex-col overflow-y-hidden mt-0 p-1 flex-grow">
                     <ScrollArea className="h-full px-1 py-4">
                         {isLoadingHistory ? (
                              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
@@ -297,7 +297,7 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
                              </div>
                         ) : history.length > 0 ? (
                             <>
-                            <p className="text-xs text-white/50 text-center mb-4">Mostrando las últimas {history.length} de hasta 1000 imágenes guardadas en este dispositivo.</p>
+                            <p className="text-xs text-white/50 text-center mb-4">Mostrando las últimas {history.length} de hasta {MAX_HISTORY_ITEMS} imágenes guardadas en este dispositivo.</p>
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                                 <TooltipProvider>
                                 {history.filter(item => item.imageUrl).map(item => (
