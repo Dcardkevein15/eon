@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import * as React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, ArrowRight, ArrowLeft } from 'lucide-react';
 
