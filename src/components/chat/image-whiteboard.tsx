@@ -43,7 +43,7 @@ type ImageHistoryItem = {
 };
 
 // This type is what we'll actually store in localStorage
-type StoredImageHistoryItem = Omit<ImageHistoryItem, 'imageUrl'> & { imageUrl: string };
+type StoredImageHistoryItem = ImageHistoryItem;
 
 
 function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val: T) => T)) => void, boolean] {
@@ -96,11 +96,7 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
 
    // Re-hydrate the full history with image URLs on mount (relying on browser cache)
-   const hydratedHistory: ImageHistoryItem[] = history.map(item => ({
-        ...item,
-        // The imageUrl is now stored, so we just use it directly.
-        imageUrl: item.imageUrl, 
-   }));
+   const hydratedHistory: ImageHistoryItem[] = history;
 
 
   useEffect(() => {
