@@ -1,22 +1,19 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, RefObject } from 'react';
 import { useAuth } from '@/firebase';
-import { getAIResponse } from '@/ai/flows/vision/voice-chat';
-import type { Message, ProfileData, CachedProfile } from '@/lib/types';
+import type { Message } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { analyzeVoiceMessageAction } from '@/app/actions';
-
+import { getVisionAIResponse } from '@/ai/flows/vision/voice-chat';
 
 interface UseVisionSessionProps {
-    videoRef: React.RefObject<HTMLVideoElement>;
+    videoRef: RefObject<HTMLVideoElement>;
 }
 
 export const useVoiceSession = ({ videoRef }: UseVisionSessionProps) => {
     const { user } = useAuth();
     const { toast } = useToast();
 
-    const [profile, setProfile] = useState<ProfileData | null>(null);
     const [isSessionActive, setIsSessionActive] = useState(false);
     const [permissionStatus, setPermissionStatus] = useState<'idle' | 'prompt' | 'granted' | 'denied'>('idle');
     const [isProcessing, setIsProcessing] = useState(false);
@@ -30,19 +27,16 @@ export const useVoiceSession = ({ videoRef }: UseVisionSessionProps) => {
     const streamRef = useRef<MediaStream | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
 
-    useEffect(() => {
-        if (user) {
-            const key = `psych-profile-${user.uid}`;
-            const cached = localStorage.getItem(key);
-            if (cached) {
-                try {
-                    setProfile(JSON.parse(cached).profile as ProfileData);
-                } catch (e) {
-                    console.error("Failed to parse cached profile", e);
-                }
-            }
-        }
-    }, [user]);
+    const captureFrame = (): string => {
+        if (!videoRef.current) return '';
+        const canvas = document.createElement('canvas');
+        canvas.width = videoRef.current.videoWidth;
+        canvas.height = videoRef.current.videoHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return '';
+        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL('image/jpeg', 0.8);
+    };
 
     const blobToDataUri = (blob: Blob): Promise<string> => {
         return new Promise((resolve, reject) => {
@@ -53,64 +47,34 @@ export const useVoiceSession = ({ videoRef }: UseVisionSessionProps) => {
         });
     };
 
-    const processAIResponse = async (currentConversation: Message[]) => {
-      if (!user) return;
-      
-      const { response: textResponse, audioUrl: audioDataUri } = await getAIResponse(
-          currentConversation.map(m => ({ ...m, timestamp: new Date() })),
-          user.uid,
-          currentConversation[0]?.anchorRole || null,
-          profile
-      );
-      
-      if (!textResponse && !audioDataUri) {
-          setAiState('listening');
-          return;
-      }
-
-      const aiMessage: Message = { id: Date.now().toString(), role: 'assistant', content: textResponse, timestamp: new Date() };
-      setConversation(prev => [...prev, aiMessage]);
-
-      setAiState('speaking');
-      
-      const audio = new Audio(audioDataUri);
-      audioPlayerRef.current = audio;
-      audio.play();
-      
-      audio.onended = () => {
-          setAiState('listening');
-      };
-    };
-
     const startSession = useCallback(async () => {
         if (isSessionActive) return;
         setPermissionStatus('prompt');
         try {
-            // Only request video here to show the user's face. Audio will be requested on record.
-            const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
-            streamRef.current = videoStream;
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            streamRef.current = stream;
             setPermissionStatus('granted');
             
             if (videoRef.current) {
-                videoRef.current.srcObject = videoStream;
+                videoRef.current.srcObject = stream;
             }
 
             setIsSessionActive(true);
             setAiState('listening');
-
         } catch (error) {
             console.error('Error accessing media devices.', error);
             setPermissionStatus('denied');
-            toast({ variant: 'destructive', title: 'Acceso a Cámara Denegado', description: 'Por favor, permite el acceso a la cámara en los ajustes de tu navegador.' });
+            toast({ variant: 'destructive', title: 'Acceso Denegado', description: 'Por favor, permite el acceso a la cámara y micrófono.' });
         }
     }, [isSessionActive, toast, videoRef]);
-
 
     const stopSession = () => {
         setIsSessionActive(false);
         setConversation([]);
         setTranscript('');
         setIsRecording(false);
+        setIsProcessing(false);
+        setAiState('listening');
 
         if (streamRef.current) {
             streamRef.current.getTracks().forEach(track => track.stop());
@@ -139,66 +103,79 @@ export const useVoiceSession = ({ videoRef }: UseVisionSessionProps) => {
             return;
         }
 
-        try {
-            // Request audio stream right before recording
-            const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-            // If there's a video stream, combine them. Otherwise, just use audio.
-            const tracks = [...audioStream.getAudioTracks()];
-            if (streamRef.current) {
-                tracks.push(...streamRef.current.getVideoTracks());
-            }
-            const combinedStream = new MediaStream(tracks);
-
-            const recorder = new MediaRecorder(combinedStream);
-            mediaRecorderRef.current = recorder;
-            audioChunksRef.current = [];
-
-            recorder.ondataavailable = (event) => {
-                if (event.data.size > 0) audioChunksRef.current.push(event.data);
-            };
-
-            recorder.onstop = async () => {
-                const audioBlob = new Blob(audioChunksRef.current);
-                // Stop only the audio track to allow video to continue
-                audioStream.getTracks().forEach(track => track.stop());
-
-                if (audioBlob.size === 0) return;
-
-                setIsProcessing(true);
-                setAiState('thinking');
-                
-                try {
-                    const audioDataUri = await blobToDataUri(audioBlob);
-                    const { transcription } = await analyzeVoiceMessageAction({ audioDataUri });
-                    
-                    if (transcription && transcription.trim().length > 0) {
-                      setTranscript(transcription);
-                      const userMessage: Message = { id: Date.now().toString(), role: 'user', content: transcription, timestamp: new Date() };
-                      const newConversation = [...conversation, userMessage];
-                      setConversation(newConversation);
-                      await processAIResponse(newConversation);
-                    } else {
-                      setAiState('listening');
-                    }
-                } catch (e) {
-                    console.error("Error processing audio:", e);
-                    toast({ variant: 'destructive', title: 'Error', description: 'No se pudo procesar tu voz.' });
-                    setAiState('listening');
-                } finally {
-                    setIsProcessing(false);
-                }
-            };
-            
-            recorder.start();
-            setIsRecording(true);
-
-        } catch (err) {
-            console.error("Failed to start MediaRecorder:", err);
-            toast({ variant: 'destructive', title: 'Error de Grabación', description: 'No se pudo iniciar la grabación. Asegúrate de permitir el acceso al micrófono.' });
-            setIsRecording(false);
+        if (!streamRef.current) {
+             toast({ variant: 'destructive', title: 'Error de Stream', description: 'No se pudo acceder al stream de medios.' });
+             return;
         }
-    }, [isRecording, conversation, user, profile, toast]);
+        
+        // Use the existing stream from startSession
+        const recorder = new MediaRecorder(streamRef.current);
+        mediaRecorderRef.current = recorder;
+        audioChunksRef.current = [];
+
+        recorder.ondataavailable = (event) => {
+            if (event.data.size > 0) audioChunksRef.current.push(event.data);
+        };
+
+        recorder.onstop = async () => {
+            const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+            
+            if (audioBlob.size === 0) return;
+
+            setIsProcessing(true);
+            setAiState('thinking');
+            
+            try {
+                const audioDataUri = await blobToDataUri(audioBlob);
+                const imageDataUri = captureFrame();
+
+                const historyForAI = conversation.map(({ role, content }) => ({ role, content }));
+                
+                const result = await getVisionAIResponse({
+                    audioDataUri,
+                    imageDataUri,
+                    conversationHistory: historyForAI
+                });
+                
+                if (result.transcription) {
+                    setTranscript(result.transcription);
+                    const userMessage: Message = { id: Date.now().toString(), role: 'user', content: result.transcription, timestamp: new Date() };
+                    const aiMessage: Message = { id: (Date.now() + 1).toString(), role: 'assistant', content: result.textResponse, timestamp: new Date() };
+                    setConversation(prev => [...prev, userMessage, aiMessage]);
+
+                    setAiState('speaking');
+                    const audio = new Audio(result.audioResponseUrl);
+                    audioPlayerRef.current = audio;
+                    audio.play();
+                    audio.onended = () => {
+                        setAiState('listening');
+                    };
+                } else {
+                     setAiState('listening');
+                }
+
+            } catch (e) {
+                console.error("Error processing audio/vision:", e);
+                toast({ variant: 'destructive', title: 'Error', description: 'No se pudo procesar tu respuesta.' });
+                setAiState('listening');
+            } finally {
+                setIsProcessing(false);
+            }
+        };
+        
+        recorder.start();
+        setIsRecording(true);
+
+    }, [isRecording, conversation, toast]);
+
+    // Clean up on component unmount
+    useEffect(() => {
+      return () => {
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+        }
+      }
+    }, []);
 
 
     return {

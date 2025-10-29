@@ -102,7 +102,7 @@ export default function VisionPage() {
                       <p className="text-xs font-bold">{user?.displayName?.split(' ')[0]}</p>
                   </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-4">
                  <Button 
                     onClick={toggleRecording} 
                     variant="outline"
