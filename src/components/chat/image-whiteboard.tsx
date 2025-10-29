@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,17 +59,20 @@ function useLocalStorage<T>(key: string, initialValue: T) {
     }
   }, [key]);
 
-  const setValue = (value: T | ((val: T) => T)) => {
+  const setValue = useCallback((value: T | ((val: T) => T)) => {
     try {
+      // Allow value to be a function so we have the same API as useState
       const valueToStore = value instanceof Function ? value(storedValue) : value;
+      // Save state
       setStoredValue(valueToStore);
+      // Save to local storage
       if (typeof window !== 'undefined') {
         window.localStorage.setItem(key, JSON.stringify(valueToStore));
       }
     } catch (error) {
       console.log(error);
     }
-  };
+  }, [key, storedValue]);
 
   return [storedValue, setValue, loading] as const;
 }
@@ -289,4 +292,3 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
     </Dialog>
   );
 }
-
