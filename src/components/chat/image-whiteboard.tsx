@@ -30,7 +30,7 @@ type GenerationState = 'idle' | 'prompting' | 'generating' | 'done' | 'error';
 
 const DB_NAME = 'ImageHistoryDB';
 const STORE_NAME = 'images';
-const MAX_HISTORY_ITEMS = 1000;
+const MAX_HISTORY_ITEMS = 20;
 
 // --- IndexedDB Hook ---
 const useImageHistoryStore = () => {
