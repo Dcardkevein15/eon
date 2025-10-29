@@ -72,12 +72,12 @@ function useImageHistoryStore() {
     // Add new item
     store.put(item);
     
-    // Enforce history limit (e.g., 20 items)
+    // Enforce history limit (e.g., 1000 items)
     const countRequest = store.count();
     countRequest.onsuccess = () => {
-      if (countRequest.result > 20) {
+      if (countRequest.result > 1000) {
         const cursorRequest = store.openCursor(null, 'next'); // 'next' gives oldest items first
-        let toDelete = countRequest.result - 20;
+        let toDelete = countRequest.result - 1000;
         cursorRequest.onsuccess = (event) => {
           const cursor = (event.target as IDBRequest).result;
           if (cursor && toDelete > 0) {
@@ -91,7 +91,7 @@ function useImageHistoryStore() {
 
     return new Promise<void>((resolve) => {
       transaction.oncomplete = () => {
-        const newHistory = [item, ...history].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 20);
+        const newHistory = [item, ...history].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 1000);
         setHistory(newHistory);
         resolve();
       };
@@ -294,7 +294,7 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
                 <ScrollArea className="h-full px-6 pb-6">
                     {history.length > 0 ? (
                         <>
-                        <p className="text-xs text-muted-foreground text-center mb-4">Mostrando las últimas 20 imágenes guardadas en tu navegador.</p>
+                        <p className="text-xs text-muted-foreground text-center mb-4">Mostrando las últimas 1000 imágenes guardadas en tu navegador.</p>
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             <TooltipProvider>
                             {history.filter(item => item.imageUrl).map(item => (
