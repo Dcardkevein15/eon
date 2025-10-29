@@ -42,43 +42,41 @@ type ImageHistoryItem = {
   createdAt: string;
 };
 
-function useLocalStorage<T>(key: string, initialValue: T) {
-  const [storedValue, setStoredValue] = useState<T>(() => {
-    // This function now only runs on the client, avoiding SSR issues.
-    if (typeof window === 'undefined') {
-      return initialValue;
-    }
+// Completamente reescrito para ser robusto y confiable.
+function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val: T) => T)) => void, boolean] {
+  const [isLoading, setIsLoading] = useState(true);
+  const [state, setState] = useState<T>(initialValue);
+
+  // Cargar el estado inicial del localStorage solo en el cliente
+  useEffect(() => {
     try {
       const item = window.localStorage.getItem(key);
-      return item ? JSON.parse(item) : initialValue;
-    } catch (error) {
-      console.log(error);
-      return initialValue;
-    }
-  });
-  const [loading, setLoading] = useState(true);
-
-   useEffect(() => {
-    // Set loading to false once we are on the client and the value has been set.
-    setLoading(false);
-  }, []);
-  
-  const setValue = useCallback((value: T | ((val: T) => T)) => {
-    try {
-      // Allow value to be a function so we have the same API as useState
-      const valueToStore = value instanceof Function ? value(storedValue) : value;
-      // Save state
-      setStoredValue(valueToStore);
-      // Save to local storage
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(key, JSON.stringify(valueToStore));
+      if (item) {
+        const parsedItem = JSON.parse(item);
+        setState(parsedItem);
+        console.log('Historial cargado desde localStorage:', parsedItem);
       }
     } catch (error) {
-      console.log(error);
+      console.error("Error al cargar desde localStorage", error);
+    } finally {
+      setIsLoading(false);
     }
-  }, [key, storedValue]); // Dependency on storedValue is crucial
+  }, [key]);
 
-  return [storedValue, setValue, loading] as const;
+  // Actualizar localStorage cada vez que el estado cambia
+  useEffect(() => {
+    // No guardamos durante la carga inicial para evitar sobreescribir con el valor inicial
+    if (!isLoading) {
+      try {
+        window.localStorage.setItem(key, JSON.stringify(state));
+        console.log('Historial guardado en localStorage:', state);
+      } catch (error) {
+        console.error("Error al guardar en localStorage", error);
+      }
+    }
+  }, [key, state, isLoading]);
+
+  return [state, setState, isLoading];
 }
 
 
@@ -118,7 +116,14 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
         imageUrl: generatedImageUrl,
         createdAt: new Date().toISOString(),
       };
-      setHistory(prev => [newHistoryItem, ...prev]);
+      
+      // La forma correcta de actualizar, usando una función para asegurar el estado más reciente
+      setHistory(prev => {
+          console.log('LOG: Historial ANTES de añadir:', prev);
+          const newHistory = [newHistoryItem, ...prev];
+          console.log('LOG: Historial DESPUÉS de añadir:', newHistory);
+          return newHistory;
+      });
 
       setState('done');
     } catch (error: any) {
@@ -243,8 +248,8 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
             </TabsContent>
 
             {/* History Tab */}
-            <TabsContent value="history" className="flex-1 overflow-y-hidden m-0">
-                <ScrollArea className="h-full px-6 pb-6">
+            <TabsContent value="history" className="flex-1 flex flex-col overflow-y-hidden m-0">
+                <ScrollArea className="h-full px-6 pb-6 pt-4">
                     {isHistoryLoading ? (
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             {[...Array(8)].map((_, i) => <Skeleton key={i} className="aspect-square w-full" />)}
