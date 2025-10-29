@@ -43,22 +43,26 @@ type ImageHistoryItem = {
 };
 
 function useLocalStorage<T>(key: string, initialValue: T) {
-  const [storedValue, setStoredValue] = useState<T>(initialValue);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
+  const [storedValue, setStoredValue] = useState<T>(() => {
+    // This function now only runs on the client, avoiding SSR issues.
+    if (typeof window === 'undefined') {
+      return initialValue;
+    }
     try {
       const item = window.localStorage.getItem(key);
-      if (item) {
-        setStoredValue(JSON.parse(item));
-      }
+      return item ? JSON.parse(item) : initialValue;
     } catch (error) {
       console.log(error);
-    } finally {
-        setLoading(false);
+      return initialValue;
     }
-  }, [key]);
+  });
+  const [loading, setLoading] = useState(true);
 
+   useEffect(() => {
+    // Set loading to false once we are on the client and the value has been set.
+    setLoading(false);
+  }, []);
+  
   const setValue = useCallback((value: T | ((val: T) => T)) => {
     try {
       // Allow value to be a function so we have the same API as useState
@@ -72,7 +76,7 @@ function useLocalStorage<T>(key: string, initialValue: T) {
     } catch (error) {
       console.log(error);
     }
-  }, [key, storedValue]);
+  }, [key, storedValue]); // Dependency on storedValue is crucial
 
   return [storedValue, setValue, loading] as const;
 }
