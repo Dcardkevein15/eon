@@ -22,7 +22,6 @@ import dynamic from 'next/dynamic';
 import { useTheme } from 'next-themes';
 import { generateProfileOnServer } from './actions';
 import { useToast } from '@/hooks/use-toast';
-import { useTour } from '@/hooks/use-interactive-tour';
 
 const EmotionalConstellation = dynamic(() => import('@/components/profile/EmotionalConstellation'), {
   ssr: false,
@@ -34,7 +33,6 @@ export default function PsychologicalProfile() {
   const firestore = useFirestore();
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
-  const { startTour } = useTour('profile');
   
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -284,10 +282,6 @@ export default function PsychologicalProfile() {
                     Volver al Chat
                 </Link>
             </Button>
-            <Button variant="ghost" size="icon" onClick={startTour}>
-                <Route className="h-5 w-5 text-muted-foreground" />
-                <span className="sr-only">Iniciar Recorrido</span>
-            </Button>
         </div>
 
         {isOutdated && (
@@ -361,7 +355,7 @@ export default function PsychologicalProfile() {
                           </div>
                           <div>
                             <h4 className="font-semibold text-xs uppercase tracking-wider flex items-center gap-2"><Shield className="w-4 h-4 text-amber-400"/> Desafíos</h4>
-                            <p className="text-sm text-muted-foreground mt-1">{profile.coreArchetype.challenges}</p>
+                            <p className="text-sm text-muted-foreground mt-1">{profile.coreArchechaquenges}</p>
                           </div>
                         </div>
                       </CardContent>

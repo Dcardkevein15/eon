@@ -17,7 +17,6 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import type { SecurityRuleContext } from '@/firebase/errors';
 import { Skeleton } from '@/components/ui/skeleton';
 import SessionCard from '@/components/gym/session-card';
-import { useTour } from '@/hooks/use-interactive-tour';
 
 export default function EmotionalGymPage() {
   const router = useRouter();
@@ -26,7 +25,6 @@ export default function EmotionalGymPage() {
   const { toast } = useToast();
   const [isCreating, setIsCreating] = useState(false);
   const [selectedScenario, setSelectedScenario] = useState<SimulationScenario | null>(null);
-  const { startTour } = useTour('gym');
 
   // --- Start Data Fetching ---
   const chatsQuery = useMemo(
@@ -138,10 +136,6 @@ export default function EmotionalGymPage() {
                     <p className="text-muted-foreground text-sm mt-1">Practica conversaciones difíciles en un entorno seguro.</p>
                   </div>
                 </div>
-                 <Button variant="ghost" size="icon" onClick={startTour}>
-                    <Route className="h-5 w-5 text-muted-foreground" />
-                    <span className="sr-only">Iniciar Recorrido</span>
-                </Button>
               </div>
             </div>
 

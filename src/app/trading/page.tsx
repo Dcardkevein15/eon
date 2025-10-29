@@ -17,7 +17,6 @@ import { es } from 'date-fns/locale';
 import { v4 as uuidv4 } from 'uuid';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { useTour } from '@/hooks/use-interactive-tour';
 
 const AnalystAvatar = ({ name }: { name: string }) => {
     const isApex = name === 'Apex';
@@ -113,7 +112,6 @@ export default function TradingAnalysisPage() {
     const [coins, setCoins] = useState<Coin[]>([]);
     const [selectedCoinId, setSelectedCoinId] = useState('bitcoin');
     const [selectedDays, setSelectedDays] = useState('30');
-    const { startTour } = useTour('trading');
 
     useEffect(() => {
         const fetchCoins = async () => {
@@ -226,10 +224,6 @@ export default function TradingAnalysisPage() {
                                     </ScrollArea>
                                 </SheetContent>
                             </Sheet>
-                            <Button variant="ghost" size="icon" onClick={startTour}>
-                                <Route className="h-5 w-5 text-muted-foreground" />
-                                <span className="sr-only">Iniciar Recorrido</span>
-                            </Button>
                             <Button onClick={handleStartAnalysis} disabled={isLoading}>
                                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />}
                                 {isLoading ? 'Analizando...' : 'Iniciar Análisis'}

@@ -39,7 +39,6 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 import DreamSpecialistSelection from '@/components/dreams/DreamSpecialistSelection';
-import { useTour } from '@/hooks/use-interactive-tour';
 
 // Custom hook for managing state in localStorage
 function useLocalStorage<T>(key: string, initialValue: T) {
@@ -170,7 +169,6 @@ export default function DreamWeaverPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const { startTour } = useTour('dreams');
 
   const [dreamText, setDreamText] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -345,10 +343,6 @@ export default function DreamWeaverPage() {
                             <h1 className="text-xl font-bold tracking-tight">Portal de Sueños</h1>
                         </div>
                          <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="icon" onClick={startTour}>
-                                <Route className="h-5 w-5 text-muted-foreground" />
-                                <span className="sr-only">Iniciar Recorrido</span>
-                            </Button>
                             <div className="md:hidden">
                                 <Sheet open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
                                     <Sheet.Trigger asChild>

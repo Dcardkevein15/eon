@@ -31,7 +31,6 @@ import {
 } from '@/components/ui/sidebar';
 import { useAuth } from '@/firebase';
 import { usePathname } from 'next/navigation';
-import { useTour } from '@/hooks/use-interactive-tour';
 
 interface ChatSidebarProps {
   chats: Chat[];
@@ -54,7 +53,6 @@ function ChatSidebar({
   const { user } = useAuth();
   const pathname = usePathname();
   const [isCreatingChat, setIsCreatingChat] = useState(false);
-  const { startTour: startMainTour } = useTour('main');
 
   useEffect(() => {
     setIsClient(true);
@@ -217,10 +215,6 @@ function ChatSidebar({
                 </AlertDialogContent>
               </AlertDialog>
             )}
-             <Button variant="ghost" className="w-full justify-start" id="start-tour-button" onClick={() => startMainTour()}>
-                <Route className="mr-2 h-4 w-4" />
-                Iniciar Recorrido Principal
-             </Button>
          </div>
         <UserButton />
       </SidebarFooter>
