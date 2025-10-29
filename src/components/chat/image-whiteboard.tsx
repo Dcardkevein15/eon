@@ -30,7 +30,7 @@ type GenerationState = 'idle' | 'prompting' | 'generating' | 'done' | 'error';
 
 const DB_NAME = 'ImageHistoryDB';
 const STORE_NAME = 'images';
-const MAX_HISTORY_ITEMS = 20;
+const MAX_HISTORY_ITEMS = 1000;
 
 // --- IndexedDB Hook ---
 const useImageHistoryStore = () => {
@@ -99,7 +99,10 @@ const useImageHistoryStore = () => {
             }
         };
 
-        setHistory(prev => [item, ...prev].slice(0, MAX_HISTORY_ITEMS));
+        setHistory(prev => [item, ...prev].sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        ).slice(0, MAX_HISTORY_ITEMS));
+
 
     }, [db]);
 
