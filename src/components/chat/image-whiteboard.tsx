@@ -34,6 +34,7 @@ interface ImageWhiteboardProps {
 
 type GenerationState = 'idle' | 'prompting' | 'generating' | 'done' | 'error';
 
+// This type includes the data URI
 type ImageHistoryItem = {
   id: string;
   prompt: string;
@@ -41,9 +42,6 @@ type ImageHistoryItem = {
   imageUrl: string;
   createdAt: string;
 };
-
-// This type is what we'll actually store in localStorage
-type StoredImageHistoryItem = ImageHistoryItem;
 
 
 function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val: T) => T)) => void, boolean] {
@@ -64,17 +62,14 @@ function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val
   }, [key]);
 
   const setValue = useCallback((value: T | ((val: T) => T)) => {
-    setState(prev => {
-        const valueToStore = value instanceof Function ? value(prev) : value;
-        try {
-            window.localStorage.setItem(key, JSON.stringify(valueToStore));
-            console.log('Historial guardado en localStorage:', valueToStore);
-        } catch (error) {
-             console.error("Error al guardar en localStorage", error);
-        }
-        return valueToStore;
-    });
-  }, [key]);
+    try {
+      const valueToStore = value instanceof Function ? value(state) : value;
+      setState(valueToStore);
+      window.localStorage.setItem(key, JSON.stringify(valueToStore));
+    } catch (error) {
+       console.error("Error al guardar en localStorage", error);
+    }
+  }, [key, state]);
 
   return [state, setValue, isLoading];
 }
@@ -92,11 +87,14 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
   const [state, setState] = useState<GenerationState>('idle');
   const { toast } = useToast();
   
-  const [history, setHistory] = useLocalStorage<StoredImageHistoryItem[]>('image-whiteboard-history', []);
+  const [history, setHistory] = useLocalStorage<ImageHistoryItem[]>('image-whiteboard-history', []);
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
 
    // Re-hydrate the full history with image URLs on mount (relying on browser cache)
-   const hydratedHistory: ImageHistoryItem[] = history;
+   const hydratedHistory: ImageHistoryItem[] = history.map(item => ({
+       ...item,
+       imageUrl: item.imageUrl
+   }));
 
 
   useEffect(() => {
@@ -128,7 +126,7 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
       setCurrentImageUrl(generatedImageUrl);
 
       // Now storing the heavy imageUrl in localStorage
-      const newHistoryItem: StoredImageHistoryItem = {
+      const newHistoryItem: ImageHistoryItem = {
         id: uuidv4(),
         prompt,
         artisticPrompt,
