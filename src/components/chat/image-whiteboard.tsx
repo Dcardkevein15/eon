@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Wand2, Download, Trash2, History, Image as ImageIcon, Sparkles, ImageOff } from 'lucide-react';
+import { Loader2, Wand2, Download, Trash2, History, Image as ImageIcon, Sparkles, ImageOff, X } from 'lucide-react';
 import { generateImagePrompt } from '@/ai/flows/generate-image-prompt';
 import { generateImageX } from '@/ai/flows/generate-image-x';
 import { useToast } from '@/hooks/use-toast';
@@ -28,106 +28,15 @@ type ImageHistoryItem = {
 
 type GenerationState = 'idle' | 'prompting' | 'generating' | 'done' | 'error';
 
-// --- INDEXEDDB HOOK ---
-function useImageHistoryStore() {
-  const [history, setHistory] = useState<ImageHistoryItem[]>([]);
-  const [db, setDb] = useState<IDBDatabase | null>(null);
-
-  useEffect(() => {
-    const request = indexedDB.open('ImageHistoryDB', 1);
-    
-    request.onupgradeneeded = (event) => {
-      const dbInstance = (event.target as IDBOpenDBRequest).result;
-      if (!dbInstance.objectStoreNames.contains('images')) {
-        dbInstance.createObjectStore('images', { keyPath: 'id' });
-      }
-    };
-
-    request.onsuccess = (event) => {
-      const dbInstance = (event.target as IDBOpenDBRequest).result;
-      setDb(dbInstance);
-      
-      // Load initial data
-      const transaction = dbInstance.transaction('images', 'readonly');
-      const store = transaction.objectStore('images');
-      const getAllRequest = store.getAll();
-      
-      getAllRequest.onsuccess = () => {
-        const sortedHistory = getAllRequest.result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setHistory(sortedHistory);
-      };
-    };
-    
-    request.onerror = (event) => {
-      console.error('IndexedDB error:', (event.target as IDBOpenDBRequest).error);
-    };
-  }, []);
-
-  const addImage = async (item: ImageHistoryItem) => {
-    if (!db) return;
-
-    const transaction = db.transaction('images', 'readwrite');
-    const store = transaction.objectStore('images');
-    
-    // Add new item
-    store.put(item);
-    
-    // Enforce history limit (e.g., 1000 items)
-    const countRequest = store.count();
-    countRequest.onsuccess = () => {
-      if (countRequest.result > 1000) {
-        const cursorRequest = store.openCursor(null, 'next'); // 'next' gives oldest items first
-        let toDelete = countRequest.result - 1000;
-        cursorRequest.onsuccess = (event) => {
-          const cursor = (event.target as IDBRequest).result;
-          if (cursor && toDelete > 0) {
-            cursor.delete();
-            toDelete--;
-            cursor.continue();
-          }
-        }
-      }
-    };
-
-    return new Promise<void>((resolve) => {
-      transaction.oncomplete = () => {
-        const newHistory = [item, ...history].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 1000);
-        setHistory(newHistory);
-        resolve();
-      };
-      transaction.onerror = () => resolve(); // Resolve even on error
-    });
-  };
-
-  const deleteImage = async (id: string) => {
-    if (!db) return;
-
-    const transaction = db.transaction('images', 'readwrite');
-    const store = transaction.objectStore('images');
-    store.delete(id);
-
-    return new Promise<void>((resolve) => {
-      transaction.oncomplete = () => {
-        setHistory(prev => prev.filter(item => item.id !== id));
-        resolve();
-      };
-       transaction.onerror = () => resolve();
-    });
-  };
-
-  return { history, addImage, deleteImage };
-}
-
 
 // --- MAIN COMPONENT ---
 export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }: { isOpen: boolean; onClose: () => void; conversationHistory: string }) {
   const [prompt, setPrompt] = useState('');
   const [currentArtisticPrompt, setCurrentArtisticPrompt] = useState('');
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
+  const [history, setHistory] = useState<ImageHistoryItem[]>([]);
   const [state, setState] = useState<GenerationState>('idle');
   const { toast } = useToast();
-  
-  const { history, addImage, deleteImage } = useImageHistoryStore();
 
   const handleGenerateImage = async () => {
     if (!prompt.trim()) {
@@ -157,7 +66,7 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
       const generatedImageUrl = imageResponse.imageUrl;
       setCurrentImageUrl(generatedImageUrl);
 
-      // 3. Add to history via IndexedDB hook
+      // 3. Add to history
       const newHistoryItem: ImageHistoryItem = {
         id: uuidv4(),
         prompt,
@@ -165,7 +74,7 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
         imageUrl: generatedImageUrl,
         createdAt: new Date().toISOString(),
       };
-      await addImage(newHistoryItem);
+      setHistory(prev => [newHistoryItem, ...prev]);
 
       setState('done');
     } catch (error: any) {
@@ -186,13 +95,11 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
   };
 
   const handleDeleteFromHistory = (id: string) => {
-    deleteImage(id);
+    setHistory(prev => prev.filter(item => item.id !== id));
   };
   
   const handleClose = () => {
-    setPrompt('');
-    setCurrentImageUrl(null);
-    setState('idle');
+    // We don't reset the state here so it persists during the session
     onClose();
   }
 
@@ -200,150 +107,161 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
-        <DialogHeader className="p-6 pb-0">
-          <DialogTitle className="flex items-center gap-2">
-            <Wand2 className="h-5 w-5 text-primary" />
-            Pizarra de Creación
-          </DialogTitle>
-          <DialogDescription>
-            Usa la IA para crear imágenes o revisa tus creaciones. Las imágenes se guardan en tu navegador.
-          </DialogDescription>
-        </DialogHeader>
-        
-        <Tabs defaultValue="create" className="w-full flex-1 flex flex-col overflow-hidden">
-            <div className="px-6">
-                 <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="create">
-                        <Sparkles className="mr-2 h-4 w-4"/>
-                        Crear
-                    </TabsTrigger>
-                    <TabsTrigger value="history">
-                        <History className="mr-2 h-4 w-4"/>
-                        Historial ({history.length})
-                    </TabsTrigger>
-                </TabsList>
-            </div>
-
-            {/* Create Tab */}
-            <TabsContent value="create" className="flex-1 flex flex-col gap-4 p-6 pt-4 m-0">
-                <div className="flex gap-2">
-                    <Input
-                        value={prompt}
-                        onChange={(e) => setPrompt(e.target.value)}
-                        placeholder="Ej: Un mapa mental de mis preocupaciones"
-                        disabled={isLoading}
-                        onKeyDown={(e) => e.key === 'Enter' && !isLoading && handleGenerateImage()}
-                    />
-                    <Button onClick={handleGenerateImage} disabled={isLoading || !prompt.trim()} className="w-44">
-                        {isLoading ? <Loader2 className="animate-spin mr-2" /> : <Wand2 className="mr-2"/>}
-                        <span className="truncate">
-                        {state === 'prompting' ? 'Creando prompt...' : state === 'generating' ? 'Generando...' : 'Generar'}
-                        </span>
-                    </Button>
+      <DialogContent className="p-0 m-0 w-screen h-screen max-w-full block rounded-none border-none bg-black/50 backdrop-blur-md">
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          <div className="animated-border"></div>
+        </div>
+        <div className="relative z-10 w-full h-full flex flex-col p-4 sm:p-6 md:p-8">
+            <DialogClose className="fixed top-4 right-4 z-50 h-9 w-9 bg-background/50 hover:bg-background/80 text-foreground rounded-full flex items-center justify-center transition-colors">
+                <X className="h-5 w-5" />
+                <span className="sr-only">Cerrar</span>
+            </DialogClose>
+            
+            <DialogHeader className="text-center pt-4 sm:pt-0">
+              <DialogTitle className="flex items-center justify-center gap-2 text-2xl sm:text-3xl text-white">
+                <Wand2 className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
+                Pizarra de Creación
+              </DialogTitle>
+              <DialogDescription className="text-white/70">
+                Forja tus pensamientos en imágenes. Las creaciones se mantienen durante esta sesión.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <Tabs defaultValue="create" className="w-full flex-1 flex flex-col overflow-hidden mt-4">
+                <div className="flex justify-center">
+                     <TabsList className="grid w-full max-w-md grid-cols-2 bg-background/50 text-muted-foreground border-border border">
+                        <TabsTrigger value="create" className="gap-2">
+                            <Sparkles className="h-4 w-4"/>
+                            Crear
+                        </TabsTrigger>
+                        <TabsTrigger value="history" className="gap-2">
+                            <History className="h-4 w-4"/>
+                            Historial ({history.length})
+                        </TabsTrigger>
+                    </TabsList>
                 </div>
 
-                <div className="relative w-full flex-1 bg-muted/20 rounded-lg flex items-center justify-center border border-dashed">
-                     <AnimatePresence>
-                        {isLoading && (
-                        <motion.div
-                            key="loader"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="absolute text-center text-muted-foreground p-4"
-                        >
-                            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-                            <p className="mt-4 text-sm font-semibold">
-                            {state === 'prompting' ? 'El Director de Arte está trabajando...' : 'El Pincel de la IA está pintando...'}
-                            </p>
-                        </motion.div>
-                        )}
-                    </AnimatePresence>
-                    <AnimatePresence>
-                        {currentImageUrl && state === 'done' && (
-                        <motion.div
-                            key="image"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="w-full h-full relative"
-                        >
-                            <Image src={currentImageUrl} alt={prompt} layout="fill" objectFit="contain" className="rounded-lg" />
-                            <div className="absolute top-2 right-2">
-                                <Button size="icon" onClick={() => handleDownload(currentImageUrl)}>
-                                    <Download className="h-5 w-5"/>
-                                </Button>
+                {/* Create Tab */}
+                <TabsContent value="create" className="flex-1 flex flex-col gap-4 p-1 m-0">
+                    <div className="flex gap-2 mt-4">
+                        <Input
+                            value={prompt}
+                            onChange={(e) => setPrompt(e.target.value)}
+                            placeholder="Ej: Un mapa mental de mis preocupaciones"
+                            disabled={isLoading}
+                            onKeyDown={(e) => e.key === 'Enter' && !isLoading && handleGenerateImage()}
+                            className="bg-background/80 border-border text-base h-12"
+                        />
+                        <Button onClick={handleGenerateImage} disabled={isLoading || !prompt.trim()} className="w-44 h-12 text-base">
+                            {isLoading ? <Loader2 className="animate-spin mr-2" /> : <Wand2 className="mr-2"/>}
+                            <span className="truncate">
+                            {state === 'prompting' ? 'Creando...' : state === 'generating' ? 'Forjando...' : 'Generar'}
+                            </span>
+                        </Button>
+                    </div>
+
+                    <div className="relative w-full flex-1 bg-background/30 rounded-lg flex items-center justify-center border border-dashed border-white/20">
+                         <AnimatePresence>
+                            {isLoading && (
+                            <motion.div
+                                key="loader"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="absolute text-center text-white/80 p-4"
+                            >
+                                <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+                                <p className="mt-4 text-sm font-semibold">
+                                {state === 'prompting' ? 'El Director de Arte está trabajando...' : 'El Pincel de la IA está pintando...'}
+                                </p>
+                            </motion.div>
+                            )}
+                        </AnimatePresence>
+                        <AnimatePresence>
+                            {currentImageUrl && state === 'done' && (
+                            <motion.div
+                                key="image"
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="w-full h-full relative p-4"
+                            >
+                                <Image src={currentImageUrl} alt={prompt} layout="fill" objectFit="contain" className="rounded-lg" />
+                                <div className="absolute top-2 right-2">
+                                    <Button size="icon" variant="secondary" onClick={() => handleDownload(currentImageUrl)}>
+                                        <Download className="h-5 w-5"/>
+                                    </Button>
+                                </div>
+                            </motion.div>
+                            )}
+                        </AnimatePresence>
+                        {state === 'idle' && !currentImageUrl && (
+                            <div className="text-center text-white/60 p-4">
+                                <ImageIcon className="h-12 w-12 mx-auto mb-2"/>
+                                <p className="text-sm font-semibold">El lienzo espera tus ideas.</p>
                             </div>
-                        </motion.div>
                         )}
-                    </AnimatePresence>
-                    {state === 'idle' && !currentImageUrl && (
-                        <div className="text-center text-muted-foreground p-4">
-                            <ImageIcon className="h-12 w-12 mx-auto mb-2"/>
-                            <p className="text-sm font-semibold">La imagen aparecerá aquí.</p>
-                        </div>
-                    )}
-                    {state === 'error' && (
-                        <p className="text-sm text-destructive">Error al generar la imagen. Inténtalo de nuevo.</p>
-                    )}
-                </div>
-            </TabsContent>
+                        {state === 'error' && (
+                            <p className="text-sm text-destructive">Error al generar la imagen. Inténtalo de nuevo.</p>
+                        )}
+                    </div>
+                </TabsContent>
 
-            {/* History Tab */}
-            <TabsContent value="history" className="flex-1 flex flex-col overflow-y-hidden m-0 pt-4">
-                <ScrollArea className="h-full px-6 pb-6">
-                    {history.length > 0 ? (
-                        <>
-                        <p className="text-xs text-muted-foreground text-center mb-4">Mostrando las últimas 1000 imágenes guardadas en tu navegador.</p>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                            <TooltipProvider>
-                            {history.filter(item => item.imageUrl).map(item => (
-                                <Card key={item.id} className="relative group overflow-hidden aspect-square bg-muted/20">
-                                    <Image 
-                                      src={item.imageUrl}
-                                      alt={item.prompt} 
-                                      layout="fill" 
-                                      objectFit="cover"
-                                      unoptimized
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col justify-end p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <p className="text-xs text-white/90 font-semibold truncate">{item.prompt}</p>
-                                        <div className="flex gap-1 mt-1">
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-white/80 hover:bg-white/20 hover:text-white" onClick={() => handleDownload(item.imageUrl)}>
-                                                        <Download className="h-4 w-4"/>
-                                                    </Button>
-                                                </TooltipTrigger>
-                                                <TooltipContent><p>Descargar</p></TooltipContent>
-                                            </Tooltip>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:bg-red-500/20 hover:text-red-300" onClick={() => handleDeleteFromHistory(item.id)}>
-                                                        <Trash2 className="h-4 w-4"/>
-                                                    </Button>
-                                                </TooltipTrigger>
-                                                <TooltipContent><p>Eliminar</p></TooltipContent>
-                                            </Tooltip>
+                {/* History Tab */}
+                <TabsContent value="history" className="flex-1 flex flex-col overflow-y-hidden m-0">
+                    <ScrollArea className="h-full px-1 py-4">
+                        {history.length > 0 ? (
+                            <>
+                            <p className="text-xs text-white/50 text-center mb-4">Mostrando imágenes de esta sesión.</p>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                                <TooltipProvider>
+                                {history.filter(item => item.imageUrl).map(item => (
+                                    <Card key={item.id} className="relative group overflow-hidden aspect-square bg-background/50 border-border/50">
+                                        <Image 
+                                          src={item.imageUrl}
+                                          alt={item.prompt} 
+                                          layout="fill" 
+                                          objectFit="cover"
+                                          unoptimized
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex flex-col justify-end p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <p className="text-xs text-white/90 font-semibold truncate">{item.prompt}</p>
+                                            <div className="flex gap-1 mt-1">
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-white/80 hover:bg-white/20 hover:text-white" onClick={() => handleDownload(item.imageUrl)}>
+                                                            <Download className="h-4 w-4"/>
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent><p>Descargar</p></TooltipContent>
+                                                </Tooltip>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:bg-red-500/20 hover:text-red-300" onClick={() => handleDeleteFromHistory(item.id)}>
+                                                            <Trash2 className="h-4 w-4"/>
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent><p>Eliminar</p></TooltipContent>
+                                                </Tooltip>
+                                            </div>
                                         </div>
-                                    </div>
-                                </Card>
-                            ))}
-                            </TooltipProvider>
-                        </div>
-                        </>
-                    ) : (
-                        <div className="flex items-center justify-center h-full text-center text-muted-foreground p-4">
-                            <div className="max-w-xs">
-                                <History className="h-12 w-12 mx-auto mb-2"/>
-                                <p className="text-sm font-semibold">Tu historial de esta sesión está vacío.</p>
-                                <p className="text-xs">Ve a la pestaña "Crear" para generar tu primera obra de arte.</p>
+                                    </Card>
+                                ))}
+                                </TooltipProvider>
                             </div>
-                        </div>
-                    )}
-                </ScrollArea>
-            </TabsContent>
-        </Tabs>
+                            </>
+                        ) : (
+                            <div className="flex items-center justify-center h-full text-center text-white/60 p-4">
+                                <div className="max-w-xs">
+                                    <History className="h-12 w-12 mx-auto mb-2"/>
+                                    <p className="text-sm font-semibold">Tu historial de esta sesión está vacío.</p>
+                                    <p className="text-xs">Ve a la pestaña "Crear" para generar tu primera obra de arte.</p>
+                                </div>
+                            </div>
+                        )}
+                    </ScrollArea>
+                </TabsContent>
+            </Tabs>
+        </div>
       </DialogContent>
     </Dialog>
   );
