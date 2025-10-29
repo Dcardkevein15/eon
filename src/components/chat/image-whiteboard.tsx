@@ -49,8 +49,7 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
   const [state, setState] = useState<GenerationState>('idle');
   const { toast } = useToast();
   
-  // Use React's local state. This will persist as long as the component is mounted,
-  // but will reset on page refresh. This is the most reliable way to avoid storage errors.
+  // The history is now managed purely by React state and will reset on page refresh.
   const [history, setHistory] = useState<ImageHistoryItem[]>([]);
 
   const handleGenerateImage = async () => {
@@ -74,10 +73,15 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
       // 2. Generate the image
       setState('generating');
       const imageResponse = await generateImageX({ prompt: artisticPrompt });
+      
+      // 3. **CRITICAL VALIDATION**: Ensure we have a valid URL before proceeding
+      if (!imageResponse.imageUrl) {
+        throw new Error('La IA no devolvió una URL de imagen válida.');
+      }
       const generatedImageUrl = imageResponse.imageUrl;
       setCurrentImageUrl(generatedImageUrl);
 
-      // 3. Add to the local state history
+      // 4. Add to history ONLY after successful generation and validation
       const newHistoryItem: ImageHistoryItem = {
         id: uuidv4(),
         prompt,
@@ -86,8 +90,7 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
         createdAt: new Date().toISOString(),
       };
       
-      // Update state correctly by using a function, ensuring we have the latest history.
-      setHistory(prev => [newHistoryItem, ...prev]);
+      setHistory(prev => [newHistoryItem, ...prev.slice(0, 19)]);
 
       setState('done');
     } catch (error: any) {
@@ -148,7 +151,7 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
             </div>
 
             {/* Create Tab */}
-            <TabsContent value="create" className="flex-1 flex flex-col gap-4 p-6 m-0 mt-0">
+            <TabsContent value="create" className="flex-1 flex flex-col gap-4 p-6 pt-2 m-0">
                 <div className="flex gap-2">
                     <Input
                         value={prompt}
@@ -212,28 +215,22 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
             </TabsContent>
 
             {/* History Tab */}
-            <TabsContent value="history" className="flex-1 flex flex-col overflow-y-hidden m-0 mt-0">
+            <TabsContent value="history" className="flex-1 flex flex-col overflow-y-hidden m-0 pt-2">
                 <ScrollArea className="h-full px-6 pb-6">
                     {history.length > 0 ? (
                         <>
                         <p className="text-xs text-muted-foreground text-center mb-4">El historial se reinicia al recargar la página.</p>
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             <TooltipProvider>
-                            {history.map(item => (
+                            {history.filter(item => item.imageUrl).map(item => (
                                 <Card key={item.id} className="relative group overflow-hidden aspect-square bg-muted/20">
-                                    {item.imageUrl ? (
-                                        <Image 
-                                        src={item.imageUrl}
-                                        alt={item.prompt} 
-                                        layout="fill" 
-                                        objectFit="cover"
-                                        unoptimized // Important for data URIs
-                                        />
-                                    ) : (
-                                        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground bg-card">
-                                            <ImageOff className="w-10 h-10" />
-                                        </div>
-                                    )}
+                                    <Image 
+                                      src={item.imageUrl}
+                                      alt={item.prompt} 
+                                      layout="fill" 
+                                      objectFit="cover"
+                                      unoptimized // Important for data URIs
+                                    />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col justify-end p-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <p className="text-xs text-white/90 font-semibold truncate">{item.prompt}</p>
                                         <div className="flex gap-1 mt-1">
