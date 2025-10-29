@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useCallback, useMemo, memo } from 'react';
+import { useCallback, useMemo, memo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   collection,
@@ -29,6 +28,7 @@ import { cn } from '@/lib/utils';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { determineAnchorRole } from '@/app/actions';
+import InteractiveTour from '@/components/tour/interactive-tour';
 
 interface ChatLayoutProps {
   chatId?: string;
@@ -38,6 +38,11 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const firestore = useFirestore();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const chatsQuery = useMemo(
     () =>
@@ -239,6 +244,7 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
 
   return (
     <SidebarProvider>
+      {isClient && <InteractiveTour />}
       <div className="bg-background text-foreground">
         <Sidebar>
           <ChatSidebar

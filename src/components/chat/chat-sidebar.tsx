@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Plus, Trash2, History, Briefcase, UserCircle, Dumbbell, Star, BarChartHorizontal, Loader2, Video } from 'lucide-react';
+import { Plus, Trash2, History, Briefcase, UserCircle, Dumbbell, Star, BarChartHorizontal, Loader2, Video, Route } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -91,12 +91,12 @@ function ChatSidebar({
   };
   
   const navItems = [
-    { href: "/vision", icon: Video, label: "Visión IA" },
-    { href: "/gym", icon: Dumbbell, label: "Gimnasio Emocional" },
-    { href: "/profile", icon: UserCircle, label: "Perfil Psicológico" },
-    { href: "/marketplace", icon: Briefcase, label: "Marketplace" },
-    { href: "/dreams", icon: Star, label: "Portal de Sueños" },
-    { href: "/trading", icon: BarChartHorizontal, label: "Análisis Pro" },
+    { href: "/vision", icon: Video, label: "Visión IA", id: 'vision-ia-nav' },
+    { href: "/gym", icon: Dumbbell, label: "Gimnasio Emocional", id: 'gym-nav' },
+    { href: "/profile", icon: UserCircle, label: "Perfil Psicológico", id: 'profile-nav' },
+    { href: "/marketplace", icon: Briefcase, label: "Marketplace", id: 'marketplace-nav' },
+    { href: "/dreams", icon: Star, label: "Portal de Sueños", id: 'dreams-nav' },
+    { href: "/trading", icon: BarChartHorizontal, label: "Análisis Pro", id: 'trading-nav' },
   ];
 
   return (
@@ -113,7 +113,7 @@ function ChatSidebar({
       <SidebarContent className="flex-1">
         <ScrollArea className="h-full px-2">
            <div className="p-2 space-y-2">
-             <Button onClick={handleNewChat} disabled={isCreatingChat} className="w-full justify-center" variant={pathname === '/' || pathname.startsWith('/c/') ? 'default' : 'secondary'}>
+             <Button onClick={handleNewChat} disabled={isCreatingChat} className="w-full justify-center" variant={pathname === '/' || pathname.startsWith('/c/') ? 'default' : 'secondary'} id="new-chat-button">
                 {isCreatingChat ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
                 {isCreatingChat ? 'Creando...' : 'NUEVA CONVERSACIÓN'}
               </Button>
@@ -123,6 +123,7 @@ function ChatSidebar({
                     asChild 
                     variant={pathname.startsWith(item.href) ? 'default' : 'secondary'} 
                     className="w-full justify-start"
+                    id={item.id}
                  >
                     <Link href={item.href}>
                       <item.icon className="mr-2 h-4 w-4" />
@@ -132,7 +133,7 @@ function ChatSidebar({
               ))}
            </div>
 
-           <div className='px-4 pt-4 pb-2'>
+           <div className='px-4 pt-4 pb-2' id="history-header">
               <h2 className='text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2'>
                 <History className="h-4 w-4" />
                 Historial
@@ -195,7 +196,7 @@ function ChatSidebar({
         {isClient && chats.length > 0 && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="ghost" className="w-full justify-start">
+              <Button variant="ghost" className="w-full justify-start" id="clear-chats-button">
                 <Trash2 className="mr-2 h-4 w-4" />
                 Limpiar conversaciones
               </Button>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -170,7 +169,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
 
     return (
       <TooltipProvider delayDuration={200}>
-      <div className="w-full max-w-4xl mx-auto space-y-4">
+      <div className="w-full max-w-4xl mx-auto space-y-4" id="chat-input-container">
         {showSuggestions && suggestions.length > 0 && !isLoading && (
            <div className="relative flex flex-col items-start gap-2">
             <div className="flex items-center gap-2 text-sm text-muted-foreground w-full">
@@ -243,7 +242,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
                      <div className={cn(
                         "relative flex w-full items-end overflow-hidden rounded-2xl border bg-card transition-all",
                         isFocused ? "ring-2 ring-primary/50" : "ring-0"
-                     )}>
+                     )} id="chat-input-area">
                         <div className="flex items-center pl-2">
                            <Tooltip>
                               <TooltipTrigger asChild>
