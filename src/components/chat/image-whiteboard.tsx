@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Wand2, Download, Trash2, History, Info } from 'lucide-react';
+import { Loader2, Wand2, Download, Trash2, History, Image as ImageIcon, Sparkles } from 'lucide-react';
 import { generateImagePrompt } from '@/ai/flows/generate-image-prompt';
 import { generateImageX } from '@/ai/flows/generate-image-x';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +20,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from '@/components/ui/skeleton';
+
 
 // --- TYPES AND HOOKS ---
 
@@ -80,8 +83,7 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
   const [state, setState] = useState<GenerationState>('idle');
   const { toast } = useToast();
   
-  const [history, setHistory] = useLocalStorage<ImageHistoryItem[]>('image-whiteboard-history', []);
-  const [loadingHistory, setLoadingHistory] = useLocalStorage<ImageHistoryItem[]>('image-whiteboard-history', []);
+  const [history, setHistory, isHistoryLoading] = useLocalStorage<ImageHistoryItem[]>('image-whiteboard-history', []);
 
   const handleGenerateImage = async () => {
     if (!prompt.trim()) {
@@ -144,127 +146,147 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl h-[90vh]">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
+        <DialogHeader className="p-6 pb-0">
           <DialogTitle className="flex items-center gap-2">
             <Wand2 className="h-5 w-5 text-primary" />
             Pizarra de Creación
           </DialogTitle>
           <DialogDescription>
-            Describe una idea y la IA lo convertirá en una imagen. Tus creaciones se guardan aquí.
+            Usa la IA para crear imágenes o revisa tus creaciones anteriores.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid md:grid-cols-2 gap-6 h-[calc(100%-80px)]">
-           {/* Generation Column */}
-          <div className="flex flex-col gap-4">
-            <div className="flex gap-2">
-              <Input
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Ej: Un mapa mental de mis preocupaciones"
-                disabled={isLoading}
-                onKeyDown={(e) => e.key === 'Enter' && !isLoading && handleGenerateImage()}
-              />
-              <Button onClick={handleGenerateImage} disabled={isLoading || !prompt.trim()} className="w-44">
-                {isLoading ? <Loader2 className="animate-spin mr-2" /> : <Wand2 className="mr-2"/>}
-                <span className="truncate">
-                  {state === 'prompting' ? 'Creando prompt...' : state === 'generating' ? 'Generando...' : 'Generar'}
-                </span>
-              </Button>
+        
+        <Tabs defaultValue="create" className="w-full flex-1 flex flex-col overflow-hidden">
+            <div className="px-6">
+                 <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="create">
+                        <Sparkles className="mr-2 h-4 w-4"/>
+                        Crear
+                    </TabsTrigger>
+                    <TabsTrigger value="history">
+                        <History className="mr-2 h-4 w-4"/>
+                        Historial
+                    </TabsTrigger>
+                </TabsList>
             </div>
 
-            <div className="relative w-full aspect-video bg-muted/50 rounded-lg flex items-center justify-center border border-dashed">
-              <AnimatePresence>
-                {isLoading && (
-                  <motion.div
-                      key="loader"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="absolute text-center text-muted-foreground p-4"
-                  >
-                    <Loader2 className="h-8 w-8 animate-spin mx-auto" />
-                    <p className="mt-2 text-sm">
-                      {state === 'prompting' ? 'El Director de Arte está trabajando...' : 'El Pincel de la IA está pintando...'}
-                    </p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              <AnimatePresence>
-                {imageUrl && state === 'done' && (
-                  <motion.div
-                      key="image"
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="w-full h-full"
-                  >
-                    <Image src={imageUrl} alt="Imagen generada" layout="fill" objectFit="contain" className="rounded-lg" />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              {state === 'idle' && !imageUrl && (
-                  <p className="text-sm text-muted-foreground">La imagen aparecerá aquí.</p>
-              )}
-              {state === 'error' && (
-                  <p className="text-sm text-destructive">Error al generar la imagen. Inténtalo de nuevo.</p>
-              )}
-            </div>
-            
-            {imageUrl && state === 'done' && (
-              <Button onClick={() => handleDownload(imageUrl)} variant="secondary" className="w-full">
-                <Download className="mr-2" />
-                Descargar Imagen
-              </Button>
-            )}
-          </div>
+            {/* Create Tab */}
+            <TabsContent value="create" className="flex-1 flex flex-col gap-4 p-6 pt-4 m-0">
+                <div className="flex gap-2">
+                    <Input
+                        value={prompt}
+                        onChange={(e) => setPrompt(e.target.value)}
+                        placeholder="Ej: Un mapa mental de mis preocupaciones"
+                        disabled={isLoading}
+                        onKeyDown={(e) => e.key === 'Enter' && !isLoading && handleGenerateImage()}
+                    />
+                    <Button onClick={handleGenerateImage} disabled={isLoading || !prompt.trim()} className="w-44">
+                        {isLoading ? <Loader2 className="animate-spin mr-2" /> : <Wand2 className="mr-2"/>}
+                        <span className="truncate">
+                        {state === 'prompting' ? 'Creando prompt...' : state === 'generating' ? 'Generando...' : 'Generar'}
+                        </span>
+                    </Button>
+                </div>
 
-          {/* History Column */}
-          <div className="flex flex-col gap-4">
-             <h3 className="text-lg font-semibold flex items-center gap-2 text-muted-foreground">
-                <History className="h-5 w-5"/>
-                Creaciones Anteriores
-             </h3>
-             <ScrollArea className="flex-1 border rounded-lg p-2 bg-muted/20">
-                {history.length > 0 ? (
-                    <div className="grid grid-cols-2 gap-2">
-                        <TooltipProvider>
-                        {history.map(item => (
-                            <Card key={item.id} className="relative group overflow-hidden aspect-square">
-                                <Image src={item.imageUrl} alt={item.prompt} layout="fill" objectFit="cover" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col justify-end p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <p className="text-xs text-white/90 font-semibold truncate">{item.prompt}</p>
-                                    <div className="flex gap-1 mt-1">
-                                        <Tooltip>
-                                            <TooltipTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-white/80 hover:bg-white/20 hover:text-white" onClick={() => handleDownload(item.imageUrl)}>
-                                                    <Download className="h-4 w-4"/>
-                                                </Button>
-                                            </TooltipTrigger>
-                                            <TooltipContent><p>Descargar</p></TooltipContent>
-                                        </Tooltip>
-                                        <Tooltip>
-                                            <TooltipTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-red-400 hover:bg-red-500/20 hover:text-red-300" onClick={() => handleDeleteFromHistory(item.id)}>
-                                                    <Trash2 className="h-4 w-4"/>
-                                                </Button>
-                                            </TooltipTrigger>
-                                            <TooltipContent><p>Eliminar</p></TooltipContent>
-                                        </Tooltip>
+                <div className="relative w-full flex-1 bg-muted/20 rounded-lg flex items-center justify-center border border-dashed">
+                     <AnimatePresence>
+                        {isLoading && (
+                        <motion.div
+                            key="loader"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute text-center text-muted-foreground p-4"
+                        >
+                            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+                            <p className="mt-4 text-sm font-semibold">
+                            {state === 'prompting' ? 'El Director de Arte está trabajando...' : 'El Pincel de la IA está pintando...'}
+                            </p>
+                        </motion.div>
+                        )}
+                    </AnimatePresence>
+                    <AnimatePresence>
+                        {imageUrl && state === 'done' && (
+                        <motion.div
+                            key="image"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="w-full h-full relative"
+                        >
+                            <Image src={imageUrl} alt="Imagen generada" layout="fill" objectFit="contain" className="rounded-lg" />
+                            <div className="absolute top-2 right-2">
+                                <Button size="icon" onClick={() => handleDownload(imageUrl)}>
+                                    <Download className="h-5 w-5"/>
+                                </Button>
+                            </div>
+                        </motion.div>
+                        )}
+                    </AnimatePresence>
+                    {state === 'idle' && !imageUrl && (
+                        <div className="text-center text-muted-foreground p-4">
+                            <ImageIcon className="h-12 w-12 mx-auto mb-2"/>
+                            <p className="text-sm font-semibold">La imagen aparecerá aquí.</p>
+                        </div>
+                    )}
+                    {state === 'error' && (
+                        <p className="text-sm text-destructive">Error al generar la imagen. Inténtalo de nuevo.</p>
+                    )}
+                </div>
+            </TabsContent>
+
+            {/* History Tab */}
+            <TabsContent value="history" className="flex-1 overflow-y-hidden m-0">
+                <ScrollArea className="h-full px-6 pb-6">
+                    {isHistoryLoading ? (
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {[...Array(8)].map((_, i) => <Skeleton key={i} className="aspect-square w-full" />)}
+                        </div>
+                    ) : history.length > 0 ? (
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            <TooltipProvider>
+                            {history.map(item => (
+                                <Card key={item.id} className="relative group overflow-hidden aspect-square">
+                                    <Image src={item.imageUrl} alt={item.prompt} layout="fill" objectFit="cover" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col justify-end p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <p className="text-xs text-white/90 font-semibold truncate">{item.prompt}</p>
+                                        <div className="flex gap-1 mt-1">
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-white/80 hover:bg-white/20 hover:text-white" onClick={() => handleDownload(item.imageUrl)}>
+                                                        <Download className="h-4 w-4"/>
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent><p>Descargar</p></TooltipContent>
+                                            </Tooltip>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:bg-red-500/20 hover:text-red-300" onClick={() => handleDeleteFromHistory(item.id)}>
+                                                        <Trash2 className="h-4 w-4"/>
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent><p>Eliminar</p></TooltipContent>
+                                            </Tooltip>
+                                        </div>
                                     </div>
-                                </div>
-                            </Card>
-                        ))}
-                        </TooltipProvider>
-                    </div>
-                ) : (
-                    <div className="flex items-center justify-center h-full text-center text-muted-foreground p-4">
-                        <p className="text-sm">Tu historial de imágenes está vacío. ¡Crea tu primera obra de arte!</p>
-                    </div>
-                )}
-             </ScrollArea>
-          </div>
-        </div>
+                                </Card>
+                            ))}
+                            </TooltipProvider>
+                        </div>
+                    ) : (
+                        <div className="flex items-center justify-center h-full text-center text-muted-foreground p-4">
+                            <div className="max-w-xs">
+                                <History className="h-12 w-12 mx-auto mb-2"/>
+                                <p className="text-sm font-semibold">Tu historial de imágenes está vacío.</p>
+                                <p className="text-xs">Ve a la pestaña "Crear" para generar tu primera obra de arte.</p>
+                            </div>
+                        </div>
+                    )}
+                </ScrollArea>
+            </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
 }
+
