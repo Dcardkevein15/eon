@@ -28,15 +28,102 @@ type ImageHistoryItem = {
 
 type GenerationState = 'idle' | 'prompting' | 'generating' | 'done' | 'error';
 
+const DB_NAME = 'ImageHistoryDB';
+const STORE_NAME = 'images';
+const MAX_HISTORY_ITEMS = 1000;
+
+// --- IndexedDB Hook ---
+const useImageHistoryStore = () => {
+    const [history, setHistory] = useState<ImageHistoryItem[]>([]);
+    const [db, setDb] = useState<IDBDatabase | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const request = indexedDB.open(DB_NAME, 1);
+
+        request.onupgradeneeded = () => {
+            const dbInstance = request.result;
+            if (!dbInstance.objectStoreNames.contains(STORE_NAME)) {
+                dbInstance.createObjectStore(STORE_NAME, { keyPath: 'id' });
+            }
+        };
+
+        request.onsuccess = () => {
+            setDb(request.result);
+        };
+
+        request.onerror = () => {
+            console.error('Error opening IndexedDB', request.error);
+            setIsLoading(false);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (db) {
+            const transaction = db.transaction(STORE_NAME, 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const getAllRequest = store.getAll();
+
+            getAllRequest.onsuccess = () => {
+                const sortedHistory = getAllRequest.result.sort(
+                    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                );
+                setHistory(sortedHistory);
+                setIsLoading(false);
+            };
+            getAllRequest.onerror = () => {
+                console.error("Error fetching history from IndexedDB", getAllRequest.error);
+                setIsLoading(false);
+            }
+        }
+    }, [db]);
+
+    const addImageToHistory = useCallback(async (item: ImageHistoryItem) => {
+        if (!db) return;
+
+        const transaction = db.transaction(STORE_NAME, 'readwrite');
+        const store = transaction.objectStore(STORE_NAME);
+        
+        store.add(item);
+
+        const countRequest = store.count();
+        countRequest.onsuccess = () => {
+            if (countRequest.result > MAX_HISTORY_ITEMS) {
+                const cursorRequest = store.openCursor(null, 'next'); // oldest is first
+                cursorRequest.onsuccess = () => {
+                    const cursor = cursorRequest.result;
+                    if (cursor) {
+                        store.delete(cursor.primaryKey);
+                    }
+                };
+            }
+        };
+
+        setHistory(prev => [item, ...prev].slice(0, MAX_HISTORY_ITEMS));
+
+    }, [db]);
+
+    const deleteImageFromHistory = useCallback(async (id: string) => {
+        if (!db) return;
+        const transaction = db.transaction(STORE_NAME, 'readwrite');
+        const store = transaction.objectStore(STORE_NAME);
+        store.delete(id);
+        setHistory(prev => prev.filter(item => item.id !== id));
+    }, [db]);
+
+    return { history, addImageToHistory, deleteImageFromHistory, isLoadingHistory: isLoading };
+};
+
 
 // --- MAIN COMPONENT ---
 export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }: { isOpen: boolean; onClose: () => void; conversationHistory: string }) {
   const [prompt, setPrompt] = useState('');
   const [currentArtisticPrompt, setCurrentArtisticPrompt] = useState('');
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
-  const [history, setHistory] = useState<ImageHistoryItem[]>([]);
   const [state, setState] = useState<GenerationState>('idle');
   const { toast } = useToast();
+  const { history, addImageToHistory, deleteImageFromHistory, isLoadingHistory } = useImageHistoryStore();
+
 
   const handleGenerateImage = async () => {
     if (!prompt.trim()) {
@@ -74,7 +161,7 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
         imageUrl: generatedImageUrl,
         createdAt: new Date().toISOString(),
       };
-      setHistory(prev => [newHistoryItem, ...prev]);
+      await addImageToHistory(newHistoryItem);
 
       setState('done');
     } catch (error: any) {
@@ -93,13 +180,8 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
     link.click();
     document.body.removeChild(link);
   };
-
-  const handleDeleteFromHistory = (id: string) => {
-    setHistory(prev => prev.filter(item => item.id !== id));
-  };
   
   const handleClose = () => {
-    // We don't reset the state here so it persists during the session
     onClose();
   }
 
@@ -123,7 +205,7 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
                 Pizarra de Creación
               </DialogTitle>
               <DialogDescription className="text-white/70">
-                Forja tus pensamientos en imágenes. Las creaciones se mantienen durante esta sesión.
+                Forja tus pensamientos en imágenes. Las creaciones se guardan en tu dispositivo.
               </DialogDescription>
             </DialogHeader>
             
@@ -209,9 +291,13 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
                 {/* History Tab */}
                 <TabsContent value="history" className="flex-1 flex flex-col overflow-y-hidden m-0">
                     <ScrollArea className="h-full px-1 py-4">
-                        {history.length > 0 ? (
+                        {isLoadingHistory ? (
+                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                                {[...Array(10)].map((_, i) => <Skeleton key={i} className="aspect-square bg-muted/20" />)}
+                             </div>
+                        ) : history.length > 0 ? (
                             <>
-                            <p className="text-xs text-white/50 text-center mb-4">Mostrando imágenes de esta sesión.</p>
+                            <p className="text-xs text-white/50 text-center mb-4">Mostrando las últimas {history.length} de hasta 1000 imágenes guardadas en este dispositivo.</p>
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                                 <TooltipProvider>
                                 {history.filter(item => item.imageUrl).map(item => (
@@ -236,7 +322,7 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
                                                 </Tooltip>
                                                 <Tooltip>
                                                     <TooltipTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:bg-red-500/20 hover:text-red-300" onClick={() => handleDeleteFromHistory(item.id)}>
+                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:bg-red-500/20 hover:text-red-300" onClick={() => deleteImageFromHistory(item.id)}>
                                                             <Trash2 className="h-4 w-4"/>
                                                         </Button>
                                                     </TooltipTrigger>
@@ -253,7 +339,7 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
                             <div className="flex items-center justify-center h-full text-center text-white/60 p-4">
                                 <div className="max-w-xs">
                                     <History className="h-12 w-12 mx-auto mb-2"/>
-                                    <p className="text-sm font-semibold">Tu historial de esta sesión está vacío.</p>
+                                    <p className="text-sm font-semibold">Tu historial está vacío.</p>
                                     <p className="text-xs">Ve a la pestaña "Crear" para generar tu primera obra de arte.</p>
                                 </div>
                             </div>
