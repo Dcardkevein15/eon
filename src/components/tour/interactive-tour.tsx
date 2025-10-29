@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
-import * as React from 'react';
+import React, { useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, ArrowRight, ArrowLeft } from 'lucide-react';
 
@@ -9,12 +8,13 @@ import { useTour } from '@/hooks/use-interactive-tour';
 import { tourSteps, type TourStep } from '@/components/tour/tour-steps';
 import { Button } from '@/components/ui/button';
 
-const getTooltipPosition = (rect: DOMRect | null, position: TourStep['position'] = 'bottom') => {
+const getTooltipPosition = (rect: DOMRect | null, preferredPosition: TourStep['position'] = 'bottom') => {
     if (!rect) return { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
 
     const offset = 12; // Gap between element and tooltip
     const tooltipWidth = 320; // Corresponds to w-80
     const tooltipHeight = 200; // Approximate height
+    const viewportPadding = 16; // Space from window edges
 
     const positions = {
         top: {
@@ -39,31 +39,37 @@ const getTooltipPosition = (rect: DOMRect | null, position: TourStep['position']
         },
     };
 
-    let pos = positions[position];
-
-    // Basic boundary detection and correction
-    if (position === 'bottom' || position === 'top') {
-        if (pos.left - tooltipWidth / 2 < 0) {
-            pos.left = tooltipWidth / 2;
+    const checkBounds = (pos: keyof typeof positions) => {
+        const { top, left } = positions[pos];
+        const isTopOverflow = top - tooltipHeight < viewportPadding;
+        const isBottomOverflow = top + tooltipHeight > window.innerHeight - viewportPadding;
+        const isLeftOverflow = left - tooltipWidth / 2 < viewportPadding;
+        const isRightOverflow = left + tooltipWidth / 2 > window.innerWidth - viewportPadding;
+        
+        if (pos === 'top' && isTopOverflow) return false;
+        if (pos === 'bottom' && isBottomOverflow) return false;
+        if (pos === 'left' && left - tooltipWidth < viewportPadding) return false;
+        if (pos === 'right' && left + tooltipWidth > window.innerWidth - viewportPadding) return false;
+        if ((pos === 'top' || pos === 'bottom') && (isLeftOverflow || isRightOverflow)) {
+             // Adjust horizontal position if it's overflowing left or right
+             if (isLeftOverflow) positions[pos].left = tooltipWidth / 2 + viewportPadding;
+             if (isRightOverflow) positions[pos].left = window.innerWidth - tooltipWidth / 2 - viewportPadding;
         }
-        if (pos.left + tooltipWidth / 2 > window.innerWidth) {
-            pos.left = window.innerWidth - tooltipWidth / 2;
-        }
-    }
-     if (position === 'top' && rect.top - tooltipHeight < 0) {
-        return positions.bottom;
-    }
-     if (position === 'bottom' && rect.bottom + tooltipHeight > window.innerHeight) {
-        return positions.top;
-    }
-    if (position === 'right' && rect.right + tooltipWidth > window.innerWidth) {
-        return positions.left;
-    }
-    if (position === 'left' && rect.left - tooltipWidth < 0) {
-        return positions.right;
-    }
+        return true;
+    };
+    
+    // Try preferred position first, then fall back
+    const positionOrder: (keyof typeof positions)[] = [
+        preferredPosition,
+        'bottom',
+        'top',
+        'right',
+        'left',
+    ];
+    
+    const finalPositionKey = positionOrder.find(checkBounds) || 'bottom';
 
-    return pos;
+    return positions[finalPositionKey];
 };
 
 
@@ -90,13 +96,23 @@ const TourTooltip = () => {
 
       const activeEl = document.getElementById(currentStep.targetId);
       if (activeEl) {
-        const rect = activeEl.getBoundingClientRect();
-        setPosition(getTooltipPosition(rect, currentStep.position) as any);
         
-        // Ensure the element is visible
-         if (rect.top < 0 || rect.bottom > window.innerHeight) {
+        const updatePosition = () => {
+             const rect = activeEl.getBoundingClientRect();
+             setPosition(getTooltipPosition(rect, currentStep.position) as any);
+        }
+
+        // Ensure the element is visible before calculating position
+         if (activeEl.getBoundingClientRect().top < 0 || activeEl.getBoundingClientRect().bottom > window.innerHeight) {
            activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+           // Wait for scroll to finish before calculating position
+           setTimeout(updatePosition, 300);
+         } else {
+            updatePosition();
          }
+         
+        window.addEventListener('resize', updatePosition);
+        return () => window.removeEventListener('resize', updatePosition);
 
       }
     } else {
