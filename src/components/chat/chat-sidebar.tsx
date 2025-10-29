@@ -31,6 +31,8 @@ import {
 } from '@/components/ui/sidebar';
 import { useAuth } from '@/firebase';
 import { usePathname } from 'next/navigation';
+import { useTour } from '@/hooks/use-interactive-tour';
+import { InteractiveTour } from '@/components/tour/interactive-tour';
 
 interface ChatSidebarProps {
   chats: Chat[];
@@ -53,6 +55,7 @@ function ChatSidebar({
   const { user } = useAuth();
   const pathname = usePathname();
   const [isCreatingChat, setIsCreatingChat] = useState(false);
+  const { startTour, isTourActive } = useTour();
 
   useEffect(() => {
     setIsClient(true);
@@ -100,9 +103,10 @@ function ChatSidebar({
 
   return (
     <>
+      {isClient && <InteractiveTour />}
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center justify-between p-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" id="logo-section">
             <AppLogo className="w-8 h-8" />
             <span className="text-lg font-semibold tracking-wider">NIMBUS</span>
           </div>
@@ -192,28 +196,34 @@ function ChatSidebar({
         </ScrollArea>
       </SidebarContent>
       <SidebarFooter>
-        {isClient && chats.length > 0 && (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="ghost" className="w-full justify-start" id="clear-chats-button">
-                <Trash2 className="mr-2 h-4 w-4" />
-                Limpiar conversaciones
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>¿Estás absolutely seguro?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Esto eliminará permanentemente todas tus conversaciones de chat. Esta acción no se puede deshacer.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={clearChats}>Limpiar todo</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        )}
+         <div className="flex flex-col gap-1">
+            {isClient && chats.length > 0 && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" className="w-full justify-start" id="clear-chats-button">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Limpiar conversaciones
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>¿Estás absolutely seguro?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esto eliminará permanentemente todas tus conversaciones de chat. Esta acción no se puede deshacer.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={clearChats}>Limpiar todo</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+             <Button variant="ghost" className="w-full justify-start" id="start-tour-button" onClick={() => startTour()}>
+                <Route className="mr-2 h-4 w-4" />
+                Iniciar Recorrido
+             </Button>
+         </div>
         <UserButton />
       </SidebarFooter>
     </>
