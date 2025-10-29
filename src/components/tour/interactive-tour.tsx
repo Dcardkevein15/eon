@@ -8,9 +8,70 @@ import { useTour } from '@/hooks/use-interactive-tour';
 import { tourSteps, type TourStep } from '@/components/tour/tour-steps';
 import { Button } from '@/components/ui/button';
 
+const getTooltipPosition = (rect: DOMRect | null, position: TourStep['position'] = 'bottom') => {
+    if (!rect) return { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
+
+    const offset = 12; // Gap between element and tooltip
+    const tooltipWidth = 320; // Corresponds to w-80
+    const tooltipHeight = 200; // Approximate height
+
+    const positions = {
+        top: {
+            top: rect.top - offset,
+            left: rect.left + rect.width / 2,
+            transform: 'translate(-50%, -100%)',
+        },
+        right: {
+            top: rect.top + rect.height / 2,
+            left: rect.right + offset,
+            transform: 'translate(0, -50%)',
+        },
+        bottom: {
+            top: rect.bottom + offset,
+            left: rect.left + rect.width / 2,
+            transform: 'translate(-50%, 0)',
+        },
+        left: {
+            top: rect.top + rect.height / 2,
+            left: rect.left - offset,
+            transform: 'translate(-100%, -50%)',
+        },
+    };
+
+    let pos = positions[position];
+
+    // Basic boundary detection and correction
+    if (position === 'bottom' || position === 'top') {
+        if (pos.left - tooltipWidth / 2 < 0) {
+            pos.left = tooltipWidth / 2;
+        }
+        if (pos.left + tooltipWidth / 2 > window.innerWidth) {
+            pos.left = window.innerWidth - tooltipWidth / 2;
+        }
+    }
+     if (position === 'top' && rect.top - tooltipHeight < 0) {
+        return positions.bottom;
+    }
+     if (position === 'bottom' && rect.bottom + tooltipHeight > window.innerHeight) {
+        return positions.top;
+    }
+    if (position === 'right' && rect.right + tooltipWidth > window.innerWidth) {
+        return positions.left;
+    }
+    if (position === 'left' && rect.left - tooltipWidth < 0) {
+        return positions.right;
+    }
+
+    return pos;
+};
+
+
 const TourTooltip = () => {
   const { step, isActive, nextStep, prevStep, finishTour } = useTour();
   const currentStep = tourSteps[step];
+  
+  // State to hold the position, to avoid re-calculating on every render
+  const [position, setPosition] = React.useState({ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' });
 
   useEffect(() => {
     if (isActive) {
@@ -28,7 +89,14 @@ const TourTooltip = () => {
 
       const activeEl = document.getElementById(currentStep.targetId);
       if (activeEl) {
-        activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const rect = activeEl.getBoundingClientRect();
+        setPosition(getTooltipPosition(rect, currentStep.position) as any);
+        
+        // Ensure the element is visible
+         if (rect.top < 0 || rect.bottom > window.innerHeight) {
+           activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+         }
+
       }
     } else {
         // Cleanup when tour ends
@@ -38,7 +106,8 @@ const TourTooltip = () => {
         });
     }
 
-    return () => { // Cleanup on unmount
+    // Cleanup function for when component unmounts or tour becomes inactive
+    return () => { 
         tourSteps.forEach((s) => {
             const el = document.getElementById(s.targetId);
             if (el) el.classList.remove('tour-highlight');
@@ -49,9 +118,6 @@ const TourTooltip = () => {
   if (!isActive || !currentStep) {
     return null;
   }
-  
-  const stepElement = document.getElementById(currentStep.targetId);
-  const position = stepElement ? stepElement.getBoundingClientRect() : null;
 
   return (
     <motion.div
@@ -59,7 +125,7 @@ const TourTooltip = () => {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 10 }}
       className="fixed z-[101] p-4 bg-background border border-primary/50 rounded-lg shadow-2xl shadow-primary/20 w-80"
-      style={getTooltipPosition(position, currentStep.position)}
+      style={position}
     >
       <div className="flex justify-between items-center mb-2">
         <h3 className="font-bold text-lg text-primary">{currentStep.title}</h3>
@@ -100,40 +166,6 @@ const TourTooltip = () => {
   );
 };
 
-
-const getTooltipPosition = (rect: DOMRect | null, position: TourStep['position'] = 'bottom') => {
-    if (!rect) return { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
-
-    const offset = 12; // 12px gap between element and tooltip
-    
-    switch (position) {
-        case 'top':
-            return {
-                top: rect.top - offset,
-                left: rect.left + rect.width / 2,
-                transform: 'translate(-50%, -100%)',
-            };
-        case 'right':
-            return {
-                top: rect.top + rect.height / 2,
-                left: rect.right + offset,
-                transform: 'translate(0, -50%)',
-            };
-        case 'left':
-            return {
-                top: rect.top + rect.height / 2,
-                left: rect.left - offset,
-                transform: 'translate(-100%, -50%)',
-            };
-        case 'bottom':
-        default:
-             return {
-                top: rect.bottom + offset,
-                left: rect.left + rect.width / 2,
-                transform: 'translateX(-50%)',
-            };
-    }
-};
 
 export default function InteractiveTour() {
   const { isActive } = useTour();
