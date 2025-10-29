@@ -22,7 +22,7 @@ const getTooltipPosition = (rect: DOMRect | null, preferredPosition: TourStep['p
         left: rect.left - viewportPadding,
         right: window.innerWidth - rect.right - viewportPadding,
     };
-
+    
     const positions = {
         top: {
             top: rect.top - offset,
@@ -46,10 +46,10 @@ const getTooltipPosition = (rect: DOMRect | null, preferredPosition: TourStep['p
         },
     };
 
-    const positionOrder: (keyof typeof positions)[] = [preferredPosition, 'bottom', 'top', 'right', 'left'];
+    const positionOrder: (keyof typeof positions)[] = [preferredPosition, 'top', 'bottom', 'right', 'left'];
 
     let bestPosition: keyof typeof positions = 'bottom';
-
+    
     for (const pos of positionOrder) {
         if (pos === 'top' && space.top > tooltipHeight) {
             bestPosition = 'top';
@@ -68,20 +68,29 @@ const getTooltipPosition = (rect: DOMRect | null, preferredPosition: TourStep['p
             break;
         }
     }
-    
+
     const finalStyle = positions[bestPosition];
+    
+    let finalLeft = finalStyle.left as number;
+    let finalTop = finalStyle.top as number;
 
-    // Final horizontal adjustment to prevent overflow
-    const finalLeft = finalStyle.left as number;
-    if (finalLeft - (tooltipWidth / 2) < viewportPadding) {
-        finalStyle.left = (tooltipWidth / 2) + viewportPadding;
+    // Adjust horizontal position to stay within viewport
+    if (finalLeft - tooltipWidth / 2 < viewportPadding) {
+        finalLeft = (tooltipWidth / 2) + viewportPadding;
     }
-    if (finalLeft + (tooltipWidth / 2) > window.innerWidth - viewportPadding) {
-        finalStyle.left = window.innerWidth - (tooltipWidth / 2) - viewportPadding;
+    if (finalLeft + tooltipWidth / 2 > window.innerWidth - viewportPadding) {
+        finalLeft = window.innerWidth - (tooltipWidth / 2) - viewportPadding;
     }
 
-
-    return finalStyle;
+    // Adjust vertical position to stay within viewport
+    if (finalTop - tooltipHeight < viewportPadding && bestPosition === 'top') {
+      finalTop = viewportPadding + tooltipHeight;
+    }
+    if (finalTop + tooltipHeight > window.innerHeight - viewportPadding && bestPosition === 'bottom') {
+      finalTop = window.innerHeight - tooltipHeight - viewportPadding;
+    }
+    
+    return { ...finalStyle, left: finalLeft, top: finalTop };
 };
 
 
