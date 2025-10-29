@@ -45,7 +45,7 @@ const voiceVisionOrchestratorFlow = ai.defineFlow(
 
     // Step 1: Transcribe the user's audio
     const { text: transcription } = await ai.generate({
-      model: googleAI.model('gemini-1.5-flash'),
+      model: googleAI.model('gemini-pro-vision'),
       prompt: [
         { text: "Tu única tarea es transcribir con la mayor precisión posible las palabras habladas en el siguiente mensaje de audio. La transcripción DEBE estar en el idioma original del audio." },
         { media: { url: audioDataUri } }
@@ -62,7 +62,7 @@ const voiceVisionOrchestratorFlow = ai.defineFlow(
 
     // Step 2: Generate a text response considering both transcription and image
     const { text: textResponse } = await ai.generate({
-        model: googleAI.model('gemini-1.5-flash'),
+        model: googleAI.model('gemini-pro-vision'),
         prompt: [
             { text: `Eres un asistente de IA conversacional y empático llamado Nimbus. Estás en una videollamada. Responde de forma natural y concisa a la transcripción del usuario, PERO también considera la imagen proporcionada para reaccionar a su lenguaje no verbal (expresión facial, entorno). Haz que la conversación se sienta personal y cara a cara.
 
