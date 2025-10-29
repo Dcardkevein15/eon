@@ -11,10 +11,17 @@ import { Button } from '@/components/ui/button';
 const getTooltipPosition = (rect: DOMRect | null, preferredPosition: TourStep['position'] = 'bottom') => {
     if (!rect) return { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
 
-    const offset = 12; // Gap between element and tooltip
-    const tooltipWidth = 320; // Corresponds to w-80
-    const tooltipHeight = 200; // Approximate height
-    const viewportPadding = 16; // Space from window edges
+    const offset = 12;
+    const tooltipWidth = 320; // w-80
+    const tooltipHeight = 180; // Approximate height, can be adjusted
+    const viewportPadding = 16;
+
+    const space = {
+        top: rect.top - viewportPadding,
+        bottom: window.innerHeight - rect.bottom - viewportPadding,
+        left: rect.left - viewportPadding,
+        right: window.innerWidth - rect.right - viewportPadding,
+    };
 
     const positions = {
         top: {
@@ -39,37 +46,42 @@ const getTooltipPosition = (rect: DOMRect | null, preferredPosition: TourStep['p
         },
     };
 
-    const checkBounds = (pos: keyof typeof positions) => {
-        const { top, left } = positions[pos];
-        const isTopOverflow = top - tooltipHeight < viewportPadding;
-        const isBottomOverflow = top + tooltipHeight > window.innerHeight - viewportPadding;
-        const isLeftOverflow = left - tooltipWidth / 2 < viewportPadding;
-        const isRightOverflow = left + tooltipWidth / 2 > window.innerWidth - viewportPadding;
-        
-        if (pos === 'top' && isTopOverflow) return false;
-        if (pos === 'bottom' && isBottomOverflow) return false;
-        if (pos === 'left' && left - tooltipWidth < viewportPadding) return false;
-        if (pos === 'right' && left + tooltipWidth > window.innerWidth - viewportPadding) return false;
-        if ((pos === 'top' || pos === 'bottom') && (isLeftOverflow || isRightOverflow)) {
-             // Adjust horizontal position if it's overflowing left or right
-             if (isLeftOverflow) positions[pos].left = tooltipWidth / 2 + viewportPadding;
-             if (isRightOverflow) positions[pos].left = window.innerWidth - tooltipWidth / 2 - viewportPadding;
-        }
-        return true;
-    };
-    
-    // Try preferred position first, then fall back
-    const positionOrder: (keyof typeof positions)[] = [
-        preferredPosition,
-        'bottom',
-        'top',
-        'right',
-        'left',
-    ];
-    
-    const finalPositionKey = positionOrder.find(checkBounds) || 'bottom';
+    const positionOrder: (keyof typeof positions)[] = [preferredPosition, 'bottom', 'top', 'right', 'left'];
 
-    return positions[finalPositionKey];
+    let bestPosition: keyof typeof positions = 'bottom';
+
+    for (const pos of positionOrder) {
+        if (pos === 'top' && space.top > tooltipHeight) {
+            bestPosition = 'top';
+            break;
+        }
+        if (pos === 'bottom' && space.bottom > tooltipHeight) {
+            bestPosition = 'bottom';
+            break;
+        }
+        if (pos === 'right' && space.right > tooltipWidth) {
+            bestPosition = 'right';
+            break;
+        }
+        if (pos === 'left' && space.left > tooltipWidth) {
+            bestPosition = 'left';
+            break;
+        }
+    }
+    
+    const finalStyle = positions[bestPosition];
+
+    // Final horizontal adjustment to prevent overflow
+    const finalLeft = finalStyle.left as number;
+    if (finalLeft - (tooltipWidth / 2) < viewportPadding) {
+        finalStyle.left = (tooltipWidth / 2) + viewportPadding;
+    }
+    if (finalLeft + (tooltipWidth / 2) > window.innerWidth - viewportPadding) {
+        finalStyle.left = window.innerWidth - (tooltipWidth / 2) - viewportPadding;
+    }
+
+
+    return finalStyle;
 };
 
 
