@@ -34,7 +34,6 @@ interface ImageWhiteboardProps {
 
 type GenerationState = 'idle' | 'prompting' | 'generating' | 'done' | 'error';
 
-// This type includes the data URI
 type ImageHistoryItem = {
   id: string;
   prompt: string;
@@ -45,8 +44,8 @@ type ImageHistoryItem = {
 
 
 function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val: T) => T)) => void, boolean] {
-  const [isLoading, setIsLoading] = useState(true);
   const [state, setState] = useState<T>(initialValue);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     try {
@@ -68,6 +67,10 @@ function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val
       window.localStorage.setItem(key, JSON.stringify(valueToStore));
     } catch (error) {
        console.error("Error al guardar en localStorage", error);
+       // This error is now more relevant
+       if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+          alert("Error: Se ha excedido el límite de almacenamiento del navegador. No se pueden guardar más imágenes.");
+       }
     }
   }, [key, state]);
 
@@ -87,21 +90,8 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
   const [state, setState] = useState<GenerationState>('idle');
   const { toast } = useToast();
   
-  const [history, setHistory] = useLocalStorage<ImageHistoryItem[]>('image-whiteboard-history', []);
-  const [isHistoryLoading, setIsHistoryLoading] = useState(true);
+  const [history, setHistory, isHistoryLoading] = useLocalStorage<ImageHistoryItem[]>('image-whiteboard-history', []);
 
-   // Re-hydrate the full history with image URLs on mount (relying on browser cache)
-   const hydratedHistory: ImageHistoryItem[] = history.map(item => ({
-       ...item,
-       imageUrl: item.imageUrl
-   }));
-
-
-  useEffect(() => {
-    setIsHistoryLoading(true);
-    // Simulate loading for better UX, can be adjusted
-    setTimeout(() => setIsHistoryLoading(false), 200);
-  }, []);
 
   const handleGenerateImage = async () => {
     if (!prompt.trim()) {
@@ -125,15 +115,15 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
       const generatedImageUrl = imageResponse.imageUrl;
       setCurrentImageUrl(generatedImageUrl);
 
-      // Now storing the heavy imageUrl in localStorage
       const newHistoryItem: ImageHistoryItem = {
         id: uuidv4(),
         prompt,
         artisticPrompt,
-        imageUrl: generatedImageUrl,
+        imageUrl: generatedImageUrl, // We store the full Data URI
         createdAt: new Date().toISOString(),
       };
       
+      // Correctly update state by passing a function
       setHistory(prev => [newHistoryItem, ...prev].slice(0, MAX_HISTORY_ITEMS));
 
       setState('done');
@@ -265,10 +255,10 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             {[...Array(8)].map((_, i) => <Skeleton key={i} className="aspect-square w-full" />)}
                         </div>
-                    ) : hydratedHistory.length > 0 ? (
+                    ) : history.length > 0 ? (
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             <TooltipProvider>
-                            {hydratedHistory.map(item => (
+                            {history.map(item => (
                                 <Card key={item.id} className="relative group overflow-hidden aspect-square bg-muted/20">
                                     <Image 
                                       src={item.imageUrl}
@@ -276,10 +266,10 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
                                       layout="fill" 
                                       objectFit="cover"
                                       unoptimized // Important for data URIs
-                                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                      onError={(e) => { e.currentTarget.parentElement?.querySelector('.fallback-icon')?.classList.remove('hidden') }}
                                     />
                                     {/* Fallback Icon */}
-                                     <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+                                     <div className="fallback-icon hidden absolute inset-0 flex items-center justify-center text-muted-foreground bg-card">
                                         <ImageOff className="w-10 h-10" />
                                     </div>
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col justify-end p-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -323,3 +313,5 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
     </Dialog>
   );
 }
+
+    
