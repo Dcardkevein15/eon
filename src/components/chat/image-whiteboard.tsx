@@ -43,7 +43,7 @@ type ImageHistoryItem = {
 };
 
 // This type is what we'll actually store in localStorage
-type StoredImageHistoryItem = Omit<ImageHistoryItem, 'imageUrl'>;
+type StoredImageHistoryItem = Omit<ImageHistoryItem, 'imageUrl'> & { imageUrl: string };
 
 
 function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val: T) => T)) => void, boolean] {
@@ -68,6 +68,7 @@ function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val
         const valueToStore = value instanceof Function ? value(prev) : value;
         try {
             window.localStorage.setItem(key, JSON.stringify(valueToStore));
+            console.log('Historial guardado en localStorage:', valueToStore);
         } catch (error) {
              console.error("Error al guardar en localStorage", error);
         }
@@ -97,8 +98,8 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
    // Re-hydrate the full history with image URLs on mount (relying on browser cache)
    const hydratedHistory: ImageHistoryItem[] = history.map(item => ({
         ...item,
-        // Reconstruct the image URL. The browser might have it cached.
-        imageUrl: item.artisticPrompt, 
+        // The imageUrl is now stored, so we just use it directly.
+        imageUrl: item.imageUrl, 
    }));
 
 
@@ -130,11 +131,12 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
       const generatedImageUrl = imageResponse.imageUrl;
       setCurrentImageUrl(generatedImageUrl);
 
-      // Don't store the heavy imageUrl in localStorage
+      // Now storing the heavy imageUrl in localStorage
       const newHistoryItem: StoredImageHistoryItem = {
         id: uuidv4(),
         prompt,
         artisticPrompt,
+        imageUrl: generatedImageUrl,
         createdAt: new Date().toISOString(),
       };
       
@@ -199,7 +201,7 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
             </div>
 
             {/* Create Tab */}
-            <TabsContent value="create" className="flex-1 flex flex-col gap-4 p-6 m-0">
+            <TabsContent value="create" className="flex-1 flex flex-col gap-4 p-6 m-0 mt-0">
                 <div className="flex gap-2">
                     <Input
                         value={prompt}
@@ -263,7 +265,7 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
             </TabsContent>
 
             {/* History Tab */}
-            <TabsContent value="history" className="flex-1 flex flex-col overflow-y-hidden m-0">
+            <TabsContent value="history" className="flex-1 flex flex-col overflow-y-hidden m-0 mt-0">
                 <ScrollArea className="h-full px-6 pb-6">
                     {isHistoryLoading ? (
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -275,7 +277,7 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
                             {hydratedHistory.map(item => (
                                 <Card key={item.id} className="relative group overflow-hidden aspect-square bg-muted/20">
                                     <Image 
-                                      src={item.imageUrl} // The URL is reconstructed, relies on browser cache
+                                      src={item.imageUrl}
                                       alt={item.prompt} 
                                       layout="fill" 
                                       objectFit="cover"
