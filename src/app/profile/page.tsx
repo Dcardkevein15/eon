@@ -52,8 +52,8 @@ export default function PsychologicalProfile() {
   );
   const { data: chats, loading: chatsLoading } = useCollection<Chat>(chatsQuery);
 
-  const fetchAndGenerateProfile = useCallback(async () => {
-    if (!user || !storageKey) {
+ const fetchAndGenerateProfile = useCallback(async () => {
+    if (!user || !firestore || !storageKey || !chats) {
       setLoading(false);
       setError('Datos insuficientes o no has iniciado sesión.');
       return;
@@ -63,14 +63,54 @@ export default function PsychologicalProfile() {
     setLoading(false);
     setError(null);
     
-    // Fake progress for better UX
     const progressInterval = setInterval(() => {
       setProgress(prev => Math.min(prev + Math.random() * 5, 95));
     }, 400);
 
     try {
-      const result = await generateProfileOnServer();
+      setProgress(10);
+      if (chats.length === 0) {
+        throw new Error('No hay conversaciones para analizar. ¡Inicia un chat para generar tu perfil!');
+      }
       
+      let fullChatHistory = '';
+      let latestTimestamp = 0;
+
+      setProgress(20);
+      for (const chat of chats) {
+        fullChatHistory += `--- INICIO DEL CHAT: ${chat.title} ---\n`;
+        const messagesQuery = query(collection(firestore, `users/${user.uid}/chats/${chat.id}/messages`), orderBy('timestamp', 'asc'));
+        const messagesSnapshot = await getDocs(messagesQuery);
+        
+        messagesSnapshot.forEach(doc => {
+          const msg = doc.data() as Message;
+          const date = (msg.timestamp as Timestamp).toDate();
+          fullChatHistory += `[${date.toISOString()}] ${msg.role}: ${msg.content}\n`;
+        });
+
+        const chatTimestamp = chat.latestMessageAt 
+            ? (chat.latestMessageAt as Timestamp).toMillis()
+            : (chat.createdAt as Timestamp).toMillis();
+        
+        if (chatTimestamp > latestTimestamp) {
+            latestTimestamp = chatTimestamp;
+        }
+        fullChatHistory += `--- FIN DEL CHAT ---\n\n`;
+      }
+      setProgress(50);
+
+      if (!fullChatHistory.trim()) {
+        throw new Error('Tus conversaciones están vacías. No se puede generar un perfil.');
+      }
+      
+      const cachedItem = localStorage.getItem(storageKey);
+      const previousProfilesContext = cachedItem ? JSON.stringify(JSON.parse(cachedItem).profile, null, 2) : '';
+      
+      setProgress(60);
+
+      const result = await generateProfileOnServer(fullChatHistory, previousProfilesContext);
+      setProgress(90);
+
       if (!result.success || !result.profile) {
         throw new Error(result.error || 'La generación del perfil falló en el servidor.');
       }
@@ -94,7 +134,7 @@ export default function PsychologicalProfile() {
       clearInterval(progressInterval);
       setTimeout(() => setGenerating(false), 500);
     }
-  }, [user, storageKey, toast]);
+  }, [user, firestore, storageKey, chats, toast]);
 
 
   useEffect(() => {
