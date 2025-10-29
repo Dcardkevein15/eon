@@ -21,6 +21,11 @@ export const tourSteps: TourStep[] = [
     content: 'Practica conversaciones difíciles en un entorno seguro. Elige un escenario y ensaya tus habilidades de comunicación sin miedo a equivocarte.',
   },
   {
+    selector: '#dreams-nav',
+    title: 'Portal de Sueños',
+    content: 'Descifra los mensajes de tu subconsciente. Narra o escribe tus sueños y deja que la IA te ofrezca interpretaciones desde diferentes perspectivas.',
+  },
+  {
     selector: '#chat-input-area',
     title: 'Tu Espacio para Escribir',
     content: 'Este es tu lienzo. Escribe lo que sientes, haz preguntas o simplemente desahógate. También puedes usar el micrófono para enviar mensajes de voz.',
