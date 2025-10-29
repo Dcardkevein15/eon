@@ -32,7 +32,6 @@ import {
 import { useAuth } from '@/firebase';
 import { usePathname } from 'next/navigation';
 import { useTour } from '@/hooks/use-interactive-tour';
-import { InteractiveTour } from '@/components/tour/interactive-tour';
 
 interface ChatSidebarProps {
   chats: Chat[];
@@ -103,7 +102,6 @@ function ChatSidebar({
 
   return (
     <>
-      {isClient && <InteractiveTour />}
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center justify-between p-2">
           <div className="flex items-center gap-2" id="logo-section">
