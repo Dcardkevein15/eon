@@ -38,7 +38,7 @@ type ImageHistoryItem = {
   id: string;
   prompt: string;
   artisticPrompt: string;
-  imageUrl: string; // This will still be used for display, relying on cache
+  imageUrl: string;
   createdAt: string;
 };
 
@@ -67,8 +67,6 @@ function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val
     setState(prev => {
         const valueToStore = value instanceof Function ? value(prev) : value;
         try {
-            // This is where the QUOTA_EXCEEDED_ERR was happening.
-            // By storing only metadata, we prevent this.
             window.localStorage.setItem(key, JSON.stringify(valueToStore));
         } catch (error) {
              console.error("Error al guardar en localStorage", error);
@@ -93,7 +91,6 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
   const [state, setState] = useState<GenerationState>('idle');
   const { toast } = useToast();
   
-  // We now store only the metadata, not the full image data URI
   const [history, setHistory] = useLocalStorage<StoredImageHistoryItem[]>('image-whiteboard-history', []);
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
 
@@ -101,7 +98,7 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
    const hydratedHistory: ImageHistoryItem[] = history.map(item => ({
         ...item,
         // Reconstruct the image URL. The browser might have it cached.
-        imageUrl: item.artisticPrompt, // Assuming we can use prompt to reconstruct or just for key
+        imageUrl: item.artisticPrompt, 
    }));
 
 
@@ -272,10 +269,10 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             {[...Array(8)].map((_, i) => <Skeleton key={i} className="aspect-square w-full" />)}
                         </div>
-                    ) : history.length > 0 ? (
+                    ) : hydratedHistory.length > 0 ? (
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             <TooltipProvider>
-                            {history.map(item => (
+                            {hydratedHistory.map(item => (
                                 <Card key={item.id} className="relative group overflow-hidden aspect-square bg-muted/20">
                                     <Image 
                                       src={item.imageUrl} // The URL is reconstructed, relies on browser cache
@@ -330,5 +327,3 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
     </Dialog>
   );
 }
-
-    
