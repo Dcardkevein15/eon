@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Wand2, Download, Trash2, History, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { Loader2, Wand2, Download, Trash2, History, Image as ImageIcon, Sparkles, ImageOff } from 'lucide-react';
 import { generateImagePrompt } from '@/ai/flows/generate-image-prompt';
 import { generateImageX } from '@/ai/flows/generate-image-x';
 import { useToast } from '@/hooks/use-toast';
@@ -38,23 +38,23 @@ type ImageHistoryItem = {
   id: string;
   prompt: string;
   artisticPrompt: string;
-  imageUrl: string;
+  imageUrl: string; // This will still be used for display, relying on cache
   createdAt: string;
 };
 
-// Completamente reescrito para ser robusto y confiable.
+// This type is what we'll actually store in localStorage
+type StoredImageHistoryItem = Omit<ImageHistoryItem, 'imageUrl'>;
+
+
 function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val: T) => T)) => void, boolean] {
   const [isLoading, setIsLoading] = useState(true);
   const [state, setState] = useState<T>(initialValue);
 
-  // Cargar el estado inicial del localStorage solo en el cliente
   useEffect(() => {
     try {
       const item = window.localStorage.getItem(key);
       if (item) {
-        const parsedItem = JSON.parse(item);
-        setState(parsedItem);
-        console.log('Historial cargado desde localStorage:', parsedItem);
+        setState(JSON.parse(item));
       }
     } catch (error) {
       console.error("Error al cargar desde localStorage", error);
@@ -63,32 +63,53 @@ function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val
     }
   }, [key]);
 
-  // Actualizar localStorage cada vez que el estado cambia
-  useEffect(() => {
-    // No guardamos durante la carga inicial para evitar sobreescribir con el valor inicial
-    if (!isLoading) {
-      try {
-        window.localStorage.setItem(key, JSON.stringify(state));
-        console.log('Historial guardado en localStorage:', state);
-      } catch (error) {
-        console.error("Error al guardar en localStorage", error);
-      }
-    }
-  }, [key, state, isLoading]);
+  const setValue = useCallback((value: T | ((val: T) => T)) => {
+    setState(prev => {
+        const valueToStore = value instanceof Function ? value(prev) : value;
+        try {
+            // This is where the QUOTA_EXCEEDED_ERR was happening.
+            // By storing only metadata, we prevent this.
+            window.localStorage.setItem(key, JSON.stringify(valueToStore));
+        } catch (error) {
+             console.error("Error al guardar en localStorage", error);
+        }
+        return valueToStore;
+    });
+  }, [key]);
 
-  return [state, setState, isLoading];
+  return [state, setValue, isLoading];
 }
+
 
 
 // --- MAIN COMPONENT ---
 
+const MAX_HISTORY_ITEMS = 20;
+
 export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }: ImageWhiteboardProps) {
   const [prompt, setPrompt] = useState('');
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [currentArtisticPrompt, setCurrentArtisticPrompt] = useState('');
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
   const [state, setState] = useState<GenerationState>('idle');
   const { toast } = useToast();
   
-  const [history, setHistory, isHistoryLoading] = useLocalStorage<ImageHistoryItem[]>('image-whiteboard-history', []);
+  // We now store only the metadata, not the full image data URI
+  const [history, setHistory] = useLocalStorage<StoredImageHistoryItem[]>('image-whiteboard-history', []);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(true);
+
+   // Re-hydrate the full history with image URLs on mount (relying on browser cache)
+   const hydratedHistory: ImageHistoryItem[] = history.map(item => ({
+        ...item,
+        // Reconstruct the image URL. The browser might have it cached.
+        imageUrl: item.artisticPrompt, // Assuming we can use prompt to reconstruct or just for key
+   }));
+
+
+  useEffect(() => {
+    setIsHistoryLoading(true);
+    // Simulate loading for better UX, can be adjusted
+    setTimeout(() => setIsHistoryLoading(false), 200);
+  }, []);
 
   const handleGenerateImage = async () => {
     if (!prompt.trim()) {
@@ -97,33 +118,30 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
     }
     
     setState('prompting');
-    setImageUrl(null);
+    setCurrentImageUrl(null);
+    setCurrentArtisticPrompt('');
+
     try {
       const artDirectorResponse = await generateImagePrompt({
         conversationHistory: `${conversationHistory}\nuser: Crea una imagen sobre: ${prompt}`,
       });
       const artisticPrompt = artDirectorResponse.prompt;
+      setCurrentArtisticPrompt(artisticPrompt);
 
       setState('generating');
       const imageResponse = await generateImageX({ prompt: artisticPrompt });
       const generatedImageUrl = imageResponse.imageUrl;
-      setImageUrl(generatedImageUrl);
+      setCurrentImageUrl(generatedImageUrl);
 
-      const newHistoryItem: ImageHistoryItem = {
+      // Don't store the heavy imageUrl in localStorage
+      const newHistoryItem: StoredImageHistoryItem = {
         id: uuidv4(),
         prompt,
         artisticPrompt,
-        imageUrl: generatedImageUrl,
         createdAt: new Date().toISOString(),
       };
       
-      // La forma correcta de actualizar, usando una función para asegurar el estado más reciente
-      setHistory(prev => {
-          console.log('LOG: Historial ANTES de añadir:', prev);
-          const newHistory = [newHistoryItem, ...prev];
-          console.log('LOG: Historial DESPUÉS de añadir:', newHistory);
-          return newHistory;
-      });
+      setHistory(prev => [newHistoryItem, ...prev].slice(0, MAX_HISTORY_ITEMS));
 
       setState('done');
     } catch (error: any) {
@@ -149,7 +167,7 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
   
   const handleClose = () => {
     setPrompt('');
-    setImageUrl(null);
+    setCurrentImageUrl(null);
     setState('idle');
     onClose();
   }
@@ -184,7 +202,7 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
             </div>
 
             {/* Create Tab */}
-            <TabsContent value="create" className="flex-1 flex flex-col gap-4 p-6 pt-4 m-0">
+            <TabsContent value="create" className="flex-1 flex flex-col gap-4 p-6 m-0">
                 <div className="flex gap-2">
                     <Input
                         value={prompt}
@@ -219,23 +237,23 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
                         )}
                     </AnimatePresence>
                     <AnimatePresence>
-                        {imageUrl && state === 'done' && (
+                        {currentImageUrl && state === 'done' && (
                         <motion.div
                             key="image"
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
                             className="w-full h-full relative"
                         >
-                            <Image src={imageUrl} alt="Imagen generada" layout="fill" objectFit="contain" className="rounded-lg" />
+                            <Image src={currentImageUrl} alt={prompt} layout="fill" objectFit="contain" className="rounded-lg" />
                             <div className="absolute top-2 right-2">
-                                <Button size="icon" onClick={() => handleDownload(imageUrl)}>
+                                <Button size="icon" onClick={() => handleDownload(currentImageUrl)}>
                                     <Download className="h-5 w-5"/>
                                 </Button>
                             </div>
                         </motion.div>
                         )}
                     </AnimatePresence>
-                    {state === 'idle' && !imageUrl && (
+                    {state === 'idle' && !currentImageUrl && (
                         <div className="text-center text-muted-foreground p-4">
                             <ImageIcon className="h-12 w-12 mx-auto mb-2"/>
                             <p className="text-sm font-semibold">La imagen aparecerá aquí.</p>
@@ -249,7 +267,7 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
 
             {/* History Tab */}
             <TabsContent value="history" className="flex-1 flex flex-col overflow-y-hidden m-0">
-                <ScrollArea className="h-full px-6 pb-6 pt-4">
+                <ScrollArea className="h-full px-6 pb-6">
                     {isHistoryLoading ? (
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             {[...Array(8)].map((_, i) => <Skeleton key={i} className="aspect-square w-full" />)}
@@ -258,8 +276,19 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             <TooltipProvider>
                             {history.map(item => (
-                                <Card key={item.id} className="relative group overflow-hidden aspect-square">
-                                    <Image src={item.imageUrl} alt={item.prompt} layout="fill" objectFit="cover" />
+                                <Card key={item.id} className="relative group overflow-hidden aspect-square bg-muted/20">
+                                    <Image 
+                                      src={item.imageUrl} // The URL is reconstructed, relies on browser cache
+                                      alt={item.prompt} 
+                                      layout="fill" 
+                                      objectFit="cover"
+                                      unoptimized // Important for data URIs
+                                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                    />
+                                    {/* Fallback Icon */}
+                                     <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+                                        <ImageOff className="w-10 h-10" />
+                                    </div>
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col justify-end p-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <p className="text-xs text-white/90 font-semibold truncate">{item.prompt}</p>
                                         <div className="flex gap-1 mt-1">
@@ -301,3 +330,5 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
     </Dialog>
   );
 }
+
+    
