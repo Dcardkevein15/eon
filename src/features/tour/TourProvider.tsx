@@ -46,10 +46,7 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
   const startTour = useCallback((key: TourKey, force = false) => {
     if (!isClient) return;
 
-    // Show welcome animation for the main tour, then start the steps.
-    if (key === 'main' && !force) {
-      setShowWelcome(true);
-    }
+    setShowWelcome(true);
     setActiveTourKey(key);
     setCurrentStep(0);
     
@@ -65,7 +62,7 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
 
   const prevStep = useCallback(() => {
     if (currentStep > 0) {
-      setCurrentStep(prev => prev + 1);
+      setCurrentStep(prev => prev - 1);
     }
   }, [currentStep]);
 

@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BrainCircuit, UserCheck, ShieldCheck, ListChecks, ChevronLeft, Sparkles, Filter, ShieldQuestion, Info, RefreshCcw, LineChart, Target, Repeat, Star, Shield, AlertTriangle, GitCommit, LayoutDashboard, BarChart3, Search, Route, Cog } from 'lucide-react';
+import { BrainCircuit, UserCheck, ShieldCheck, ListChecks, ChevronLeft, Sparkles, Filter, ShieldQuestion, Info, RefreshCcw, LineChart, Target, Repeat, Star, Shield, AlertTriangle, GitCommit, LayoutDashboard, BarChart3, Search, Route } from 'lucide-react';
 import Link from 'next/link';
 import { Progress } from '@/components/ui/progress';
 import { format } from 'date-fns';
@@ -325,9 +325,9 @@ export default function PsychologicalProfile() {
                     Volver al Chat
                 </Link>
             </Button>
-             <Button variant="ghost" onClick={() => startTour('profile', true)}>
-                <Route className="mr-2 h-4 w-4" />
-                Iniciar Recorrido
+             <Button variant="ghost" size="icon" onClick={() => startTour('profile', true)}>
+                <Route className="h-5 w-5" />
+                <span className="sr-only">Iniciar Recorrido</span>
             </Button>
         </div>
 

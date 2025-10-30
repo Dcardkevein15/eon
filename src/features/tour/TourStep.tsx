@@ -47,9 +47,9 @@ const TourStep: React.FC<TourStepProps> = ({ step, currentStep, totalSteps, onNe
   });
   
   // Effect to handle dynamic content and visibility
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (targetElement) {
-      targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      targetElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
       
       const timer = setTimeout(() => {
         setIsVisible(true);
@@ -65,29 +65,16 @@ const TourStep: React.FC<TourStepProps> = ({ step, currentStep, totalSteps, onNe
     <AnimatePresence>
       {targetElement && isVisible && (
         <>
-          {/* Overlay */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 z-[100]"
-            onClick={onStop}
-          />
-
           {/* Highlight */}
           <motion.div
-            initial={{
-              x: targetElement.getBoundingClientRect().left,
-              y: targetElement.getBoundingClientRect().top,
-              width: targetElement.getBoundingClientRect().width,
-              height: targetElement.getBoundingClientRect().height,
-            }}
+            initial={false}
             animate={{
-              x: targetElement.getBoundingClientRect().left,
-              y: targetElement.getBoundingClientRect().top,
-              width: targetElement.getBoundingClientRect().width,
-              height: targetElement.getBoundingClientRect().height,
+              x: targetElement.getBoundingClientRect().left - 5,
+              y: targetElement.getBoundingClientRect().top - 5,
+              width: targetElement.getBoundingClientRect().width + 10,
+              height: targetElement.getBoundingClientRect().height + 10,
             }}
+            exit={{ opacity: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             className="fixed top-0 left-0 rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] z-[101]"
             style={{
@@ -102,7 +89,7 @@ const TourStep: React.FC<TourStepProps> = ({ step, currentStep, totalSteps, onNe
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
-              className="w-[90vw] max-w-xs sm:w-80 rounded-lg border bg-background shadow-2xl"
+              className="w-[90vw] max-w-xs rounded-lg border bg-background shadow-2xl"
             >
               <div className="p-4">
                 <h3 className="font-semibold text-lg">{step.title}</h3>
