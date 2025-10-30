@@ -102,7 +102,7 @@ const TourStep: React.FC<TourStepProps> = ({ step, currentStep, totalSteps, onNe
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
-              className="w-80 rounded-lg border bg-background shadow-2xl"
+              className="w-[90vw] max-w-xs sm:w-80 rounded-lg border bg-background shadow-2xl"
             >
               <div className="p-4">
                 <h3 className="font-semibold text-lg">{step.title}</h3>
