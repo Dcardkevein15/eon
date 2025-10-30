@@ -175,10 +175,8 @@
         "schema": { "$ref": "#/entities/article" },
         "rules": {
             "read": "true",
-            "write": "request.resource.data.createdAt == request.time"
+            "write": "true"
         }
     }
   }
 }
-
-    

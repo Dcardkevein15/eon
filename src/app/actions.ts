@@ -5,7 +5,7 @@ import { ai } from '@/ai/genkit';
 import { smartComposeMessage } from '@/ai/flows/smart-compose-message';
 import { getInitialPrompts } from '@/ai/flows/initial-prompt-suggestion';
 import { generateChatTitle as genTitle } from '@/ai/flows/generate-chat-title';
-import { collection, getDocs, query, orderBy, limit, Timestamp, doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, Timestamp, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { SUGGESTIONS_FALLBACK } from '@/lib/suggestions-fallback';
 import { generateBreakdownExercise as genExercise } from '@/ai/flows/generate-breakdown-exercise';
@@ -286,7 +286,7 @@ export async function getArticleContent(input: GenerateArticleContentInput): Pro
         slug: input.slug,
         category: input.category,
         content: generatedContent.content,
-        // createdAt is now handled by security rules
+        createdAt: serverTimestamp(),
     });
 
     return generatedContent;
