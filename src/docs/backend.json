@@ -1,4 +1,5 @@
 
+
 {
   "entities": {
     "user": {
@@ -174,8 +175,10 @@
       "schema": { "$ref": "#/entities/article" },
       "rules": {
         "read": "true",
-        "write": "request.auth != null"
+        "write": "true"
       }
     }
   }
 }
+
+    
