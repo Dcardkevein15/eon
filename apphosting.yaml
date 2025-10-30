@@ -3,6 +3,8 @@
 runConfig:
   timeoutSeconds: 120
   maxInstances: 1
+  environmentVariables:
+    FIREBASE_SERVICE_ACCOUNT_BASE64: ${secret:FIREBASE_SERVICE_ACCOUNT_BASE64}
 build:
   - name: fetch
     repo: ''
