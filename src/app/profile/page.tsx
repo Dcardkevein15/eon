@@ -23,11 +23,15 @@ import { useTheme } from 'next-themes';
 import { generateProfileOnServer } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { motion } from 'framer-motion';
+import TextSizeControl from '@/components/profile/TextSizeControl';
+import { cn } from '@/lib/utils';
 
 const EmotionalConstellation = dynamic(() => import('@/components/profile/EmotionalConstellation'), {
   ssr: false,
   loading: () => <Skeleton className="h-[400px] w-full" />,
 });
+
+type TextSize = 'sm' | 'base' | 'lg';
 
 export default function PsychologicalProfile() {
   const { user, loading: authLoadingFromHook } = useAuth();
@@ -42,6 +46,9 @@ export default function PsychologicalProfile() {
   const [error, setError] = useState<string | null>(null);
   const [isOutdated, setIsOutdated] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [diagnosisTextSize, setDiagnosisTextSize] = useState<TextSize>('base');
+  const [personalityTextSize, setPersonalityTextSize] = useState<TextSize>('base');
+  const [strengthsTextSize, setStrengthsTextSize] = useState<TextSize>('base');
 
   const storageKey = useMemo(() => user ? `psych-profile-${user.uid}` : null, [user]);
 
@@ -368,14 +375,22 @@ export default function PsychologicalProfile() {
 
           <TabsContent value="overview" className="mt-6 space-y-6">
               <Card className="bg-card/50 border-border/50" data-tour-id="profile-diagnosis">
-                <CardHeader>
+                <CardHeader className="flex flex-row justify-between items-center">
                     <CardTitle className="flex items-center gap-3 text-xl">
                         <BrainCircuit className="w-6 h-6 text-accent"/>
                         Diagnóstico Descriptivo
                     </CardTitle>
+                    <TextSizeControl size={diagnosisTextSize} onSizeChange={setDiagnosisTextSize} />
                 </CardHeader>
-                <CardContent className="prose prose-sm dark:prose-invert max-w-none">
-                    <ReactMarkdown className="text-foreground/80 whitespace-pre-wrap">{profile.diagnosis}</ReactMarkdown>
+                <CardContent>
+                    <ReactMarkdown className={cn(
+                        "prose dark:prose-invert max-w-none text-foreground/80 leading-relaxed",
+                        {
+                            'text-sm': diagnosisTextSize === 'sm',
+                            'text-base': diagnosisTextSize === 'base',
+                            'text-lg': diagnosisTextSize === 'lg',
+                        }
+                    )}>{profile.diagnosis}</ReactMarkdown>
                 </CardContent>
               </Card>
 
@@ -495,14 +510,24 @@ export default function PsychologicalProfile() {
                 <AccordionItem value="item-1">
                     <Card className="bg-card/50 border-border/50">
                         <AccordionTrigger className="w-full text-left p-6 hover:no-underline [&>svg]:ml-auto">
-                            <CardTitle className="flex items-center gap-3 text-xl">
+                           <div className="flex flex-row justify-between items-center w-full">
+                             <CardTitle className="flex items-center gap-3 text-xl">
                                 <UserCheck className="w-6 h-6 text-accent"/>
                                 Caracterización de la Personalidad
                             </CardTitle>
+                            <TextSizeControl size={personalityTextSize} onSizeChange={setPersonalityTextSize} />
+                           </div>
                         </AccordionTrigger>
                         <AccordionContent>
-                            <CardContent className="prose prose-sm dark:prose-invert max-w-none">
-                                <ReactMarkdown className="text-foreground/80 whitespace-pre-wrap">{profile.personality}</ReactMarkdown>
+                            <CardContent>
+                                <ReactMarkdown className={cn(
+                                    "prose dark:prose-invert max-w-none text-foreground/80 leading-relaxed",
+                                    {
+                                        'text-sm': personalityTextSize === 'sm',
+                                        'text-base': personalityTextSize === 'base',
+                                        'text-lg': personalityTextSize === 'lg',
+                                    }
+                                )}>{profile.personality}</ReactMarkdown>
                             </CardContent>
                         </AccordionContent>
                     </Card>
@@ -511,14 +536,24 @@ export default function PsychologicalProfile() {
                 <AccordionItem value="item-2">
                     <Card className="bg-card/50 border-border/50">
                         <AccordionTrigger className="w-full text-left p-6 hover:no-underline [&>svg]:ml-auto">
-                            <CardTitle className="flex items-center gap-3 text-xl">
-                                <Sparkles className="w-6 h-6 text-accent"/>
-                                Fortalezas Psicológicas
-                            </CardTitle>
+                            <div className="flex flex-row justify-between items-center w-full">
+                                <CardTitle className="flex items-center gap-3 text-xl">
+                                    <Sparkles className="w-6 h-6 text-accent"/>
+                                    Fortalezas Psicológicas
+                                </CardTitle>
+                                <TextSizeControl size={strengthsTextSize} onSizeChange={setStrengthsTextSize} />
+                            </div>
                         </AccordionTrigger>
                         <AccordionContent>
-                            <CardContent className="prose prose-sm dark:prose-invert max-w-none">
-                                <ReactMarkdown className="text-foreground/80 whitespace-pre-wrap">{profile.strengths}</ReactMarkdown>
+                            <CardContent>
+                                <ReactMarkdown className={cn(
+                                     "prose dark:prose-invert max-w-none text-foreground/80 leading-relaxed",
+                                    {
+                                        'text-sm': strengthsTextSize === 'sm',
+                                        'text-base': strengthsTextSize === 'base',
+                                        'text-lg': strengthsTextSize === 'lg',
+                                    }
+                                )}>{profile.strengths}</ReactMarkdown>
                             </CardContent>
                         </AccordionContent>
                     </Card>
