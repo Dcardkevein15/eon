@@ -1,70 +1,121 @@
+
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { getArticleContent } from '@/app/actions';
+import { generateArticleContent } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronLeft, AlertTriangle, LogIn } from 'lucide-react';
+import { ChevronLeft, AlertTriangle, LogIn, Sparkles, X, Wand2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import ReactMarkdown from 'react-markdown';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { doc, getDoc, setDoc, serverTimestamp, updateDoc, increment } from 'firebase/firestore';
+import type { Article, User } from '@/lib/types';
+import { useDocument } from '@/firebase/use-doc';
 
 export default function ArticlePage() {
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
-  
-  const [content, setContent] = useState<string>('');
+  const firestore = useFirestore();
+
+  const [article, setArticle] = useState<Article | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const category = Array.isArray(params.category) ? params.category[0] : params.category;
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
-  
   const title = slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
+  const articleRef = useMemo(() => firestore && slug ? doc(firestore, 'articles', slug) : undefined, [firestore, slug]);
+  const userRef = useMemo(() => firestore && user ? doc(firestore, 'users', user.uid) : undefined, [firestore, user]);
+
+  const { data: dbArticle, loading: articleLoading } = useDocument<Article>(articleRef);
+  const { data: userData, loading: userLoading } = useDocument<User>(userRef);
+
+  const [credits, setCredits] = useState(0);
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+
   useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
-        setIsLoading(false);
-        return;
-    };
-
-    if (category && slug) {
-      const fetchContent = async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-          const result = await getArticleContent({
-            category: category.replace(/-/g, ' '),
-            slug,
-            title,
-          });
-          setContent(result.content);
-        } catch (err: any) {
-          console.error('Failed to get article content:', err);
-          setError('No se pudo cargar el artículo. Por favor, inténtelo de nuevo más tarde.');
-          toast({
-            variant: 'destructive',
-            title: 'Error de Carga',
-            description: 'No se pudo generar o recuperar el contenido del artículo.',
-          });
-        } finally {
-          setIsLoading(false);
-        }
-      };
-
-      fetchContent();
+    if (userData) {
+      const userCredits = userData.articleGenerationCredits ?? 5; // Default to 5 credits
+      setCredits(userCredits);
+      if (userData.lastCreditRefresh) {
+        setLastRefresh(new Date(userData.lastCreditRefresh));
+      } else if(userRef) {
+        // Initialize credits for first-time users
+        updateDoc(userRef, {
+            articleGenerationCredits: 5,
+            lastCreditRefresh: new Date().toISOString()
+        });
+      }
     }
-  }, [category, slug, title, toast, user, authLoading]);
+  }, [userData, userRef]);
+  
+  useEffect(() => {
+      if(dbArticle) {
+          setArticle(dbArticle);
+          setIsLoading(false);
+      } else {
+          setIsLoading(articleLoading);
+      }
+  }, [dbArticle, articleLoading]);
+
+
+  const handleGenerateArticle = async () => {
+    if (!user || !firestore || !slug || !userRef || credits <= 0) {
+      toast({ variant: 'destructive', title: 'Error', description: 'No tienes créditos suficientes o no has iniciado sesión.' });
+      return;
+    }
+
+    setIsGenerating(true);
+    setError(null);
+    try {
+      const result = await generateArticleContent({
+        category: category.replace(/-/g, ' '),
+        slug,
+        title,
+      });
+      
+      const newArticle = {
+        title,
+        slug,
+        category,
+        content: result.content,
+        createdAt: serverTimestamp()
+      };
+      
+      await setDoc(articleRef, newArticle);
+      await updateDoc(userRef, {
+          articleGenerationCredits: increment(-1),
+          lastCreditRefresh: new Date().toISOString()
+      });
+
+      setArticle({ ...newArticle, id: slug, createdAt: new Date() } as Article);
+      setCredits(prev => prev -1);
+
+    } catch (err: any) {
+      console.error('Failed to generate or save article content:', err);
+      setError('No se pudo generar el artículo. Por favor, inténtelo de nuevo más tarde.');
+      toast({
+        variant: 'destructive',
+        title: 'Error de Generación',
+        description: 'No se pudo generar o guardar el contenido del artículo.',
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
 
   const renderContent = () => {
-    if (isLoading || authLoading) {
+    if (isLoading || authLoading || userLoading) {
        return (
           <article className="space-y-6">
             <Skeleton className="h-10 w-full" />
@@ -106,6 +157,25 @@ export default function ArticlePage() {
           </div>
         );
     }
+    
+    if (!article) {
+        return (
+            <div className="text-center border rounded-lg p-8 bg-card/50">
+                <h2 className="text-2xl font-bold text-primary">Artículo no Generado</h2>
+                <p className="text-muted-foreground mt-2">Este artículo aún no ha sido creado por nuestra IA.</p>
+                <div className='mt-6'>
+                    <Button onClick={handleGenerateArticle} disabled={isGenerating || credits <= 0}>
+                        {isGenerating ? (
+                            <><Sparkles className="mr-2 h-4 w-4 animate-spin" /> Generando...</>
+                        ) : (
+                            <><Wand2 className="mr-2 h-4 w-4" /> Gastar 1 crédito para generar</>
+                        )}
+                    </Button>
+                    <p className="text-xs text-muted-foreground mt-2">Te quedan {credits} créditos.</p>
+                </div>
+            </div>
+        )
+    }
 
     return (
         <motion.article
@@ -122,7 +192,7 @@ export default function ArticlePage() {
                 a: ({node, ...props}) => <a className="text-accent hover:underline" {...props} />,
               }}
             >
-              {content}
+              {article.content}
             </ReactMarkdown>
           </motion.article>
     );
@@ -144,3 +214,5 @@ export default function ArticlePage() {
     </div>
   );
 }
+
+    

@@ -1,9 +1,10 @@
+
 'use server';
 /**
  * @fileOverview Flujos de Genkit para la generación de contenido del blog.
  *
  * - generateArticleTitles: Genera una lista de títulos de artículos para una categoría.
- * - generateArticleContent: Genera el contenido completo de un artículo a partir de un título y lo guarda en Firestore.
+ * - generateArticleContent: Genera el contenido completo de un artículo a partir de un título. NO lo guarda en Firestore.
  */
 
 import { ai } from '@/ai/genkit';
@@ -17,8 +18,6 @@ import {
   type GenerateArticleContentInput,
   type GenerateArticleContentOutput,
 } from '@/lib/types';
-import { getAdminApp } from '@/lib/firebase-admin';
-import * as admin from 'firebase-admin';
 
 
 // --- Flujo para generar Títulos de Artículos ---
@@ -54,7 +53,7 @@ export const generateArticleTitles = ai.defineFlow(
 );
 
 
-// --- Flujo para generar y guardar Contenido de Artículo ---
+// --- Flujo para generar Contenido de Artículo ---
 
 const articleContentPrompt = ai.definePrompt({
   name: 'articleContentPrompt',
@@ -83,35 +82,15 @@ export const generateArticleContent = ai.defineFlow(
     outputSchema: GenerateArticleContentOutputSchema,
   },
   async (input) => {
-    const adminApp = getAdminApp();
-    if (!adminApp) {
-      throw new Error('La aplicación de administración de Firebase no está inicializada.');
-    }
-    const firestore = admin.firestore(adminApp);
-    
-    // 1. Check if the article exists in Firestore
-    const articleRef = firestore.collection('articles').doc(input.slug);
-    const docSnap = await articleRef.get();
-
-    if (docSnap.exists) {
-      return { content: docSnap.data()!.content };
-    }
-
-    // 2. If not, generate it
+    // 1. Generate the article content
     const { output: generatedOutput } = await articleContentPrompt(input);
-     if (!generatedOutput?.content) {
+    if (!generatedOutput?.content) {
       throw new Error('No se pudo generar el contenido del artículo.');
     }
-
-    // 3. Save it for next time
-    await articleRef.set({
-        title: input.title,
-        slug: input.slug,
-        category: input.category,
-        content: generatedOutput.content,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
+    
+    // 2. Return the content to the client to be saved.
     return generatedOutput;
   }
 );
+
+    

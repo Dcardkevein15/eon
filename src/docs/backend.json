@@ -16,7 +16,16 @@
             "items": { "type": "string" },
             "description": "User roles (e.g., 'admin', 'professional')."
         },
-        "therapistId": { "type": "string", "description": "The ID of the associated therapist profile, if any." }
+        "therapistId": { "type": "string", "description": "The ID of the associated therapist profile, if any." },
+        "articleGenerationCredits": {
+          "type": "number",
+          "description": "Number of credits available for generating articles."
+        },
+        "lastCreditRefresh": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The last time the user's article generation credits were refreshed."
+        }
       },
       "required": ["uid"]
     },
@@ -175,8 +184,11 @@
         "schema": { "$ref": "#/entities/article" },
         "rules": {
             "read": "request.auth != null",
-            "write": "request.auth.token.roles.hasAny(['admin'])"
+            "create": "request.auth != null && request.resource.data.keys().hasOnly(['title', 'slug', 'category', 'content', 'createdAt']) && request.resource.data.createdAt == request.time",
+            "update": "request.auth.token.roles.hasAny(['admin'])"
         }
     }
   }
 }
+
+    

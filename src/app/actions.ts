@@ -268,7 +268,9 @@ export async function generateArticleTitles(input: GenerateArticleTitlesInput): 
     return genTitlesFlow(input);
 }
 
-export async function getArticleContent(input: GenerateArticleContentInput): Promise<GenerateArticleContentOutput> {
-    // The entire logic is now within the Genkit flow to run on the server with admin privileges.
+export async function generateArticleContent(input: GenerateArticleContentInput): Promise<GenerateArticleContentOutput> {
+    // The Genkit flow now only generates content, it does not write to the DB.
     return genContentFlow(input);
 }
+
+    
