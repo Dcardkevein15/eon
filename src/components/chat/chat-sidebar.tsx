@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Plus, Trash2, History, Briefcase, UserCircle, Dumbbell, Star, BarChartHorizontal, Loader2, Route } from 'lucide-react';
+import { Plus, Trash2, History, Briefcase, UserCircle, Dumbbell, Star, BarChartHorizontal, Loader2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,7 +31,6 @@ import {
 } from '@/components/ui/sidebar';
 import { useAuth } from '@/firebase';
 import { usePathname } from 'next/navigation';
-import { useTour } from '@/features/tour/use-tour';
 
 interface ChatSidebarProps {
   chats: Chat[];
@@ -54,7 +53,6 @@ function ChatSidebar({
   const { user } = useAuth();
   const pathname = usePathname();
   const [isCreatingChat, setIsCreatingChat] = useState(false);
-  const { startTour } = useTour();
 
   useEffect(() => {
     setIsClient(true);
@@ -195,10 +193,6 @@ function ChatSidebar({
       </SidebarContent>
       <SidebarFooter>
          <div className="flex flex-col gap-1">
-            <Button variant="ghost" className="w-full justify-start" onClick={() => startTour('main', true)}>
-              <Route className="mr-2 h-4 w-4" />
-              Reiniciar Recorrido
-            </Button>
             {isClient && chats.length > 0 && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>

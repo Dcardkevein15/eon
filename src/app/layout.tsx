@@ -6,7 +6,6 @@ import { cn } from '@/lib/utils';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { ThemeProvider } from '@/components/theme-provider';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
-import { TourProvider } from '@/features/tour/TourProvider';
 
 export const metadata: Metadata = {
   title: '¡tu-psicologo-ya!',
@@ -41,11 +40,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <FirebaseClientProvider>
-            <TourProvider>
               <FirebaseErrorListener />
               {children}
               <Toaster />
-            </TourProvider>
           </FirebaseClientProvider>
         </ThemeProvider>
       </body>

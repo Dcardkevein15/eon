@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BrainCircuit, UserCheck, ShieldCheck, ListChecks, ChevronLeft, Sparkles, Filter, ShieldQuestion, Info, RefreshCcw, LineChart, Target, Repeat, Star, Shield, AlertTriangle, GitCommit, LayoutDashboard, BarChart3, Search, Route } from 'lucide-react';
+import { BrainCircuit, UserCheck, ShieldCheck, ListChecks, ChevronLeft, Sparkles, Filter, ShieldQuestion, Info, RefreshCcw, LineChart, Target, Repeat, Star, Shield, AlertTriangle, GitCommit, LayoutDashboard, BarChart3, Search, Cog } from 'lucide-react';
 import Link from 'next/link';
 import { Progress } from '@/components/ui/progress';
 import { format } from 'date-fns';
@@ -22,7 +22,6 @@ import dynamic from 'next/dynamic';
 import { useTheme } from 'next-themes';
 import { generateProfileOnServer } from './actions';
 import { useToast } from '@/hooks/use-toast';
-import { useTour } from '@/features/tour/use-tour';
 import { motion } from 'framer-motion';
 
 const EmotionalConstellation = dynamic(() => import('@/components/profile/EmotionalConstellation'), {
@@ -35,7 +34,6 @@ export default function PsychologicalProfile() {
   const firestore = useFirestore();
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
-  const { startTour } = useTour();
   
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -130,8 +128,7 @@ export default function PsychologicalProfile() {
 
   useEffect(() => {
     setIsClient(true);
-    startTour('profile');
-  }, [startTour]);
+  }, []);
 
   const authLoading = authLoadingFromHook || !isClient;
 
@@ -324,10 +321,6 @@ export default function PsychologicalProfile() {
                     <ChevronLeft className="h-4 w-4 mr-2" />
                     Volver al Chat
                 </Link>
-            </Button>
-             <Button variant="ghost" size="icon" onClick={() => startTour('profile', true)}>
-                <Route className="h-5 w-5" />
-                <span className="sr-only">Iniciar Recorrido</span>
             </Button>
         </div>
 

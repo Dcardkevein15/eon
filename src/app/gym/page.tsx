@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, ChevronLeft, Route } from 'lucide-react';
+import { ArrowRight, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth, useFirestore, useCollection } from '@/firebase';
 import { collection, addDoc, serverTimestamp, updateDoc, query, orderBy, deleteDoc, doc, Timestamp } from 'firebase/firestore';

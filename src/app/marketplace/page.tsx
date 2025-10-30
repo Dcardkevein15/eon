@@ -9,7 +9,7 @@ import ChatSidebar from '@/components/chat/chat-sidebar';
 import { useAuth, useCollection, useFirestore } from '@/firebase';
 import { collection, query, where, orderBy } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, ChevronLeft, Route } from 'lucide-react';
+import { PlusCircle, ChevronLeft } from 'lucide-react';
 import TherapistEditModal from '@/components/marketplace/therapist-edit-modal';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';

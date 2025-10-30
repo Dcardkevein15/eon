@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, Play, BrainCircuit, Bot, Sparkles, ChevronLeft, History, TrendingUp, TrendingDown, PauseCircle, Route } from 'lucide-react';
+import { Loader2, Play, BrainCircuit, Bot, Sparkles, ChevronLeft, History, TrendingUp, TrendingDown, PauseCircle } from 'lucide-react';
 import type { TradingSignal, CryptoDebateTurn, TradingAnalysisRecord, FullCryptoAnalysis, Coin, MarketData } from '@/lib/types';
 import { runCryptoAnalysis, getCoinList } from '@/ai/flows/crypto-analysis-flow';
 import Link from 'next/link';

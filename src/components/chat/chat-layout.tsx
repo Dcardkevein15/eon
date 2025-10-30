@@ -28,7 +28,6 @@ import { cn } from '@/lib/utils';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { determineAnchorRole } from '@/app/actions';
-import { useTour } from '@/features/tour/use-tour';
 
 interface ChatLayoutProps {
   chatId?: string;
@@ -39,13 +38,10 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
   const { user, loading: authLoading } = useAuth();
   const firestore = useFirestore();
   const [isClient, setIsClient] = useState(false);
-  const { startTour } = useTour();
 
   useEffect(() => {
     setIsClient(true);
-    // Start the main tour when the app loads
-    startTour('main');
-  }, [startTour]);
+  }, []);
 
   const chatsQuery = useMemo(
     () =>
