@@ -5,16 +5,17 @@ import { ai } from '@/ai/genkit';
 import { smartComposeMessage } from '@/ai/flows/smart-compose-message';
 import { getInitialPrompts } from '@/ai/flows/initial-prompt-suggestion';
 import { generateChatTitle as genTitle } from '@/ai/flows/generate-chat-title';
-import { collection, getDocs, query, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, Timestamp, doc, getDoc, setDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { SUGGESTIONS_FALLBACK } from '@/lib/suggestions-fallback';
 import { generateBreakdownExercise as genExercise } from '@/ai/flows/generate-breakdown-exercise';
-import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, ProfileData, PromptSuggestion, InterpretDreamInput, DreamInterpretation, AnalyzeSentimentInput, AnalyzeSentimentOutput, GetTacticalAdviceInput, GetTacticalAdviceOutput, ClassifyIntentInput, ClassifyIntentOutput, AnalyzeVoiceInput, AnalyzeVoiceOutput } from '@/lib/types';
+import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, ProfileData, PromptSuggestion, InterpretDreamInput, DreamInterpretation, AnalyzeSentimentInput, AnalyzeSentimentOutput, GetTacticalAdviceInput, GetTacticalAdviceOutput, ClassifyIntentInput, ClassifyIntentOutput, AnalyzeVoiceInput, AnalyzeVoiceOutput, GenerateArticleTitlesInput, GenerateArticleTitlesOutput, GenerateArticleContentInput, GenerateArticleContentOutput } from '@/lib/types';
 import { interpretDream as interpretDreamFlow } from '@/ai/flows/interpret-dream';
 import { analyzeSentiment as analyzeSentimentFlow } from '@/ai/flows/analyze-sentiment';
 import { getTacticalAdvice as getTacticalAdviceFlow } from '@/ai/flows/get-tactical-advice';
 import { classifyIntent as classifyIntentFlow } from '@/ai/flows/classify-intent';
 import { analyzeVoiceMessage as analyzeVoiceMessageFlow } from '@/ai/flows/analyze-voice-message';
+import { generateArticleTitles as genTitlesFlow, generateArticleContent as genContentFlow } from '@/ai/flows/blog-flows';
 
 
 const expertRoles = [
@@ -259,4 +260,34 @@ export async function analyzeVoiceMessageAction(input: AnalyzeVoiceInput): Promi
     console.error('Error analyzing voice message:', error);
     return { transcription: 'Error al transcribir el audio.' };
   }
+}
+
+// --- Blog Actions ---
+
+export async function generateArticleTitles(input: GenerateArticleTitlesInput): Promise<GenerateArticleTitlesOutput> {
+    return genTitlesFlow(input);
+}
+
+export async function getArticleContent(input: GenerateArticleContentInput): Promise<GenerateArticleContentOutput> {
+    // First, check if the article exists in Firestore
+    const articleRef = doc(firestore, 'articles', input.slug);
+    const docSnap = await getDoc(articleRef);
+
+    if (docSnap.exists()) {
+        return { content: docSnap.data().content };
+    }
+
+    // If not, generate it
+    const generatedContent = await genContentFlow(input);
+
+    // Then, save it for next time
+    await setDoc(articleRef, {
+        title: input.title,
+        slug: input.slug,
+        category: input.category,
+        content: generatedContent.content,
+        createdAt: serverTimestamp(),
+    });
+
+    return generatedContent;
 }

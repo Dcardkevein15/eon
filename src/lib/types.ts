@@ -381,3 +381,36 @@ export const AnalyzeVoiceOutputSchema = z.object({
   transcription: z.string().describe('El texto transcrito del audio.'),
 });
 export type AnalyzeVoiceOutput = z.infer<typeof AnalyzeVoiceOutputSchema>;
+
+
+// --- Blog Types ---
+export const GenerateArticleTitlesInputSchema = z.object({
+  category: z.string(),
+});
+export type GenerateArticleTitlesInput = z.infer<typeof GenerateArticleTitlesInputSchema>;
+
+export const GenerateArticleTitlesOutputSchema = z.object({
+  titles: z.array(z.string()),
+});
+export type GenerateArticleTitlesOutput = z.infer<typeof GenerateArticleTitlesOutputSchema>;
+
+export const GenerateArticleContentInputSchema = z.object({
+  category: z.string(),
+  title: z.string(),
+  slug: z.string(),
+});
+export type GenerateArticleContentInput = z.infer<typeof GenerateArticleContentInputSchema>;
+
+export const GenerateArticleContentOutputSchema = z.object({
+  content: z.string(),
+});
+export type GenerateArticleContentOutput = z.infer<typeof GenerateArticleContentOutputSchema>;
+
+export type Article = {
+  id: string;
+  title: string;
+  slug: string;
+  category: string;
+  content: string;
+  createdAt: Timestamp;
+};

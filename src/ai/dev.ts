@@ -18,3 +18,4 @@ import '@/ai/flows/analyze-voice-message.ts';
 import '@/ai/flows/speech.ts';
 import '@/ai/flows/generate-image-prompt.ts';
 import '@/ai/flows/generate-image-x.ts';
+import '@/ai/flows/blog-flows.ts';
