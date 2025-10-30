@@ -172,13 +172,11 @@
         }
     },
     "/articles/{articleSlug}": {
-      "schema": { "$ref": "#/entities/article" },
-      "rules": {
-        "read": "true",
-        "write": "true"
-      }
+        "schema": { "$ref": "#/entities/article" },
+        "rules": {
+            "read": "request.auth != null",
+            "write": "request.auth.token.roles.hasAny(['admin'])"
+        }
     }
   }
 }
-
-    

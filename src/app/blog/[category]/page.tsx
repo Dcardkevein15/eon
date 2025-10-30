@@ -8,8 +8,10 @@ import { generateArticleTitles } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronLeft, ArrowRight, FileText } from 'lucide-react';
+import { ChevronLeft, ArrowRight, FileText, LogIn } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/firebase';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 function slugify(text: string) {
   return text
@@ -25,6 +27,8 @@ export default function ArticleListPage() {
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
+  const { user, loading: authLoading } = useAuth();
+
   const [titles, setTitles] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -32,6 +36,12 @@ export default function ArticleListPage() {
   const formattedCategory = category.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
   useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+        setIsLoading(false);
+        return;
+    }
+
     if (category) {
       const fetchTitles = async () => {
         setIsLoading(true);
@@ -53,35 +63,31 @@ export default function ArticleListPage() {
 
       fetchTitles();
     }
-  }, [category, formattedCategory, router, toast]);
+  }, [category, formattedCategory, router, toast, user, authLoading]);
 
-  return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-        <header className="mb-12">
-          <Button asChild variant="ghost" className="-ml-4 text-muted-foreground hover:bg-accent/10 hover:text-foreground">
-            <Link href="/blog">
-              <ChevronLeft className="h-4 w-4 mr-2" />
-              Volver a Categorías
-            </Link>
-          </Button>
-          <div className="mt-4">
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-primary">
-              {formattedCategory}
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              Artículos generados por IA para profundizar en este tema. Elige uno para leerlo.
-            </p>
-          </div>
-        </header>
+  const renderContent = () => {
+     if (isLoading || authLoading) {
+      return (
+        Array.from({ length: 5 }).map((_, index) => (
+            <Skeleton key={index} className="h-28 w-full" />
+        ))
+      )
+    }
 
-        <div className="space-y-6">
-          {isLoading ? (
-            Array.from({ length: 5 }).map((_, index) => (
-              <Skeleton key={index} className="h-28 w-full" />
-            ))
-          ) : (
-            titles.map((title) => (
+    if (!user) {
+      return (
+        <Alert>
+          <LogIn className="h-4 w-4" />
+          <AlertTitle>Acceso Restringido</AlertTitle>
+          <AlertDescription>
+            Debes iniciar sesión para ver los artículos de esta categoría.
+          </AlertDescription>
+        </Alert>
+      )
+    }
+
+    return (
+        titles.map((title) => (
               <motion.div
                 key={title}
                 initial={{ opacity: 0, y: 20 }}
@@ -105,8 +111,32 @@ export default function ArticleListPage() {
                   </Card>
                 </Link>
               </motion.div>
-            ))
-          )}
+        ))
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+        <header className="mb-12">
+          <Button asChild variant="ghost" className="-ml-4 text-muted-foreground hover:bg-accent/10 hover:text-foreground">
+            <Link href="/blog">
+              <ChevronLeft className="h-4 w-4 mr-2" />
+              Volver a Categorías
+            </Link>
+          </Button>
+          <div className="mt-4">
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-primary">
+              {formattedCategory}
+            </h1>
+            <p className="text-muted-foreground mt-2">
+              { user ? 'Artículos generados por IA para profundizar en este tema. Elige uno para leerlo.' : 'Inicia sesión para explorar nuestros artículos.'}
+            </p>
+          </div>
+        </header>
+
+        <div className="space-y-6">
+            {renderContent()}
         </div>
       </div>
     </div>

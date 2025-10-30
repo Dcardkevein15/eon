@@ -2,9 +2,11 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowRight, BrainCircuit, Heart, Users, GitMerge, Sun, Moon } from 'lucide-react';
+import { ArrowRight, BrainCircuit, Heart, Users, GitMerge, Sun, Moon, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
+import { useAuth } from '@/firebase';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const categories = [
   {
@@ -52,6 +54,8 @@ const categories = [
 ];
 
 export default function BlogCategoriesPage() {
+  const { user, loading } = useAuth();
+  
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -72,47 +76,57 @@ export default function BlogCategoriesPage() {
           </div>
         </header>
 
-        <motion.div
-          className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
-          initial="hidden"
-          animate="visible"
-          variants={{
-            visible: {
-              transition: {
-                staggerChildren: 0.1,
+        { !loading && !user ? (
+           <Alert className="max-w-xl mx-auto">
+            <LogIn className="h-4 w-4" />
+            <AlertTitle>Acceso Exclusivo</AlertTitle>
+            <AlertDescription>
+              Inicia sesión para explorar nuestras categorías y leer los artículos.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <motion.div
+            className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
+            initial="hidden"
+            animate="visible"
+            variants={{
+              visible: {
+                transition: {
+                  staggerChildren: 0.1,
+                },
               },
-            },
-          }}
-        >
-          {categories.map((category) => (
-            <motion.div
-              key={category.slug}
-              variants={{
-                hidden: { opacity: 0, y: 20 },
-                visible: { opacity: 1, y: 0 },
-              }}
-            >
-              <Link href={`/blog/${category.slug}`} passHref>
-                <div className="h-full block group relative overflow-hidden rounded-xl border border-border bg-card/50 p-6 transition-all duration-300 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/10">
-                   <div className="absolute -right-10 -bottom-10 opacity-10 group-hover:opacity-20 group-hover:scale-125 transition-all duration-500">
-                     <category.icon className="w-32 h-32" />
-                  </div>
-                  <div className="relative z-10">
-                    <div className={`mb-4 inline-block rounded-lg bg-gradient-to-br ${category.color} p-3`}>
-                      <category.icon className="h-6 w-6 text-white" />
+            }}
+          >
+            {categories.map((category) => (
+              <motion.div
+                key={category.slug}
+                variants={{
+                  hidden: { opacity: 0, y: 20 },
+                  visible: { opacity: 1, y: 0 },
+                }}
+              >
+                <Link href={`/blog/${category.slug}`} passHref>
+                  <div className="h-full block group relative overflow-hidden rounded-xl border border-border bg-card/50 p-6 transition-all duration-300 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/10">
+                    <div className="absolute -right-10 -bottom-10 opacity-10 group-hover:opacity-20 group-hover:scale-125 transition-all duration-500">
+                      <category.icon className="w-32 h-32" />
                     </div>
-                    <h2 className="text-xl font-bold text-foreground">{category.name}</h2>
-                    <p className="mt-2 text-sm text-muted-foreground">{category.description}</p>
-                    <div className="mt-4 flex items-center text-xs font-semibold text-primary/80 transition-colors group-hover:text-primary">
-                      <span>Explorar Categoría</span>
-                      <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                    <div className="relative z-10">
+                      <div className={`mb-4 inline-block rounded-lg bg-gradient-to-br ${category.color} p-3`}>
+                        <category.icon className="h-6 w-6 text-white" />
+                      </div>
+                      <h2 className="text-xl font-bold text-foreground">{category.name}</h2>
+                      <p className="mt-2 text-sm text-muted-foreground">{category.description}</p>
+                      <div className="mt-4 flex items-center text-xs font-semibold text-primary/80 transition-colors group-hover:text-primary">
+                        <span>Explorar Categoría</span>
+                        <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Link>
-            </motion.div>
-          ))}
-        </motion.div>
+                </Link>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
       </div>
     </div>
   );
