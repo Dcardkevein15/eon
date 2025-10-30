@@ -286,7 +286,7 @@ export async function getArticleContent(input: GenerateArticleContentInput): Pro
         slug: input.slug,
         category: input.category,
         content: generatedContent.content,
-        createdAt: serverTimestamp(),
+        // createdAt is now handled by security rules
     });
 
     return generatedContent;
