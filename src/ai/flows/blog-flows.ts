@@ -17,8 +17,8 @@ import {
   type GenerateArticleContentInput,
   type GenerateArticleContentOutput,
 } from '@/lib/types';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { firestore } from '@/lib/firebase'; // Assuming server-side firebase instance
+import { getAdminApp } from '@/lib/firebase-admin';
+import * as admin from 'firebase-admin';
 
 
 // --- Flujo para generar Títulos de Artículos ---
@@ -83,12 +83,18 @@ export const generateArticleContent = ai.defineFlow(
     outputSchema: GenerateArticleContentOutputSchema,
   },
   async (input) => {
+    const adminApp = getAdminApp();
+    if (!adminApp) {
+      throw new Error('La aplicación de administración de Firebase no está inicializada.');
+    }
+    const firestore = admin.firestore(adminApp);
+    
     // 1. Check if the article exists in Firestore
-    const articleRef = doc(firestore, 'articles', input.slug);
-    const docSnap = await getDoc(articleRef);
+    const articleRef = firestore.collection('articles').doc(input.slug);
+    const docSnap = await articleRef.get();
 
-    if (docSnap.exists()) {
-      return { content: docSnap.data().content };
+    if (docSnap.exists) {
+      return { content: docSnap.data()!.content };
     }
 
     // 2. If not, generate it
@@ -98,12 +104,12 @@ export const generateArticleContent = ai.defineFlow(
     }
 
     // 3. Save it for next time
-    await setDoc(articleRef, {
+    await articleRef.set({
         title: input.title,
         slug: input.slug,
         category: input.category,
         content: generatedOutput.content,
-        createdAt: serverTimestamp(),
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
     return generatedOutput;
