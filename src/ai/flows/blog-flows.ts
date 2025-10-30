@@ -3,7 +3,7 @@
  * @fileOverview Flujos de Genkit para la generación de contenido del blog.
  *
  * - generateArticleTitles: Genera una lista de títulos de artículos para una categoría.
- * - generateArticleContent: Genera el contenido completo de un artículo a partir de un título.
+ * - generateArticleContent: Genera el contenido completo de un artículo a partir de un título y lo guarda en Firestore.
  */
 
 import { ai } from '@/ai/genkit';
@@ -14,10 +14,11 @@ import {
   GenerateArticleContentInputSchema,
   GenerateArticleContentOutputSchema,
   type GenerateArticleTitlesInput,
-  type GenerateArticleTitlesOutput,
   type GenerateArticleContentInput,
   type GenerateArticleContentOutput,
 } from '@/lib/types';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { firestore } from '@/lib/firebase'; // Assuming server-side firebase instance
 
 
 // --- Flujo para generar Títulos de Artículos ---
@@ -53,7 +54,7 @@ export const generateArticleTitles = ai.defineFlow(
 );
 
 
-// --- Flujo para generar Contenido de Artículo ---
+// --- Flujo para generar y guardar Contenido de Artículo ---
 
 const articleContentPrompt = ai.definePrompt({
   name: 'articleContentPrompt',
@@ -82,10 +83,29 @@ export const generateArticleContent = ai.defineFlow(
     outputSchema: GenerateArticleContentOutputSchema,
   },
   async (input) => {
-    const { output } = await articleContentPrompt(input);
-     if (!output?.content) {
+    // 1. Check if the article exists in Firestore
+    const articleRef = doc(firestore, 'articles', input.slug);
+    const docSnap = await getDoc(articleRef);
+
+    if (docSnap.exists()) {
+      return { content: docSnap.data().content };
+    }
+
+    // 2. If not, generate it
+    const { output: generatedOutput } = await articleContentPrompt(input);
+     if (!generatedOutput?.content) {
       throw new Error('No se pudo generar el contenido del artículo.');
     }
-    return output;
+
+    // 3. Save it for next time
+    await setDoc(articleRef, {
+        title: input.title,
+        slug: input.slug,
+        category: input.category,
+        content: generatedOutput.content,
+        createdAt: serverTimestamp(),
+    });
+
+    return generatedOutput;
   }
 );

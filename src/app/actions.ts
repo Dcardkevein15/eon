@@ -269,25 +269,6 @@ export async function generateArticleTitles(input: GenerateArticleTitlesInput): 
 }
 
 export async function getArticleContent(input: GenerateArticleContentInput): Promise<GenerateArticleContentOutput> {
-    // First, check if the article exists in Firestore
-    const articleRef = doc(firestore, 'articles', input.slug);
-    const docSnap = await getDoc(articleRef);
-
-    if (docSnap.exists()) {
-        return { content: docSnap.data().content };
-    }
-
-    // If not, generate it
-    const generatedContent = await genContentFlow(input);
-
-    // Then, save it for next time
-    await setDoc(articleRef, {
-        title: input.title,
-        slug: input.slug,
-        category: input.category,
-        content: generatedContent.content,
-        createdAt: serverTimestamp(),
-    });
-
-    return generatedContent;
+    // The entire logic is now within the Genkit flow to run on the server with admin privileges.
+    return genContentFlow(input);
 }

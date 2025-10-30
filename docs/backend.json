@@ -175,7 +175,7 @@
         "schema": { "$ref": "#/entities/article" },
         "rules": {
             "read": "true",
-            "write": "true"
+            "write": "request.auth.token.roles.hasAny(['admin'])"
         }
     }
   }
