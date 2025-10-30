@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BrainCircuit, UserCheck, ShieldCheck, ListChecks, ChevronLeft, Sparkles, Filter, ShieldQuestion, Info, RefreshCcw, LineChart, Target, Repeat, Star, Shield, AlertTriangle, GitCommit, LayoutDashboard, BarChart3, Search, Route } from 'lucide-react';
+import { BrainCircuit, UserCheck, ShieldCheck, ListChecks, ChevronLeft, Sparkles, Filter, ShieldQuestion, Info, RefreshCcw, LineChart, Target, Repeat, Star, Shield, AlertTriangle, GitCommit, LayoutDashboard, BarChart3, Search, Route, Cog } from 'lucide-react';
 import Link from 'next/link';
 import { Progress } from '@/components/ui/progress';
 import { format } from 'date-fns';
@@ -22,6 +22,8 @@ import dynamic from 'next/dynamic';
 import { useTheme } from 'next-themes';
 import { generateProfileOnServer } from './actions';
 import { useToast } from '@/hooks/use-toast';
+import { useTour } from '@/features/tour/use-tour';
+import { motion } from 'framer-motion';
 
 const EmotionalConstellation = dynamic(() => import('@/components/profile/EmotionalConstellation'), {
   ssr: false,
@@ -33,6 +35,7 @@ export default function PsychologicalProfile() {
   const firestore = useFirestore();
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
+  const { startTour } = useTour();
   
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -51,7 +54,7 @@ export default function PsychologicalProfile() {
   const { data: chats, loading: chatsLoading } = useCollection<Chat>(chatsQuery);
 
  const fetchAndGenerateProfile = useCallback(async () => {
-    if (!user || !firestore || !storageKey || !chats) {
+    if (!user || !firestore || !storageKey ) {
       setLoading(false);
       setError('Datos insuficientes o no has iniciado sesión.');
       return;
@@ -67,38 +70,26 @@ export default function PsychologicalProfile() {
 
     try {
       setProgress(10);
-      if (chats.length === 0) {
-        throw new Error('No hay conversaciones para analizar. ¡Inicia un chat para generar tu perfil!');
-      }
-      
       let fullChatHistory = '';
-      let latestTimestamp = 0;
-
-      setProgress(20);
-      for (const chat of chats) {
-        fullChatHistory += `--- INICIO DEL CHAT: ${chat.title} ---\n`;
-        const messagesQuery = query(collection(firestore, `users/${user.uid}/chats/${chat.id}/messages`), orderBy('timestamp', 'asc'));
-        const messagesSnapshot = await getDocs(messagesQuery);
-        
-        messagesSnapshot.forEach(doc => {
-          const msg = doc.data() as Message;
-          const date = msg.timestamp && typeof (msg.timestamp as any).toDate === 'function'
-              ? (msg.timestamp as Timestamp).toDate()
-              : new Date(msg.timestamp as any);
-          fullChatHistory += `[${date.toISOString()}] ${msg.role}: ${msg.content}\n`;
-        });
-
-        const chatTimestamp = chat.latestMessageAt 
-            ? (chat.latestMessageAt as Timestamp).toMillis()
-            : (chat.createdAt as Timestamp).toMillis();
-        
-        if (chatTimestamp > latestTimestamp) {
-            latestTimestamp = chatTimestamp;
+      if (chats && chats.length > 0) {
+        setProgress(20);
+        for (const chat of chats) {
+          fullChatHistory += `--- INICIO DEL CHAT: ${chat.title} ---\n`;
+          const messagesQuery = query(collection(firestore, `users/${user.uid}/chats/${chat.id}/messages`), orderBy('timestamp', 'asc'));
+          const messagesSnapshot = await getDocs(messagesQuery);
+          
+          messagesSnapshot.forEach(doc => {
+            const msg = doc.data() as Message;
+            const date = msg.timestamp && typeof (msg.timestamp as any).toDate === 'function'
+                ? (msg.timestamp as Timestamp).toDate()
+                : new Date(msg.timestamp as any);
+            fullChatHistory += `[${date.toISOString()}] ${msg.role}: ${msg.content}\n`;
+          });
+          fullChatHistory += `--- FIN DEL CHAT ---\n\n`;
         }
-        fullChatHistory += `--- FIN DEL CHAT ---\n\n`;
       }
       setProgress(50);
-
+      
       if (!fullChatHistory.trim()) {
         throw new Error('Tus conversaciones están vacías. No se puede generar un perfil.');
       }
@@ -139,7 +130,8 @@ export default function PsychologicalProfile() {
 
   useEffect(() => {
     setIsClient(true);
-  }, []);
+    startTour('profile');
+  }, [startTour]);
 
   const authLoading = authLoadingFromHook || !isClient;
 
@@ -214,12 +206,63 @@ export default function PsychologicalProfile() {
 
   if (generating) {
     return (
-      <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full flex flex-col items-center justify-center min-h-[60vh] text-center">
-          <h2 className="text-2xl font-semibold mb-4 bg-clip-text text-transparent bg-gradient-to-br from-chart-5 via-chart-1 to-chart-2">Generando tu Cianotipo Psicológico...</h2>
-          <p className="text-muted-foreground mb-8 max-w-md">La IA está analizando tu historial para crear un informe evolutivo. Este proceso puede tardar hasta un minuto.</p>
-          <div className='w-full max-w-md space-y-4'>
-            <Progress value={progress} className="w-full h-3" />
-            <p className='text-center text-sm font-medium text-primary'>{Math.round(progress)}%</p>
+      <div className="fixed inset-0 bg-background flex flex-col items-center justify-center text-center overflow-hidden">
+          {/* Fondo de engranajes animados */}
+          <div className="absolute inset-0 z-0 opacity-10">
+              <motion.div
+                  className="absolute"
+                  style={{ top: '10%', left: '15%', width: '20vw', height: '20vw' }}
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 20, ease: 'linear' }}
+              >
+                  <Cog className="w-full h-full text-foreground" />
+              </motion.div>
+              <motion.div
+                  className="absolute"
+                  style={{ bottom: '5%', right: '10%', width: '30vw', height: '30vw' }}
+                  animate={{ rotate: -360 }}
+                  transition={{ repeat: Infinity, duration: 25, ease: 'linear' }}
+              >
+                  <Cog className="w-full h-full text-foreground" />
+              </motion.div>
+              <motion.div
+                  className="absolute"
+                  style={{ top: '50%', left: '5%', width: '15vw', height: '15vw' }}
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 18, ease: 'linear' }}
+              >
+                  <Cog className="w-full h-full text-foreground" />
+              </motion.div>
+              <motion.div
+                  className="absolute"
+                  style={{ top: '20%', right: '25%', width: '10vw', height: '10vw' }}
+                  animate={{ rotate: -360 }}
+                  transition={{ repeat: Infinity, duration: 30, ease: 'linear' }}
+              >
+                  <Cog className="w-full h-full text-foreground" />
+              </motion.div>
+          </div>
+          
+          {/* Engranaje central y texto */}
+          <div className="relative z-10 p-4">
+              <motion.div
+                  className="relative w-48 h-48 md:w-64 md:h-64 mx-auto mb-8"
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 15, ease: 'linear' }}
+              >
+                  <Cog className="w-full h-full text-primary/50" />
+              </motion.div>
+
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <div className="w-full max-w-md bg-background/50 backdrop-blur-sm p-6 rounded-xl">
+                      <h2 className="text-2xl font-semibold mb-4 bg-clip-text text-transparent bg-gradient-to-br from-chart-5 via-chart-1 to-chart-2">Generando tu Cianotipo Psicológico...</h2>
+                      <p className="text-muted-foreground mb-8">La IA está analizando tu historial para crear un informe evolutivo. Este proceso puede tardar hasta un minuto.</p>
+                      <div className='w-full max-w-sm mx-auto space-y-2'>
+                          <Progress value={progress} className="w-full h-2" />
+                          <p className='text-center text-xs font-medium text-primary'>{Math.round(progress)}%</p>
+                      </div>
+                  </div>
+              </div>
           </div>
       </div>
     );
@@ -282,6 +325,10 @@ export default function PsychologicalProfile() {
                     Volver al Chat
                 </Link>
             </Button>
+             <Button variant="ghost" onClick={() => startTour('profile', true)}>
+                <Route className="mr-2 h-4 w-4" />
+                Iniciar Recorrido
+            </Button>
         </div>
 
         {isOutdated && (
@@ -314,7 +361,7 @@ export default function PsychologicalProfile() {
                 <span className="hidden md:inline">Resumen</span>
                 <span className="md:hidden">Resumen</span>
             </TabsTrigger>
-            <TabsTrigger value="metrics" className="gap-2">
+            <TabsTrigger value="metrics" className="gap-2" data-tour-id="profile-metrics">
                 <BarChart3 className="h-4 w-4" />
                 <span className="hidden md:inline">Métricas</span>
                 <span className="md:hidden">Métricas</span>
@@ -327,7 +374,7 @@ export default function PsychologicalProfile() {
           </TabsList>
 
           <TabsContent value="overview" className="mt-6 space-y-6">
-              <Card className="bg-card/50 border-border/50">
+              <Card className="bg-card/50 border-border/50" data-tour-id="profile-diagnosis">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-3 text-xl">
                         <BrainCircuit className="w-6 h-6 text-accent"/>
@@ -342,7 +389,7 @@ export default function PsychologicalProfile() {
               { (profile.coreArchetype || profile.coreConflict) && (
                 <div className="grid md:grid-cols-2 gap-6">
                     {profile.coreArchetype && (
-                    <Card className="bg-card/50 border-border/50">
+                    <Card className="bg-card/50 border-border/50" data-tour-id="profile-archetype">
                       <CardHeader>
                         <CardTitle className='flex items-center gap-3'><UserCheck className="w-6 h-6 text-accent"/> Arquetipo: {profile.coreArchetype.title}</CardTitle>
                       </CardHeader>
@@ -355,7 +402,7 @@ export default function PsychologicalProfile() {
                           </div>
                           <div>
                             <h4 className="font-semibold text-xs uppercase tracking-wider flex items-center gap-2"><Shield className="w-4 h-4 text-amber-400"/> Desafíos</h4>
-                            <p className="text-sm text-muted-foreground mt-1">{profile.coreArchechaquenges}</p>
+                            <p className="text-sm text-muted-foreground mt-1">{profile.coreArchetype.challenges}</p>
                           </div>
                         </div>
                       </CardContent>
@@ -375,7 +422,7 @@ export default function PsychologicalProfile() {
               )}
 
               {profile.habitLoop && (
-                 <Card className="bg-card/50 border-border/50">
+                 <Card className="bg-card/50 border-border/50" data-tour-id="profile-habit-loop">
                   <CardHeader>
                     <CardTitle className='flex items-center gap-3'><Repeat className="w-6 h-6 text-accent"/> El Bucle del Hábito</CardTitle>
                     <CardDescription>Un patrón recurrente en tu comportamiento. Identificarlo es el primer paso para poder cambiarlo.</CardDescription>
