@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Hammer, Zap, GitCommitVertical } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 const ForgeAnvil = () => (
     <svg width="60" height="40" viewBox="0 0 60 40" fill="hsl(var(--muted-foreground))" className="drop-shadow-lg">
@@ -11,7 +12,22 @@ const ForgeAnvil = () => (
     </svg>
 )
 
+type Spark = {
+    left: string;
+    top: string;
+}
+
 export default function RecommendationLoader() {
+    const [sparks, setSparks] = useState<Spark[]>([]);
+
+    useEffect(() => {
+        // Generate spark positions only on the client-side after hydration
+        const newSparks = Array.from({ length: 30 }).map(() => ({
+            left: `${Math.random() * 100}%`,
+            top: `${Math.random() * 50}%`,
+        }));
+        setSparks(newSparks);
+    }, []); // Empty dependency array ensures this runs once on mount
 
     const sparkVariants = {
         hidden: { opacity: 0, y: -20 },
@@ -86,13 +102,13 @@ export default function RecommendationLoader() {
         <div className="relative w-full h-48 bg-card/80 rounded-xl overflow-hidden flex items-center justify-center border-2 border-dashed border-border/50">
             {/* Sparks */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-24">
-                {[...Array(30)].map((_, i) => (
+                {sparks.map((spark, i) => (
                     <motion.div
                         key={i}
                         className="absolute"
                         style={{
-                            left: `${Math.random() * 100}%`,
-                            top: `${Math.random() * 50}%`,
+                            left: spark.left,
+                            top: spark.top,
                         }}
                         variants={sparkVariants}
                         initial="hidden"
