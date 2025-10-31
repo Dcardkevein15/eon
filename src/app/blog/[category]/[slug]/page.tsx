@@ -164,10 +164,10 @@ export default function ArticlePage() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
           >
-            <h1>{title}</h1>
             <ReactMarkdown
               components={{
-                h2: ({node, ...props}) => <h2 className="text-2xl font-bold mt-8 mb-4 text-primary" {...props} />,
+                h1: ({node, ...props}) => <h1 className="text-3xl font-bold !mb-4 text-primary" {...props} />,
+                h2: ({node, ...props}) => <h2 className="text-2xl font-bold mt-8 mb-4 text-primary/90" {...props} />,
                 p: ({node, ...props}) => <p className="leading-relaxed" {...props} />,
                 a: ({node, ...props}) => <a className="text-accent hover:underline" {...props} />,
               }}
