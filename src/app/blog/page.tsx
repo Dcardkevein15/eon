@@ -60,7 +60,7 @@ const categories = [
 export default function BlogCategoriesPage() {
   const { user, loading } = useAuth();
   const [recommended, setRecommended] = useState<{ name: string; slug: string } | null>(null);
-  const [isLoadingRec, setIsLoadingRec] = useState(false);
+  const [isLoadingRec, setIsLoadingRec] = useState(true);
   
   useEffect(() => {
     if (user && !loading) {
@@ -86,6 +86,8 @@ export default function BlogCategoriesPage() {
         }
       };
       fetchRecommendation();
+    } else if (!loading) {
+        setIsLoadingRec(false);
     }
   }, [user, loading]);
 
