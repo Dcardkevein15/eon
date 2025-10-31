@@ -2,15 +2,22 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowRight, BrainCircuit, Heart, Users, GitMerge, Sun, Moon, LogIn, Star } from 'lucide-react';
+import { ArrowRight, BrainCircuit, Heart, Users, GitMerge, Sun, Moon, LogIn, Star, Book } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
 import { useAuth } from '@/firebase';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useState, useEffect } from 'react';
 import { getRecommendedCategory } from '@/app/actions';
-import type { CachedProfile } from '@/lib/types';
-import { Skeleton } from '@/components/ui/skeleton';
+import type { Article, CachedProfile } from '@/lib/types';
+import RecommendationLoader from '@/components/blog/RecommendationLoader';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { useCollection, useFirestore } from '@/firebase';
+import { collection, query, orderBy } from 'firebase/firestore';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatDistanceToNow } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const categories = [
   {
@@ -59,13 +66,28 @@ const categories = [
 
 export default function BlogCategoriesPage() {
   const { user, loading } = useAuth();
+  const firestore = useFirestore();
   const [recommended, setRecommended] = useState<{ name: string; slug: string } | null>(null);
   const [isLoadingRec, setIsLoadingRec] = useState(true);
+
+  // --- Data Fetching for History ---
+  const articlesQuery = (firestore ? query(collection(firestore, 'articles'), orderBy('createdAt', 'desc')) : undefined);
+  const { data: articles, loading: articlesLoading } = useCollection<Article>(articlesQuery);
+
+  const getFormattedDate = (timestamp: any) => {
+    if (!timestamp) return 'Fecha desconocida';
+    try {
+      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      return formatDistanceToNow(date, { addSuffix: true, locale: es });
+    } catch {
+      return 'Fecha inválida';
+    }
+  };
   
   useEffect(() => {
     if (user && !loading) {
+      setIsLoadingRec(true);
       const fetchRecommendation = async () => {
-        setIsLoadingRec(true);
         try {
           const storageKey = `psych-profile-${user.uid}`;
           const cachedItem = localStorage.getItem(storageKey);
@@ -93,7 +115,11 @@ export default function BlogCategoriesPage() {
 
   const RecommendedCard = () => {
       if (isLoadingRec) {
-          return <Skeleton className="h-48 w-full sm:col-span-2 lg:col-span-3" />
+          return (
+             <div className="sm:col-span-2 lg:col-span-3">
+                <RecommendationLoader />
+             </div>
+          )
       }
 
       if (!recommended) return null;
@@ -103,7 +129,7 @@ export default function BlogCategoriesPage() {
             className="sm:col-span-2 lg:col-span-3"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
         >
             <Link href={`/blog/${recommended.slug}`} passHref>
                 <div className="h-full block group relative overflow-hidden rounded-xl border-2 border-primary bg-card/80 p-6 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/20">
@@ -132,12 +158,53 @@ export default function BlogCategoriesPage() {
     <div className="min-h-screen bg-background text-foreground">
       <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <header className="mb-12">
-           <Button asChild variant="ghost" className="-ml-4 text-muted-foreground hover:bg-accent/10 hover:text-foreground">
-            <Link href="/">
-              <ChevronLeft className="h-4 w-4 mr-2" />
-              Volver al Inicio
-            </Link>
-          </Button>
+           <div className="flex justify-between items-start">
+             <Button asChild variant="ghost" className="-ml-4 text-muted-foreground hover:bg-accent/10 hover:text-foreground">
+                <Link href="/">
+                  <ChevronLeft className="h-4 w-4 mr-2" />
+                  Volver al Inicio
+                </Link>
+             </Button>
+
+            <Sheet>
+                <SheetTrigger asChild>
+                    <Button variant="outline" size="icon">
+                        <Book className="h-5 w-5" />
+                        <span className="sr-only">Ver historial de artículos</span>
+                    </Button>
+                </SheetTrigger>
+                <SheetContent className="w-[400px] sm:w-[540px] p-0">
+                    <SheetHeader className="p-6 border-b">
+                        <SheetTitle className="flex items-center gap-2">
+                           <Book className="h-5 w-5" />
+                           Historial de Artículos
+                        </SheetTitle>
+                    </SheetHeader>
+                    <ScrollArea className="h-[calc(100vh-80px)]">
+                        {articlesLoading ? (
+                            <p className="p-6 text-muted-foreground">Cargando historial...</p>
+                        ) : articles && articles.length > 0 ? (
+                            <div className="p-6 space-y-4">
+                                {articles.map(article => (
+                                    <Link key={article.id} href={`/blog/${article.category}/${article.slug}`} passHref>
+                                        <Card className="hover:bg-accent/50 cursor-pointer">
+                                            <CardHeader>
+                                                <CardTitle className="text-base">{article.title}</CardTitle>
+                                                <CardDescription>
+                                                    Creado {getFormattedDate(article.createdAt)}
+                                                </CardDescription>
+                                            </CardHeader>
+                                        </Card>
+                                    </Link>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="p-6 text-muted-foreground">No hay artículos generados todavía.</p>
+                        )}
+                    </ScrollArea>
+                </SheetContent>
+            </Sheet>
+           </div>
           <div className="mt-4 text-center">
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-chart-5 via-chart-1 to-chart-2">
               Explora Nuestro Conocimiento
