@@ -17,10 +17,11 @@ import {
   type User as FirebaseUser,
   getIdTokenResult,
 } from 'firebase/auth';
-import { type Firestore } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, Timestamp, type Firestore } from 'firebase/firestore';
 import { type FirebaseStorage } from 'firebase/storage';
 import { type FirebaseApp } from 'firebase/app';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
+import type { User } from '@/lib/types';
 
 // Main Firebase Context
 interface FirebaseContextType {
@@ -44,12 +45,17 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const DAILY_CREDITS = 100;
+const REFRESH_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
 export function AuthProvider({
   children,
   auth,
+  firestore,
 }: {
   children: ReactNode;
   auth: Auth;
+  firestore: Firestore;
 }) {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [userRoles, setUserRoles] = useState<string[]>([]);
@@ -63,8 +69,35 @@ export function AuthProvider({
             const tokenResult = await getIdTokenResult(firebaseUser, true); // Force refresh
             const roles = (tokenResult.claims.roles as string[]) || [];
             setUserRoles(roles);
+
+            // Manage user document and credits
+            const userRef = doc(firestore, 'users', firebaseUser.uid);
+            const userSnap = await getDoc(userRef);
+
+            if (userSnap.exists()) {
+                // User exists, check for credit refresh
+                const userData = userSnap.data() as User;
+                const lastRefresh = userData.lastCreditRefresh?.toMillis() || 0;
+                if (Date.now() - lastRefresh > REFRESH_INTERVAL) {
+                    await setDoc(userRef, { 
+                        articleGenerationCredits: DAILY_CREDITS, 
+                        lastCreditRefresh: serverTimestamp() 
+                    }, { merge: true });
+                }
+            } else {
+                // New user, create document with initial credits
+                await setDoc(userRef, {
+                    uid: firebaseUser.uid,
+                    displayName: firebaseUser.displayName,
+                    email: firebaseUser.email,
+                    photoURL: firebaseUser.photoURL,
+                    articleGenerationCredits: DAILY_CREDITS,
+                    lastCreditRefresh: serverTimestamp()
+                }, { merge: true });
+            }
+
         } catch (error) {
-            console.error("Error fetching user roles:", error);
+            console.error("Error managing user data:", error);
             setUserRoles([]);
         }
       } else {
@@ -74,7 +107,7 @@ export function AuthProvider({
     });
 
     return () => unsubscribe();
-  }, [auth]);
+  }, [auth, firestore]);
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
@@ -157,7 +190,7 @@ export function FirebaseProvider({
     const app = auth.app;
     return (
         <FirebaseContext.Provider value={{ app, auth, firestore, storage }}>
-            <AuthProvider auth={auth}>
+            <AuthProvider auth={auth} firestore={firestore}>
                 <FirebaseErrorListener />
                 {children}
             </AuthProvider>

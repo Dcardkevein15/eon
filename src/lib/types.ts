@@ -7,6 +7,8 @@ import { z } from 'zod';
 export type User = import('firebase/auth').User & {
   roles?: string[];
   therapistId?: string;
+  articleGenerationCredits?: number;
+  lastCreditRefresh?: Timestamp;
 };
 
 export type Message = {

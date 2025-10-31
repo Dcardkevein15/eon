@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/sidebar';
 import { useAuth } from '@/firebase';
 import { usePathname } from 'next/navigation';
+import UserCredits from './user-credits';
 
 interface ChatSidebarProps {
   chats: Chat[];
@@ -107,6 +108,7 @@ function ChatSidebar({
             <AppLogo className="w-8 h-8" />
             <span className="text-lg font-semibold tracking-wider">NIMBUS</span>
           </div>
+          {user && <UserCredits />}
         </div>
       </SidebarHeader>
 
