@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Hammer, Zap, GitCommitVertical } from 'lucide-react';
+import { Hammer } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const ForgeAnvil = () => (
@@ -13,113 +13,78 @@ const ForgeAnvil = () => (
 )
 
 type Spark = {
+    id: number;
     left: string;
     top: string;
-}
+    duration: number;
+    delay: number;
+    x: number;
+    y: number;
+};
 
 export default function RecommendationLoader() {
     const [sparks, setSparks] = useState<Spark[]>([]);
 
     useEffect(() => {
         // Generate spark positions only on the client-side after hydration
-        const newSparks = Array.from({ length: 30 }).map(() => ({
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 50}%`,
+        const newSparks = Array.from({ length: 15 }).map((_, i) => ({
+            id: i,
+            left: '50%',
+            top: '50%',
+            duration: Math.random() * 0.6 + 0.4, // 0.4s to 1.0s
+            delay: i * (1.2 / 15), // Stagger the start of each spark over the hammer cycle
+            x: (Math.random() - 0.5) * 150, // Horizontal spread
+            y: -(Math.random() * 80 + 20), // Upward motion
         }));
         setSparks(newSparks);
-    }, []); // Empty dependency array ensures this runs once on mount
-
-    const sparkVariants = {
-        hidden: { opacity: 0, y: -20 },
-        visible: (i: number) => ({
-            opacity: [0, 1, 0],
-            y: 40,
-            x: Math.random() * 40 - 20,
-            scale: Math.random() * 0.5 + 0.5,
-            transition: {
-                delay: i * 0.02 + 0.5,
-                duration: 0.8,
-                ease: 'easeOut',
-            }
-        })
-    };
+    }, []); 
 
     const hammerVariants = {
-        rest: { rotate: -20, y: -80, x: 40, opacity: 0 },
         strike: {
-            rotate: [45, -10],
-            y: 25,
-            x: 0,
-            opacity: 1,
+            rotate: [15, -10],
+            y: [0, 25],
+            x: [20, 0],
             transition: {
                 duration: 0.3,
                 ease: 'easeIn',
-                delay: 1.5,
+                repeat: Infinity,
+                repeatType: "reverse",
+                repeatDelay: 0.6,
             }
         },
     };
     
-    const flashVariants = {
-        hidden: { scale: 0, opacity: 0 },
-        visible: {
-            scale: [0, 25],
-            opacity: [0, 1, 0.5, 0],
+    const shockwaveVariants = {
+        expand: {
+            scale: [0, 15],
+            opacity: [0, 0.5, 0],
             transition: {
-                delay: 1.8,
-                duration: 0.5,
+                duration: 1.2,
                 ease: 'easeOut',
-            }
-        }
-    }
-
-    const orbVariants = {
-        hidden: { scale: 0, opacity: 0 },
-        visible: {
-            scale: 1,
-            opacity: 1,
-            transition: {
-                delay: 2.2,
-                duration: 0.5,
-            }
-        },
-        pulse: {
-            scale: [1, 1.1, 1],
-            boxShadow: [
-                "0 0 0 0 hsl(var(--primary) / 0.7)",
-                "0 0 20px 30px hsl(var(--primary) / 0)",
-                "0 0 0 0 hsl(var(--primary) / 0)",
-            ],
-            transition: {
-                duration: 2,
                 repeat: Infinity,
-                ease: 'easeInOut'
             }
         }
-    }
+    };
+
+    const sparkVariants = {
+        fly: (spark: Spark) => ({
+            x: spark.x,
+            y: spark.y,
+            opacity: [0, 1, 1, 0],
+            scale: [0, 1, 1, 0],
+            transition: {
+                duration: spark.duration,
+                delay: spark.delay,
+                repeat: Infinity,
+                repeatDelay: 1.2 - spark.duration, // Ensure it syncs with the overall cycle
+                ease: "easeOut",
+            }
+        })
+    };
 
 
     return (
         <div className="relative w-full h-48 bg-card/80 rounded-xl overflow-hidden flex items-center justify-center border-2 border-dashed border-border/50">
-            {/* Sparks */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-24">
-                {sparks.map((spark, i) => (
-                    <motion.div
-                        key={i}
-                        className="absolute"
-                        style={{
-                            left: spark.left,
-                            top: spark.top,
-                        }}
-                        variants={sparkVariants}
-                        initial="hidden"
-                        animate="visible"
-                        custom={i}
-                    >
-                        <div className="w-1 h-1 bg-amber-400 rounded-full" />
-                    </motion.div>
-                ))}
-            </div>
-
             {/* Anvil */}
             <motion.div
                 initial={{ opacity: 0, y: 10 }}
@@ -129,32 +94,36 @@ export default function RecommendationLoader() {
             >
                 <ForgeAnvil />
             </motion.div>
-
+            
             {/* Hammer */}
             <motion.div
                 variants={hammerVariants}
-                initial="rest"
                 animate="strike"
                 className="absolute"
+                style={{ originX: '100%', originY: '100%' }}
             >
                 <Hammer className="w-16 h-16 text-slate-300 -scale-x-100" />
             </motion.div>
 
-            {/* Flash */}
+            {/* Shockwave on impact */}
             <motion.div
-                variants={flashVariants}
-                initial="hidden"
-                animate="visible"
-                className="absolute w-2 h-2 rounded-full bg-primary"
+                className="absolute w-4 h-4 rounded-full border-2 border-primary"
+                variants={shockwaveVariants}
+                animate="expand"
             />
-            
-            {/* Orb */}
-            <motion.div
-                variants={orbVariants}
-                initial="hidden"
-                animate={["visible", "pulse"]}
-                className="absolute w-8 h-8 bg-primary rounded-full"
-            />
+
+            {/* Sparks on impact */}
+             <div className="absolute">
+                {sparks.map((spark) => (
+                    <motion.div
+                        key={spark.id}
+                        className="absolute w-1 h-1 bg-amber-400 rounded-full"
+                        variants={sparkVariants}
+                        custom={spark}
+                        animate="fly"
+                    />
+                ))}
+            </div>
             
         </div>
     );
