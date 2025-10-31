@@ -103,7 +103,7 @@ function ChatSidebar({
   return (
     <>
       <SidebarHeader className="border-b border-sidebar-border">
-        <div className="flex items-center justify-between p-2">
+        <div className="flex items-center justify-between p-2 pr-12 md:pr-2">
           <div className="flex items-center gap-2" id="logo-section">
             <AppLogo className="w-8 h-8" />
             <span className="text-lg font-semibold tracking-wider">NIMBUS</span>
