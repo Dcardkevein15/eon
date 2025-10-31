@@ -97,7 +97,7 @@ export default function ArticlePage() {
 
     if (isLoading) {
        return (
-          <article className="space-y-6">
+          <div className="space-y-6">
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-4 w-3/4" />
             <div className="space-y-4 pt-4">
@@ -109,7 +109,7 @@ export default function ArticlePage() {
               <Skeleton className="h-5 w-full" />
               <Skeleton className="h-5 w-4/5" />
             </div>
-          </article>
+          </div>
         );
     }
     
@@ -158,15 +158,15 @@ export default function ArticlePage() {
     }
 
     return (
-        <motion.article
-            className="prose prose-lg dark:prose-invert max-w-none"
+        <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
           >
+            <h1 className="text-3xl font-bold !mb-8 text-primary tracking-tight">{article.title}</h1>
             <ReactMarkdown
+              className="prose dark:prose-invert max-w-none"
               components={{
-                h1: ({node, ...props}) => <h1 className="text-3xl font-bold !mb-4 text-primary" {...props} />,
                 h2: ({node, ...props}) => <h2 className="text-2xl font-bold mt-8 mb-4 text-primary/90" {...props} />,
                 p: ({node, ...props}) => <p className="leading-relaxed" {...props} />,
                 a: ({node, ...props}) => <a className="text-accent hover:underline" {...props} />,
@@ -174,7 +174,7 @@ export default function ArticlePage() {
             >
               {article.content}
             </ReactMarkdown>
-          </motion.article>
+          </motion.div>
     );
   }
 
