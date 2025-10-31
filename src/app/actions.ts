@@ -269,8 +269,5 @@ export async function generateArticleTitles(input: GenerateArticleTitlesInput): 
 }
 
 export async function generateArticleContent(input: GenerateArticleContentInput): Promise<GenerateArticleContentOutput> {
-    // The Genkit flow now only generates content, it does not write to the DB.
     return genContentFlow(input);
 }
-
-    

@@ -7,15 +7,15 @@ import { motion } from 'framer-motion';
 import { generateArticleContent } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronLeft, AlertTriangle, LogIn, Sparkles, X, Wand2 } from 'lucide-react';
+import { ChevronLeft, AlertTriangle, LogIn, Sparkles, Wand2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import ReactMarkdown from 'react-markdown';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore, useDocument } from '@/firebase';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { doc, getDoc, setDoc, serverTimestamp, updateDoc, increment } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, updateDoc, increment } from 'firebase/firestore';
 import type { Article, User } from '@/lib/types';
-import { useDocument } from '@/firebase/use-doc';
+
 
 export default function ArticlePage() {
   const params = useParams();
@@ -24,8 +24,6 @@ export default function ArticlePage() {
   const { user, loading: authLoading } = useAuth();
   const firestore = useFirestore();
 
-  const [article, setArticle] = useState<Article | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,37 +34,10 @@ export default function ArticlePage() {
   const articleRef = useMemo(() => firestore && slug ? doc(firestore, 'articles', slug) : undefined, [firestore, slug]);
   const userRef = useMemo(() => firestore && user ? doc(firestore, 'users', user.uid) : undefined, [firestore, user]);
 
-  const { data: dbArticle, loading: articleLoading } = useDocument<Article>(articleRef);
+  const { data: article, loading: articleLoading } = useDocument<Article>(articleRef);
   const { data: userData, loading: userLoading } = useDocument<User>(userRef);
 
-  const [credits, setCredits] = useState(0);
-  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
-
-  useEffect(() => {
-    if (userData) {
-      const userCredits = userData.articleGenerationCredits ?? 5; // Default to 5 credits
-      setCredits(userCredits);
-      if (userData.lastCreditRefresh) {
-        setLastRefresh(new Date(userData.lastCreditRefresh));
-      } else if(userRef) {
-        // Initialize credits for first-time users
-        updateDoc(userRef, {
-            articleGenerationCredits: 5,
-            lastCreditRefresh: new Date().toISOString()
-        });
-      }
-    }
-  }, [userData, userRef]);
-  
-  useEffect(() => {
-      if(dbArticle) {
-          setArticle(dbArticle);
-          setIsLoading(false);
-      } else {
-          setIsLoading(articleLoading);
-      }
-  }, [dbArticle, articleLoading]);
-
+  const credits = userData?.articleGenerationCredits ?? 0;
 
   const handleGenerateArticle = async () => {
     if (!user || !firestore || !slug || !userRef || credits <= 0) {
@@ -83,7 +54,7 @@ export default function ArticlePage() {
         title,
       });
       
-      const newArticle = {
+      const newArticleData = {
         title,
         slug,
         category,
@@ -91,14 +62,17 @@ export default function ArticlePage() {
         createdAt: serverTimestamp()
       };
       
-      await setDoc(articleRef, newArticle);
+      // Use the action to save the article and decrement credits
+      await setDoc(articleRef, newArticleData);
       await updateDoc(userRef, {
           articleGenerationCredits: increment(-1),
-          lastCreditRefresh: new Date().toISOString()
       });
 
-      setArticle({ ...newArticle, id: slug, createdAt: new Date() } as Article);
-      setCredits(prev => prev -1);
+      toast({
+        title: "¡Artículo Generado!",
+        description: "Tu crédito ha sido utilizado."
+      })
+      // The useDocument hook will automatically update the UI with the new article.
 
     } catch (err: any) {
       console.error('Failed to generate or save article content:', err);
@@ -115,7 +89,9 @@ export default function ArticlePage() {
 
 
   const renderContent = () => {
-    if (isLoading || authLoading || userLoading) {
+    const isLoading = articleLoading || authLoading || userLoading;
+
+    if (isLoading) {
        return (
           <article className="space-y-6">
             <Skeleton className="h-10 w-full" />
@@ -214,5 +190,3 @@ export default function ArticlePage() {
     </div>
   );
 }
-
-    

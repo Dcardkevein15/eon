@@ -14,9 +14,6 @@ import {
   GenerateArticleTitlesOutputSchema,
   GenerateArticleContentInputSchema,
   GenerateArticleContentOutputSchema,
-  type GenerateArticleTitlesInput,
-  type GenerateArticleContentInput,
-  type GenerateArticleContentOutput,
 } from '@/lib/types';
 
 
@@ -92,5 +89,3 @@ export const generateArticleContent = ai.defineFlow(
     return generatedOutput;
   }
 );
-
-    
