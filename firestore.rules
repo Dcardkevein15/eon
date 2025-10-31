@@ -1,264 +1,48 @@
-/**
- * @file Firestore Security Rules
- * @description This ruleset enforces a strict user-ownership model for most data, with the exception of therapists, therapist applications, and scenarios which have more open read permissions.
- *
- * @dataStructure
- * - /users/{userId}: User profile information, accessible only by the user.
- * - /users/{userId}/chats/{chatId}: Chat sessions for a user, accessible only by the user.
- * - /users/{userId}/chats/{chatId}/messages/{messageId}: Messages within a chat, accessible only by the user.
- * - /users/{userId}/chats/{chatId}/whiteboard/main: Whiteboard state for a chat, accessible only by the user.
- * - /users/{userId}/chatbotState/main: Chatbot state for a user, accessible only by the user.
- * - /users/{userId}/profile/main: User's psychological profile, accessible only by the user.
- * - /users/{userId}/gymSessions/{sessionId}: Emotional Gym sessions, accessible only by the user.
- * - /users/{userId}/gymSessions/{sessionId}/messages/{messageId}: Messages within an Emotional Gym session, accessible only by the user.
- * - /users/{userId}/dreams/{dreamId}: Dream interpretations, accessible only by the user.
- * - /therapists/{therapistId}: Public therapist profiles, readable by anyone, writable only by admins.
- * - /therapistApplications/{applicationId}: Therapist applications, readable by the applicant and admins, writable only by admins.
- *
- * @keySecurityDecisions
- * - User listing is disallowed to prevent information harvesting.
- * - Therapist profiles are publicly readable but admin-writeable.
- * - Therapist applications can be read by the applicant or admins, created by the applicant, and updated by admins.
- * - Default security posture for ambiguous relationships is strict owner-only access.
- */
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    //----------------------------------------------------------------//
+    //                         USER DATA                              //
+    //----------------------------------------------------------------//
 
-    /**
-     * @description Secures user profiles, allowing only the user to read and write their own profile.
-     * @path /users/{userId}
-     * @allow (create, update, delete) request.auth.uid == userId
-     * @allow (get, list) request.auth.uid == userId
-     * @deny (create, update, delete) request.auth.uid != userId
-     * @deny (get, list) request.auth.uid != userId
-     * @principle Enforces document ownership for all operations.
-     */
-    match /users/{userId} {
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+    // User-specific data is only accessible by the owner.
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    /**
-     * @description Secures chat sessions, allowing only the owning user to read and write.
-     * @path /users/{userId}/chats/{chatId}
-     * @allow (create, update, delete) request.auth.uid == userId
-     * @allow (get, list) request.auth.uid == userId
-     * @deny (create, update, delete) request.auth.uid != userId
-     * @deny (get, list) request.auth.uid != userId
-     * @principle Enforces document ownership; only the user can manage their chats.
-     */
-    match /users/{userId}/chats/{chatId} {
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
+    //----------------------------------------------------------------//
+    //                   MARKETPLACE & PROFESSIONALS                  //
+    //----------------------------------------------------------------//
 
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
-    }
-
-    /**
-     * @description Secures messages within a chat session, allowing only the owning user to read and write.
-     * @path /users/{userId}/chats/{chatId}/messages/{messageId}
-     * @allow (create, update, delete) request.auth.uid == userId
-     * @allow (get, list) request.auth.uid == userId
-     * @deny (create, update, delete) request.auth.uid != userId
-     * @deny (get, list) request.auth.uid != userId
-     * @principle Enforces document ownership; only the user can manage their chat messages.
-     */
-    match /users/{userId}/chats/{chatId}/messages/{messageId} {
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
-    }
-
-        /**
-     * @description Secures the collaborative whiteboard for a chat session, allowing only the owning user to read and write.
-     * @path /users/{userId}/chats/{chatId}/whiteboard/main
-     * @allow (create, update, delete) request.auth.uid == userId
-     * @allow (get, list) request.auth.uid == userId
-     * @deny (create, update, delete) request.auth.uid != userId
-     * @deny (get, list) request.auth.uid != userId
-     * @principle Enforces document ownership; only the user can manage their whiteboard.
-     */
-    match /users/{userId}/chats/{chatId}/whiteboard/main {
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
-    }
-
-
-    /**
-     * @description Secures chatbot state, allowing only the owning user to read and write.
-     * @path /users/{userId}/chatbotState/main
-     * @allow (create, update, delete) request.auth.uid == userId
-     * @allow (get, list) request.auth.uid == userId
-     * @deny (create, update, delete) request.auth.uid != userId
-     * @deny (get, list) request.auth.uid != userId
-     * @principle Enforces document ownership; only the user can manage their chatbot state.
-     */
-    match /users/{userId}/chatbotState/main {
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
-    }
-
-    /**
-     * @description Secures user profiles, allowing only the user to read and write their own profile.
-     * @path /users/{userId}/profile/main
-     * @allow (create, update, delete) request.auth.uid == userId
-     * @allow (get, list) request.auth.uid == userId
-     * @deny (create, update, delete) request.auth.uid != userId
-     * @deny (get, list) request.auth.uid != userId
-     * @principle Enforces document ownership for all operations.
-     */
-    match /users/{userId}/profile/main {
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
-    }
-
-    /**
-     * @description Secures Emotional Gym sessions, allowing only the owning user to read and write.
-     * @path /users/{userId}/gymSessions/{sessionId}
-     * @allow (create, update, delete) request.auth.uid == userId
-     * @allow (get, list) request.auth.uid == userId
-     * @deny (create, update, delete) request.auth.uid != userId
-     * @deny (get, list) request.auth.uid != userId
-     * @principle Enforces document ownership; only the user can manage their gym sessions.
-     */
-    match /users/{userId}/gymSessions/{sessionId} {
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
-    }
-
-    /**
-     * @description Secures messages within an Emotional Gym session, allowing only the owning user to read and write.
-     * @path /users/{userId}/gymSessions/{sessionId}/messages/{messageId}
-     * @allow (create, update, delete) request.auth.uid == userId
-     * @allow (get, list) request.auth.uid == userId
-     * @deny (create, update, delete) request.auth.uid != userId
-     * @deny (get, list) request.auth.uid != userId
-     * @principle Enforces document ownership; only the user can manage their gym session messages.
-     */
-    match /users/{userId}/gymSessions/{sessionId}/messages/{messageId} {
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
-    }
-
-    /**
-     * @description Secures dream interpretations, allowing only the owning user to read and write.
-     * @path /users/{userId}/dreams/{dreamId}
-     * @allow (create, update, delete) request.auth.uid == userId
-     * @allow (get, list) request.auth.uid == userId
-     * @deny (create, update, delete) request.auth.uid != userId
-     * @deny (get, list) request.auth.uid != userId
-     * @principle Enforces document ownership; only the user can manage their dream interpretations.
-     */
-    match /users/{userId}/dreams/{dreamId} {
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
-    }
-
-    /**
-     * @description Allows public read access to therapist profiles, with admin-only write access.
-     * @path /therapists/{therapistId}
-     * @allow (get, list) true
-     * @allow (create, update, delete) request.auth.token.roles.hasAny(['admin'])
-     * @deny (create, update, delete) !request.auth.token.roles.hasAny(['admin'])
-     * @principle Public read, restricted write; admins control therapist profiles.
-     */
+    // Therapist profiles are public to read, but only admins can write.
     match /therapists/{therapistId} {
-      function isAdmin() {
-        return 'admin' in request.auth.token.roles;
-      }
-
-      allow get: if true;
-      allow list: if true;
-      allow create: if request.auth.uid != null && isAdmin();
-      allow update: if request.auth.uid != null && isAdmin();
-      allow delete: if request.auth.uid != null && isAdmin();
+      allow get, list: if true;
+      allow write: if request.auth != null && request.auth.token.roles.hasAny(['admin']);
     }
 
-    /**
-     * @description Secures therapist applications, allowing users to read their own application, admins to list all, and admins to update.
-     * @path /therapistApplications/{applicationId}
-     * @allow (get) resource.data.userId == request.auth.uid || request.auth.token.roles.hasAny(['admin'])
-     * @allow (list) request.auth.token.roles.hasAny(['admin'])
-     * @allow (create) request.resource.data.userId == request.auth.uid
-     * @allow (update) request.auth.token.roles.hasAny(['admin'])
-     * @deny (create) request.resource.data.userId != request.auth.uid
-     * @deny (update) !request.auth.token.roles.hasAny(['admin'])
-     * @principle Role-based access control and ownership; users can manage their application, admins have full control.
-     */
+    // Applications can be created by the applicant, and read by the applicant or an admin.
+    // Only admins can update (approve/reject) applications.
     match /therapistApplications/{applicationId} {
-      function isOwner(userId) {
-        return get(/databases/$(database)/documents/users/$(userId)).data.uid == request.auth.uid;
-      }
-      function isAdmin() {
-        return 'admin' in request.auth.token.roles;
-      }
-
-      allow get: if isOwner(resource.data.userId) || isAdmin();
-      allow list: if isAdmin();
-      allow create: if request.auth.uid != null && request.resource.data.userId == request.auth.uid;
-      allow update: if isAdmin();
+      allow get: if request.auth != null && (resource.data.userId == request.auth.uid || request.auth.token.roles.hasAny(['admin']));
+      allow list: if request.auth != null && request.auth.token.roles.hasAny(['admin']);
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null && request.auth.token.roles.hasAny(['admin']);
       allow delete: if false;
+    }
+    
+    //----------------------------------------------------------------//
+    //                         BLOG ARTICLES                          //
+    //----------------------------------------------------------------//
+
+    // Articles can be read by any authenticated user.
+    // They can be created by any authenticated user (via the credit system).
+    // They can only be updated/deleted by admins.
+    match /articles/{articleSlug} {
+      allow get, list: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && request.auth.token.roles.hasAny(['admin']);
     }
   }
 }

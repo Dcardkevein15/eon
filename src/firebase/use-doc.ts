@@ -1,3 +1,4 @@
+
 'use client';
 
 import { DocumentReference, onSnapshot } from 'firebase/firestore';
@@ -37,7 +38,7 @@ export function useDocument<T>(ref: DocumentReference | undefined) {
         }
         setLoading(false);
       },
-      (err) => { // <<< ASYNC REMOVED HERE
+      (err) => {
         setLoading(false);
         setError(err);
         if (err.code === 'permission-denied') {

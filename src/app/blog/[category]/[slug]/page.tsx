@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { generateArticleContent } from '@/app/actions';
@@ -11,7 +11,8 @@ import { ChevronLeft, AlertTriangle, LogIn, Sparkles, Wand2 } from 'lucide-react
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import ReactMarkdown from 'react-markdown';
-import { useAuth, useFirestore, useDocument } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
+import { useDocument } from '@/firebase/use-doc';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { doc, setDoc, serverTimestamp, updateDoc, increment } from 'firebase/firestore';
 import type { Article, User } from '@/lib/types';
@@ -54,6 +55,10 @@ export default function ArticlePage() {
         title,
       });
       
+      if (!result.content) {
+          throw new Error("La IA no pudo generar el contenido del artículo.");
+      }
+      
       const newArticleData = {
         title,
         slug,
@@ -62,8 +67,7 @@ export default function ArticlePage() {
         createdAt: serverTimestamp()
       };
       
-      // Use the action to save the article and decrement credits
-      await setDoc(articleRef, newArticleData);
+      await setDoc(doc(firestore, 'articles', slug), newArticleData);
       await updateDoc(userRef, {
           articleGenerationCredits: increment(-1),
       });
