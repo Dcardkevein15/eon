@@ -7,10 +7,12 @@ import { useEffect, useState } from 'react';
 import { useMemoCompare } from './use-memo-compare';
 import { errorEmitter } from './error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from './errors';
+import { useDocument } from './use-doc';
 
 
 // Re-exporting from provider
 export { useAuth, useFirestore, useFirebaseApp, useStorage } from './provider';
+export { useDocument };
 
 // Collection Hook
 type DocumentWithId<T> = T & { id: string };
