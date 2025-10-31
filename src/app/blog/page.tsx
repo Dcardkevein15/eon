@@ -2,11 +2,15 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowRight, BrainCircuit, Heart, Users, GitMerge, Sun, Moon, LogIn } from 'lucide-react';
+import { ArrowRight, BrainCircuit, Heart, Users, GitMerge, Sun, Moon, LogIn, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
 import { useAuth } from '@/firebase';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useState, useEffect } from 'react';
+import { getRecommendedCategory } from '@/app/actions';
+import type { CachedProfile } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const categories = [
   {
@@ -55,7 +59,73 @@ const categories = [
 
 export default function BlogCategoriesPage() {
   const { user, loading } = useAuth();
+  const [recommended, setRecommended] = useState<{ name: string; slug: string } | null>(null);
+  const [isLoadingRec, setIsLoadingRec] = useState(false);
   
+  useEffect(() => {
+    if (user && !loading) {
+      const fetchRecommendation = async () => {
+        setIsLoadingRec(true);
+        try {
+          const storageKey = `psych-profile-${user.uid}`;
+          const cachedItem = localStorage.getItem(storageKey);
+          if (cachedItem) {
+            const data: CachedProfile = JSON.parse(cachedItem);
+            if (data.profile) {
+              const recommendation = await getRecommendedCategory(JSON.stringify(data.profile));
+              setRecommended({
+                name: recommendation.categoryName,
+                slug: recommendation.categorySlug,
+              });
+            }
+          }
+        } catch (error) {
+          console.error("Failed to fetch recommendation:", error);
+        } finally {
+          setIsLoadingRec(false);
+        }
+      };
+      fetchRecommendation();
+    }
+  }, [user, loading]);
+
+  const RecommendedCard = () => {
+      if (isLoadingRec) {
+          return <Skeleton className="h-48 w-full sm:col-span-2 lg:col-span-3" />
+      }
+
+      if (!recommended) return null;
+
+      return (
+        <motion.div
+            className="sm:col-span-2 lg:col-span-3"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+        >
+            <Link href={`/blog/${recommended.slug}`} passHref>
+                <div className="h-full block group relative overflow-hidden rounded-xl border-2 border-primary bg-card/80 p-6 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/20">
+                <div className="relative z-10">
+                    <div className="flex items-center gap-4 mb-4">
+                         <div className="p-3 bg-primary/10 rounded-lg">
+                            <Star className="h-6 w-6 text-primary" />
+                        </div>
+                        <div>
+                             <h2 className="text-xl font-bold text-primary">Recomendado para Ti: {recommended.name}</h2>
+                             <p className="mt-1 text-sm text-muted-foreground">Basado en tu perfil, este tema podría ser especialmente útil para ti ahora.</p>
+                        </div>
+                    </div>
+                    <div className="mt-4 flex items-center text-xs font-semibold text-primary/90 transition-colors group-hover:text-primary">
+                        <span>Explorar Artículos Recomendados</span>
+                        <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                    </div>
+                </div>
+                </div>
+            </Link>
+        </motion.div>
+      )
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -97,6 +167,8 @@ export default function BlogCategoriesPage() {
               },
             }}
           >
+            <RecommendedCard />
+
             {categories.map((category) => (
               <motion.div
                 key={category.slug}

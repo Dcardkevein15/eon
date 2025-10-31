@@ -16,6 +16,7 @@ import { getTacticalAdvice as getTacticalAdviceFlow } from '@/ai/flows/get-tacti
 import { classifyIntent as classifyIntentFlow } from '@/ai/flows/classify-intent';
 import { analyzeVoiceMessage as analyzeVoiceMessageFlow } from '@/ai/flows/analyze-voice-message';
 import { generateArticleTitles as genTitlesFlow, generateArticleContent as genContentFlow } from '@/ai/flows/blog-flows';
+import { getRecommendedCategory as getRecommendedCategoryFlow } from '@/ai/flows/get-recommended-category';
 
 
 const expertRoles = [
@@ -270,4 +271,8 @@ export async function generateArticleTitles(input: GenerateArticleTitlesInput): 
 
 export async function generateArticleContent(input: GenerateArticleContentInput): Promise<GenerateArticleContentOutput> {
     return genContentFlow(input);
+}
+
+export async function getRecommendedCategory(userProfile: string) {
+    return getRecommendedCategoryFlow({ userProfile });
 }
