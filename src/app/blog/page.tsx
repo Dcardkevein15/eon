@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ArrowRight, BrainCircuit, Heart, Users, GitMerge, Sun, Moon, LogIn, Star, Book, ChevronRight, FileText, Calendar, X } from 'lucide-react';
@@ -8,14 +8,13 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
 import { useAuth } from '@/firebase';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useState, useEffect } from 'react';
 import { getRecommendedCategory } from '@/app/actions';
 import type { Article, CachedProfile } from '@/lib/types';
 import RecommendationLoader from '@/components/blog/RecommendationLoader';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -72,7 +71,6 @@ export default function BlogCategoriesPage() {
   const [recommended, setRecommended] = useState<{ name: string; slug: string } | null>(null);
   const [isLoadingRec, setIsLoadingRec] = useState(true);
 
-  // --- Data Fetching for History ---
   const articlesQuery = (firestore ? query(collection(firestore, 'articles'), orderBy('createdAt', 'desc')) : undefined);
   const { data: articles, loading: articlesLoading } = useCollection<Article>(articlesQuery);
 
@@ -175,7 +173,7 @@ export default function BlogCategoriesPage() {
                         <span className="sr-only">Ver historial de artículos</span>
                     </Button>
                 </SheetTrigger>
-                <SheetContent className="w-[400px] sm:w-[540px] p-0">
+                <SheetContent className="w-[400px] sm:max-w-md p-0">
                   <div className="flex h-full flex-col">
                     <div className="flex items-center justify-between border-b p-4">
                         <h2 className="text-lg font-semibold flex items-center gap-2">
