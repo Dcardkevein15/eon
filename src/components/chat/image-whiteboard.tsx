@@ -14,8 +14,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 // --- TYPES ---
 type ImageHistoryItem = {
@@ -27,6 +27,7 @@ type ImageHistoryItem = {
 };
 
 type GenerationState = 'idle' | 'prompting' | 'generating' | 'done' | 'error';
+type ViewMode = 'create' | 'history';
 
 const DB_NAME = 'ImageHistoryDB';
 const STORE_NAME = 'images';
@@ -124,6 +125,7 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
   const [currentArtisticPrompt, setCurrentArtisticPrompt] = useState('');
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
   const [state, setState] = useState<GenerationState>('idle');
+  const [activeView, setActiveView] = useState<ViewMode>('create');
   const { toast } = useToast();
   const { history, addImageToHistory, deleteImageFromHistory, isLoadingHistory } = useImageHistoryStore();
 
@@ -135,6 +137,7 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
     }
     
     setState('prompting');
+    setActiveView('create'); // Switch to creation view
     setCurrentImageUrl(null);
     setCurrentArtisticPrompt('');
 
@@ -184,25 +187,23 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
     document.body.removeChild(link);
   };
   
-  const handleClose = () => {
-    onClose();
-  }
-
   const isLoading = state === 'prompting' || state === 'generating';
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="p-0 m-0 w-screen h-screen max-w-full block rounded-none border-none bg-black/50 backdrop-blur-md">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="p-0 m-0 w-screen h-screen max-w-full block rounded-none border-none bg-black/80 backdrop-blur-md">
         <div className="absolute inset-0 z-0 overflow-hidden">
           <div className="animated-border"></div>
         </div>
-        <div className="relative z-10 w-full h-full flex flex-col p-4 sm:p-6 md:p-8">
+
+        {/* Main Layout: Header, Content, Footer */}
+        <div className="relative z-10 w-full h-full flex flex-col">
             <DialogClose className="fixed top-4 right-4 z-50 h-9 w-9 bg-background/50 hover:bg-background/80 text-foreground rounded-full flex items-center justify-center transition-colors">
                 <X className="h-5 w-5" />
                 <span className="sr-only">Cerrar</span>
             </DialogClose>
             
-            <DialogHeader className="text-center pt-4 sm:pt-0">
+            <header className="flex-shrink-0 p-4 pt-6 text-center">
               <DialogTitle className="flex items-center justify-center gap-2 text-2xl sm:text-3xl text-white">
                 <Wand2 className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
                 Pizarra de Creación
@@ -210,42 +211,23 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
               <DialogDescription className="text-white/70">
                 Forja tus pensamientos en imágenes. Las creaciones se guardan en tu dispositivo.
               </DialogDescription>
-            </DialogHeader>
+
+               <div className="flex justify-center mt-4">
+                  <div className="inline-flex h-10 items-center justify-center rounded-md bg-background/50 p-1 text-muted-foreground border border-border">
+                      <Button onClick={() => setActiveView('create')} variant="ghost" className={cn("inline-flex items-center justify-center rounded-sm px-3 py-1.5 text-sm font-medium", activeView === 'create' && 'bg-primary text-primary-foreground')}>
+                          <Sparkles className="h-4 w-4 mr-2"/>Crear
+                      </Button>
+                      <Button onClick={() => setActiveView('history')} variant="ghost" className={cn("inline-flex items-center justify-center rounded-sm px-3 py-1.5 text-sm font-medium", activeView === 'history' && 'bg-primary text-primary-foreground')}>
+                          <History className="h-4 w-4 mr-2"/>Historial ({history.length})
+                      </Button>
+                  </div>
+              </div>
+            </header>
             
-            <Tabs defaultValue="create" className="w-full flex-1 flex flex-col overflow-hidden mt-4">
-                <div className="flex justify-center">
-                     <TabsList className="grid w-full max-w-md grid-cols-2 bg-background/50 text-muted-foreground border-border border">
-                        <TabsTrigger value="create" className="gap-2">
-                            <Sparkles className="h-4 w-4"/>
-                            Crear
-                        </TabsTrigger>
-                        <TabsTrigger value="history" className="gap-2">
-                            <History className="h-4 w-4"/>
-                            Historial ({history.length})
-                        </TabsTrigger>
-                    </TabsList>
-                </div>
-
-                {/* Create Tab */}
-                <TabsContent value="create" className="flex-1 flex flex-col gap-4 p-1 mt-4">
-                    <div className="flex gap-2">
-                        <Input
-                            value={prompt}
-                            onChange={(e) => setPrompt(e.target.value)}
-                            placeholder="Ej: Un mapa mental de mis preocupaciones"
-                            disabled={isLoading}
-                            onKeyDown={(e) => e.key === 'Enter' && !isLoading && handleGenerateImage()}
-                            className="bg-background/80 border-border text-base h-12"
-                        />
-                        <Button onClick={handleGenerateImage} disabled={isLoading || !prompt.trim()} className="w-44 h-12 text-base">
-                            {isLoading ? <Loader2 className="animate-spin mr-2" /> : <Wand2 className="mr-2"/>}
-                            <span className="truncate">
-                            {state === 'prompting' ? 'Creando...' : state === 'generating' ? 'Forjando...' : 'Generar'}
-                            </span>
-                        </Button>
-                    </div>
-
-                    <div className="relative w-full flex-1 bg-background/30 rounded-lg flex items-center justify-center border border-dashed border-white/20">
+            {/* Main Content Area */}
+            <main className="flex-1 overflow-hidden p-4 pb-0">
+                {activeView === 'create' && (
+                    <div className="relative w-full h-full bg-black/30 rounded-lg flex items-center justify-center border border-dashed border-white/20">
                          <AnimatePresence>
                             {isLoading && (
                             <motion.div
@@ -289,20 +271,19 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
                             <p className="text-sm text-destructive">Error al generar la imagen. Inténtalo de nuevo.</p>
                         )}
                     </div>
-                </TabsContent>
-
-                {/* History Tab - RESTRUCTURED */}
-                 <TabsContent value="history" className="flex-1 flex flex-col mt-4 overflow-hidden">
+                )}
+                
+                {activeView === 'history' && (
                     <div className="h-full">
-                        <ScrollArea className="h-full px-1 py-4">
+                       <ScrollArea className="h-full pr-2">
                             {isLoadingHistory ? (
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                                     {[...Array(10)].map((_, i) => <Skeleton key={i} className="aspect-square bg-muted/20" />)}
                                 </div>
                             ) : history.length > 0 ? (
                                 <>
-                                <p className="text-xs text-white/50 text-center mb-4">Mostrando las últimas {history.length} de hasta {MAX_HISTORY_ITEMS} imágenes guardadas en este dispositivo.</p>
-                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                                <p className="text-xs text-white/50 text-center mb-4">Mostrando las últimas {history.length} imágenes guardadas en este dispositivo.</p>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                                     <TooltipProvider>
                                     {history.filter(item => item.imageUrl).map(item => (
                                         <Card key={item.id} className="relative group overflow-hidden aspect-square bg-background/50 border-border/50">
@@ -350,8 +331,28 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
                             )}
                         </ScrollArea>
                     </div>
-                </TabsContent>
-            </Tabs>
+                )}
+            </main>
+            
+            {/* Footer / Input Area */}
+            <footer className="flex-shrink-0 p-4">
+                 <div className="flex gap-2">
+                    <Input
+                        value={prompt}
+                        onChange={(e) => setPrompt(e.target.value)}
+                        placeholder="Ej: Un mapa mental de mis preocupaciones"
+                        disabled={isLoading}
+                        onKeyDown={(e) => e.key === 'Enter' && !isLoading && handleGenerateImage()}
+                        className="bg-background/80 border-border text-base h-12"
+                    />
+                    <Button onClick={handleGenerateImage} disabled={isLoading || !prompt.trim()} className="w-44 h-12 text-base">
+                        {isLoading ? <Loader2 className="animate-spin mr-2" /> : <Wand2 className="mr-2"/>}
+                        <span className="truncate">
+                        {state === 'prompting' ? 'Creando...' : state === 'generating' ? 'Forjando...' : 'Generar'}
+                        </span>
+                    </Button>
+                </div>
+            </footer>
         </div>
       </DialogContent>
     </Dialog>
