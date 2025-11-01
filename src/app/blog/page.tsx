@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ArrowRight, BrainCircuit, Heart, Users, GitMerge, Sun, Moon, LogIn, Star, Book, ChevronRight, FileText, Calendar, X } from 'lucide-react';
@@ -7,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
 import { useAuth } from '@/firebase';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { getRecommendedCategory } from '@/app/actions';
 import type { Article, CachedProfile } from '@/lib/types';
 import RecommendationLoader from '@/components/blog/RecommendationLoader';
@@ -175,8 +176,8 @@ export default function BlogCategoriesPage() {
                     </Button>
                 </SheetTrigger>
                 <SheetContent className="w-[400px] sm:w-[540px] p-0 flex flex-col">
-                    <div className="flex flex-col h-full">
-                        <div className="flex items-center justify-between p-4 border-b">
+                    <div className="flex h-full flex-col">
+                        <div className="flex items-center justify-between border-b p-4">
                             <h2 className="text-lg font-semibold flex items-center gap-2">
                                 <Book className="h-5 w-5" />
                                 Historial de Artículos
@@ -189,11 +190,11 @@ export default function BlogCategoriesPage() {
                             {articlesLoading ? (
                                 <p className="p-6 text-muted-foreground">Cargando historial...</p>
                             ) : articles && articles.length > 0 ? (
-                                <div className="p-4">
+                                <div className="p-2">
                                     {articles.map((article, index) => (
                                         <React.Fragment key={article.id}>
                                             <Link href={`/blog/${article.category}/${article.slug}`} passHref>
-                                                <div className="block p-3 rounded-lg hover:bg-accent/50 cursor-pointer">
+                                                <div className="block p-4 rounded-lg hover:bg-accent/50 cursor-pointer">
                                                     <p className="font-semibold text-foreground text-base break-words mb-2">{article.title}</p>
                                                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                                                         <div className="flex items-center gap-4">
