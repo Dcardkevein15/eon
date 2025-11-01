@@ -189,7 +189,7 @@ export default function BlogCategoriesPage() {
                                     <Link key={article.id} href={`/blog/${article.category}/${article.slug}`} passHref>
                                         <Card className="hover:bg-accent/50 cursor-pointer">
                                             <CardHeader>
-                                                <CardTitle className="text-base">{article.title}</CardTitle>
+                                                <CardTitle className="text-base break-words">{article.title}</CardTitle>
                                                 <CardDescription>
                                                     Creado {getFormattedDate(article.createdAt)}
                                                 </CardDescription>
