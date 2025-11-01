@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowRight, BrainCircuit, Heart, Users, GitMerge, Sun, Moon, LogIn, Star, Book, ChevronRight, FileText } from 'lucide-react';
+import { ArrowRight, BrainCircuit, Heart, Users, GitMerge, Sun, Moon, LogIn, Star, Book, ChevronRight, FileText, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
 import { useAuth } from '@/firebase';
@@ -185,23 +185,22 @@ export default function BlogCategoriesPage() {
                         {articlesLoading ? (
                             <p className="p-6 text-muted-foreground">Cargando historial...</p>
                         ) : articles && articles.length > 0 ? (
-                            <div className="p-4">
+                            <div>
                                 {articles.map((article, index) => (
                                     <React.Fragment key={article.id}>
-                                        <Link href={`/blog/${article.category}/${article.slug}`} passHref>
-                                            <div className="flex items-center gap-4 p-3 rounded-lg hover:bg-accent/50 cursor-pointer">
-                                                <div className="flex flex-col items-center gap-1 text-muted-foreground w-20 flex-shrink-0">
-                                                    <FileText className="w-5 h-5"/>
-                                                    <span className="text-xs capitalize">{article.category.replace(/-/g, ' ')}</span>
-                                                    <span className="text-xs text-center">{getFormattedDate(article.createdAt)}</span>
+                                      <Link href={`/blog/${article.category}/${article.slug}`} passHref>
+                                        <div className="flex items-center gap-4 p-4 hover:bg-accent/50 cursor-pointer">
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-semibold text-foreground text-base break-words">{article.title}</p>
+                                                <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
+                                                    <span className="flex items-center gap-1.5"><FileText className="w-3 h-3"/> {article.category.replace(/-/g, ' ')}</span>
+                                                    <span className="flex items-center gap-1.5"><Calendar className="w-3 h-3"/> {getFormattedDate(article.createdAt)}</span>
                                                 </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-semibold text-foreground text-base break-words">{article.title}</p>
-                                                </div>
-                                                <ChevronRight className="w-5 h-5 text-muted-foreground ml-auto flex-shrink-0"/>
                                             </div>
-                                        </Link>
-                                        {index < articles.length - 1 && <Separator />}
+                                            <ChevronRight className="w-5 h-5 text-muted-foreground ml-auto flex-shrink-0"/>
+                                        </div>
+                                      </Link>
+                                      {index < articles.length - 1 && <Separator />}
                                     </React.Fragment>
                                 ))}
                             </div>
