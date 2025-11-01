@@ -292,7 +292,7 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
                 </TabsContent>
 
                 {/* History Tab */}
-                <TabsContent value="history" className="flex-1 flex flex-col overflow-y-hidden mt-0 p-1 flex-grow">
+                 <TabsContent value="history" className="flex-1 overflow-hidden mt-4">
                     <ScrollArea className="h-full px-1 py-4">
                         {isLoadingHistory ? (
                              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
