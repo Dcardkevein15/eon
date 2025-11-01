@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
 import { useAuth } from '@/firebase';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getRecommendedCategory } from '@/app/actions';
 import type { Article, CachedProfile } from '@/lib/types';
 import RecommendationLoader from '@/components/blog/RecommendationLoader';
