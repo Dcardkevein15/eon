@@ -291,63 +291,65 @@ export default function ImageWhiteboard({ isOpen, onClose, conversationHistory }
                     </div>
                 </TabsContent>
 
-                {/* History Tab */}
+                {/* History Tab - RESTRUCTURED */}
                  <TabsContent value="history" className="flex-1 flex flex-col mt-4 overflow-hidden">
-                    <ScrollArea className="h-full px-1 py-4">
-                        {isLoadingHistory ? (
-                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                                {[...Array(10)].map((_, i) => <Skeleton key={i} className="aspect-square bg-muted/20" />)}
-                             </div>
-                        ) : history.length > 0 ? (
-                            <>
-                            <p className="text-xs text-white/50 text-center mb-4">Mostrando las últimas {history.length} de hasta {MAX_HISTORY_ITEMS} imágenes guardadas en este dispositivo.</p>
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                                <TooltipProvider>
-                                {history.filter(item => item.imageUrl).map(item => (
-                                    <Card key={item.id} className="relative group overflow-hidden aspect-square bg-background/50 border-border/50">
-                                        <Image 
-                                          src={item.imageUrl}
-                                          alt={item.prompt} 
-                                          layout="fill" 
-                                          objectFit="cover"
-                                          unoptimized
-                                        />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex flex-col justify-end p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <p className="text-xs text-white/90 font-semibold truncate">{item.prompt}</p>
-                                            <div className="flex gap-1 mt-1">
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-white/80 hover:bg-white/20 hover:text-white" onClick={() => handleDownload(item.imageUrl)}>
-                                                            <Download className="h-4 w-4"/>
-                                                        </Button>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent><p>Descargar</p></TooltipContent>
-                                                </Tooltip>
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:bg-red-500/20 hover:text-red-300" onClick={() => deleteImageFromHistory(item.id)}>
-                                                            <Trash2 className="h-4 w-4"/>
-                                                        </Button>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent><p>Eliminar</p></TooltipContent>
-                                                </Tooltip>
-                                            </div>
-                                        </div>
-                                    </Card>
-                                ))}
-                                </TooltipProvider>
-                            </div>
-                            </>
-                        ) : (
-                            <div className="flex items-center justify-center h-full text-center text-white/60 p-4">
-                                <div className="max-w-xs">
-                                    <History className="h-12 w-12 mx-auto mb-2"/>
-                                    <p className="text-sm font-semibold">Tu historial está vacío.</p>
-                                    <p className="text-xs">Ve a la pestaña "Crear" para generar tu primera obra de arte.</p>
+                    <div className="h-full">
+                        <ScrollArea className="h-full px-1 py-4">
+                            {isLoadingHistory ? (
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                                    {[...Array(10)].map((_, i) => <Skeleton key={i} className="aspect-square bg-muted/20" />)}
                                 </div>
-                            </div>
-                        )}
-                    </ScrollArea>
+                            ) : history.length > 0 ? (
+                                <>
+                                <p className="text-xs text-white/50 text-center mb-4">Mostrando las últimas {history.length} de hasta {MAX_HISTORY_ITEMS} imágenes guardadas en este dispositivo.</p>
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                                    <TooltipProvider>
+                                    {history.filter(item => item.imageUrl).map(item => (
+                                        <Card key={item.id} className="relative group overflow-hidden aspect-square bg-background/50 border-border/50">
+                                            <Image 
+                                            src={item.imageUrl}
+                                            alt={item.prompt} 
+                                            layout="fill" 
+                                            objectFit="cover"
+                                            unoptimized
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex flex-col justify-end p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <p className="text-xs text-white/90 font-semibold truncate">{item.prompt}</p>
+                                                <div className="flex gap-1 mt-1">
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-white/80 hover:bg-white/20 hover:text-white" onClick={() => handleDownload(item.imageUrl)}>
+                                                                <Download className="h-4 w-4"/>
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent><p>Descargar</p></TooltipContent>
+                                                    </Tooltip>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:bg-red-500/20 hover:text-red-300" onClick={() => deleteImageFromHistory(item.id)}>
+                                                                <Trash2 className="h-4 w-4"/>
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent><p>Eliminar</p></TooltipContent>
+                                                    </Tooltip>
+                                                </div>
+                                            </div>
+                                        </Card>
+                                    ))}
+                                    </TooltipProvider>
+                                </div>
+                                </>
+                            ) : (
+                                <div className="flex items-center justify-center h-full text-center text-white/60 p-4">
+                                    <div className="max-w-xs">
+                                        <History className="h-12 w-12 mx-auto mb-2"/>
+                                        <p className="text-sm font-semibold">Tu historial está vacío.</p>
+                                        <p className="text-xs">Ve a la pestaña "Crear" para generar tu primera obra de arte.</p>
+                                    </div>
+                                </div>
+                            )}
+                        </ScrollArea>
+                    </div>
                 </TabsContent>
             </Tabs>
         </div>
