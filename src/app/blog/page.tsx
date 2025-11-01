@@ -175,45 +175,39 @@ export default function BlogCategoriesPage() {
                         <span className="sr-only">Ver historial de artículos</span>
                     </Button>
                 </SheetTrigger>
-                <SheetContent className="w-[400px] sm:w-[540px] p-0 flex flex-col">
-                    <div className="flex h-full flex-col">
-                        <div className="flex items-center justify-between border-b p-4">
-                            <h2 className="text-lg font-semibold flex items-center gap-2">
-                                <Book className="h-5 w-5" />
-                                Historial de Artículos
-                            </h2>
-                            <SheetClose className="h-7 w-7 flex items-center justify-center rounded-full hover:bg-muted">
-                                <X className="h-4 w-4" />
-                            </SheetClose>
-                        </div>
-                        <ScrollArea className="flex-1">
-                            {articlesLoading ? (
-                                <p className="p-6 text-muted-foreground">Cargando historial...</p>
-                            ) : articles && articles.length > 0 ? (
-                                <div className="p-2">
-                                    {articles.map((article, index) => (
-                                        <React.Fragment key={article.id}>
-                                            <Link href={`/blog/${article.category}/${article.slug}`} passHref>
-                                                <div className="block p-4 rounded-lg hover:bg-accent/50 cursor-pointer">
-                                                    <p className="font-semibold text-foreground text-base break-words mb-2">{article.title}</p>
-                                                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                                        <div className="flex items-center gap-4">
-                                                          <span className="flex items-center gap-1.5"><FileText className="w-3 h-3"/> {article.category.replace(/-/g, ' ')}</span>
-                                                          <span className="flex items-center gap-1.5"><Calendar className="w-3 h-3"/> {getFormattedDate(article.createdAt)}</span>
-                                                        </div>
-                                                        <ChevronRight className="w-5 h-5 text-muted-foreground ml-auto flex-shrink-0"/>
-                                                    </div>
-                                                </div>
-                                            </Link>
-                                            {index < articles.length - 1 && <Separator />}
-                                        </React.Fragment>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p className="p-6 text-muted-foreground text-center">No hay artículos generados todavía.</p>
-                            )}
-                        </ScrollArea>
+                <SheetContent className="w-[400px] sm:w-[540px] p-0">
+                  <ScrollArea className="h-full">
+                    <div className="flex items-center justify-between border-b p-4">
+                      <h2 className="text-lg font-semibold flex items-center gap-2">
+                        <Book className="h-5 w-5" />
+                        Historial de Artículos
+                      </h2>
+                       <SheetClose className="h-7 w-7 flex items-center justify-center rounded-full hover:bg-muted">
+                          <X className="h-4 w-4" />
+                       </SheetClose>
                     </div>
+                    {articlesLoading ? (
+                      <p className="p-6 text-muted-foreground">Cargando historial...</p>
+                    ) : articles && articles.length > 0 ? (
+                      <div className="divide-y divide-border">
+                        {articles.map((article) => (
+                          <React.Fragment key={article.id}>
+                            <Link href={`/blog/${article.category}/${article.slug}`} passHref>
+                              <div className="block p-4 hover:bg-accent/50 cursor-pointer">
+                                <p className="font-semibold text-foreground text-base break-words mb-2">{article.title}</p>
+                                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                  <span className="flex items-center gap-1.5"><FileText className="w-3 h-3"/> {article.category.replace(/-/g, ' ')}</span>
+                                  <span className="flex items-center gap-1.5"><Calendar className="w-3 h-3"/> {getFormattedDate(article.createdAt)}</span>
+                                </div>
+                              </div>
+                            </Link>
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="p-6 text-muted-foreground text-center">No hay artículos generados todavía.</p>
+                    )}
+                  </ScrollArea>
                 </SheetContent>
             </Sheet>
            </div>
