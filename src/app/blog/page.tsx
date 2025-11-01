@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowRight, BrainCircuit, Heart, Users, GitMerge, Sun, Moon, LogIn, Star, Book } from 'lucide-react';
+import { ArrowRight, BrainCircuit, Heart, Users, GitMerge, Sun, Moon, LogIn, Star, Book, ChevronRight, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
 import { useAuth } from '@/firebase';
@@ -18,6 +18,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/ca
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 
 const categories = [
   {
@@ -173,33 +174,39 @@ export default function BlogCategoriesPage() {
                         <span className="sr-only">Ver historial de artículos</span>
                     </Button>
                 </SheetTrigger>
-                <SheetContent className="w-[400px] sm:w-[540px] p-0">
-                    <SheetHeader className="p-6 border-b">
-                        <SheetTitle className="flex items-center gap-2">
+                <SheetContent className="w-[400px] sm:w-[540px] p-0 flex flex-col">
+                    <SheetHeader className="p-6 border-b flex-shrink-0">
+                        <SheetTitle className="flex items-center gap-2 text-lg">
                            <Book className="h-5 w-5" />
                            Historial de Artículos
                         </SheetTitle>
                     </SheetHeader>
-                    <ScrollArea className="h-[calc(100vh-80px)]">
+                    <ScrollArea className="flex-1">
                         {articlesLoading ? (
                             <p className="p-6 text-muted-foreground">Cargando historial...</p>
                         ) : articles && articles.length > 0 ? (
-                            <div className="p-6 space-y-4">
-                                {articles.map(article => (
-                                    <Link key={article.id} href={`/blog/${article.category}/${article.slug}`} passHref>
-                                        <Card className="hover:bg-accent/50 cursor-pointer">
-                                            <CardHeader>
-                                                <CardTitle className="text-base break-words">{article.title}</CardTitle>
-                                                <CardDescription>
-                                                    Creado {getFormattedDate(article.createdAt)}
-                                                </CardDescription>
-                                            </CardHeader>
-                                        </Card>
-                                    </Link>
+                            <div className="p-4">
+                                {articles.map((article, index) => (
+                                    <React.Fragment key={article.id}>
+                                        <Link href={`/blog/${article.category}/${article.slug}`} passHref>
+                                            <div className="flex items-center gap-4 p-3 rounded-lg hover:bg-accent/50 cursor-pointer">
+                                                <div className="flex flex-col items-center gap-1 text-muted-foreground w-20 flex-shrink-0">
+                                                    <FileText className="w-5 h-5"/>
+                                                    <span className="text-xs capitalize">{article.category.replace(/-/g, ' ')}</span>
+                                                    <span className="text-xs text-center">{getFormattedDate(article.createdAt)}</span>
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-semibold text-foreground text-base break-words">{article.title}</p>
+                                                </div>
+                                                <ChevronRight className="w-5 h-5 text-muted-foreground ml-auto flex-shrink-0"/>
+                                            </div>
+                                        </Link>
+                                        {index < articles.length - 1 && <Separator />}
+                                    </React.Fragment>
                                 ))}
                             </div>
                         ) : (
-                            <p className="p-6 text-muted-foreground">No hay artículos generados todavía.</p>
+                            <p className="p-6 text-muted-foreground text-center">No hay artículos generados todavía.</p>
                         )}
                     </ScrollArea>
                 </SheetContent>
