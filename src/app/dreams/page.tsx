@@ -43,6 +43,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 import DreamSpecialistSelection from '@/components/dreams/DreamSpecialistSelection';
+import { z } from 'zod';
 
 // Custom hook for managing state in localStorage
 function useLocalStorage<T>(key: string, initialValue: T) {
@@ -119,7 +120,7 @@ function DreamHistorySidebar({ dreams, isLoading, onSelectDream, onDeleteDream }
                         <Card className="bg-sidebar-accent/50 border-sidebar-border hover:bg-sidebar-accent hover:border-primary/50 transition-colors">
                             <CardHeader className="p-3">
                                 <CardTitle className="text-sm font-semibold truncate text-sidebar-foreground">{dream.interpretation.dreamTitle}</CardTitle>
-                                <CardDescription className="text-xs text-muted-foreground">{getFormattedDate(dream.createdAt)}</CardDescription>
+                                <CardDescription className="text-xs text-muted-foreground">{getFormattedDate(dream.createdAt)}</CardHeader>
                             </CardHeader>
                         </Card>
                     </button>
@@ -273,20 +274,16 @@ export default function DreamWeaverPage() {
           dreamDescription = `Transcripción de la narración: "${transcription}"\n\nNotas adicionales del usuario: ${dreamText}`;
       }
 
-      const interpretation = await interpretDreamAction({
+      const interpretationResult = await interpretDreamAction({
         dreamDescription: dreamDescription,
         userProfile: profile ? JSON.stringify(profile) : '{}',
         perspective: specialist.perspective,
       });
 
-      // Zod schema for validation
-      const DreamTitleSchema = z.object({ dreamTitle: z.string() });
-
       // Fallback title
       let dreamTitle = "Sueño Sin Título";
       try {
-        // A simple regex to find the title, more robust than parsing the whole markdown
-        const titleMatch = interpretation.interpretationText.match(/^#\s*(.*)/);
+        const titleMatch = interpretationResult.interpretationText.match(/^#\s*(.*)/);
         if (titleMatch && titleMatch[1]) {
             dreamTitle = titleMatch[1];
         }
@@ -294,14 +291,13 @@ export default function DreamWeaverPage() {
         console.error("Could not parse dream title from markdown", e);
       }
 
-
       const newDreamDoc: DreamInterpretationDoc = {
         id: uuidv4(),
         userId: user?.uid || 'local-user',
         dreamDescription: dreamDescription,
         interpretation: { 
-            ...interpretation,
-            dreamTitle: dreamTitle, // Add the parsed/fallback title
+            interpretationText: interpretationResult.interpretationText,
+            dreamTitle: dreamTitle,
         },
         createdAt: new Date().toISOString(),
       };
@@ -477,3 +473,5 @@ export default function DreamWeaverPage() {
     </SidebarProvider>
   );
 }
+
+    
