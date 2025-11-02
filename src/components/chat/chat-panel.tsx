@@ -207,43 +207,35 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
     const textInput = input.trim();
     if (!textInput && !audioDataUri) return;
     
-    let messageContent: string;
-    let transcriptionResult = '';
-
-    // If there's audio, transcribe it first.
+    let messageContent = textInput;
+    
+    // If there's audio, transcribe it and enrich the message.
     if (audioDataUri) {
         try {
-            const { transcription } = await analyzeVoiceMessageAction({ audioDataUri });
-            transcriptionResult = transcription;
-            messageContent = `Transcripción: "${transcription}"\n\n${textInput}`.trim();
+            const { transcription, intent } = await analyzeVoiceMessageAction({ audioDataUri });
+            if (transcription) {
+                // Prepend the transcription and intent analysis to the user's text message.
+                messageContent = `(Transcripción: "${transcription}")\n(Táctica: ${intent})\n\n${textInput}`.trim();
+            } else {
+                 messageContent = `(Error al transcribir audio)\n\n${textInput}`.trim();
+            }
         } catch (error: any) {
-            // IMPORTANT: Capture the specific error from the server
             console.error('Error in voice analysis action:', error);
-            const errorMessage = error.message || 'La transcripción de audio falló en el servidor.';
-            messageContent = `Error de Transcripción: "${errorMessage}"\n\n${textInput}`.trim();
+            const errorMessage = error.message || 'La transcripción de audio falló.';
+            messageContent = `(Error de Transcripción: "${errorMessage}")\n\n${textInput}`.trim();
         }
-    } else {
-        messageContent = textInput;
     }
 
-    // Now, create a single message with the final content
     const userMessage: Omit<Message, 'id'> = {
       role: 'user',
       content: messageContent,
       timestamp: Timestamp.now(),
     };
 
-    // Append this single message to the chat
     await appendMessage(chat.id, userMessage);
     
-    // Only proceed to get AI response if transcription was successful
-    if (transcriptionResult) {
-      await getAIResponseAndUpdate([...(messages || []), { ...userMessage, id: uuidv4() }]);
-    } else if (!audioDataUri && textInput) {
-      // If it was just a text message, get response
-      await getAIResponseAndUpdate([...(messages || []), { ...userMessage, id: uuidv4() }]);
-    }
-    // If transcription failed, we have already posted the error message, so we stop.
+    // Always get an AI response, even if transcription failed, so the context is not lost.
+    await getAIResponseAndUpdate([...(messages || []), { ...userMessage, id: uuidv4() }]);
 
   }, [user, messages, appendMessage, chat.id, getAIResponseAndUpdate, toast]);
 

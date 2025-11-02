@@ -221,7 +221,6 @@ export async function generateBreakdownExerciseAction(input: GenerateBreakdownEx
 
 export async function interpretDreamAction(input: InterpretDreamInput) {
   try {
-    // El flow se encarga de convertir el perfil a string, así que lo pasamos directamente.
     const result = await interpretDreamFlow(input);
     return result;
   } catch (e: any) {
@@ -261,15 +260,25 @@ export async function classifyIntentAction(input: ClassifyIntentInput): Promise<
     }
 }
 
-export async function analyzeVoiceMessageAction(input: AnalyzeVoiceInput): Promise<AnalyzeVoiceOutput> {
+export async function analyzeVoiceMessageAction(input: AnalyzeVoiceInput): Promise<{ transcription: string; sentiment: number; intent: string }> {
   if (!input.audioDataUri) {
-    return { transcription: '' };
+    return { transcription: '', sentiment: 0, intent: 'desconocido' };
   }
   try {
-    const voiceAnalysis = await analyzeVoiceMessageFlow({ audioDataUri: input.audioDataUri });
-    return {
-        transcription: voiceAnalysis.transcription,
-    };
+    // 1. Transcribe audio
+    const { transcription } = await analyzeVoiceMessageFlow({ audioDataUri: input.audioDataUri });
+    
+    if (!transcription) {
+      return { transcription: '', sentiment: 0, intent: 'desconocido' };
+    }
+
+    // 2. Analyze sentiment of the transcription
+    const { sentiment } = await analyzeSentimentAction({ text: transcription });
+
+    // 3. Classify intent of the transcription
+    const { intent } = await classifyIntentAction({ text: transcription });
+
+    return { transcription, sentiment, intent };
   } catch (error) {
     console.error('Error in voice analysis action:', error);
     // Re-throw the original error to be caught by the client
@@ -289,7 +298,6 @@ export async function analyzeDreamVoiceAction(input: AnalyzeVoiceInput): Promise
     };
   } catch (error) {
     console.error('Error in dream voice analysis action:', error);
-    // Re-throw the original error to be caught by the client
     throw error;
   }
 }

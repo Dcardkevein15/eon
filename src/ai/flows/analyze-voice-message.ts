@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * @fileOverview Transcribes an audio message.
+ * @fileOverview Transcribes an audio message and provides an initial analysis.
  */
 
 import { ai } from '@/ai/genkit';
