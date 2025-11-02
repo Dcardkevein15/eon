@@ -38,7 +38,7 @@ export default function ArticleListPage() {
 
   useEffect(() => {
     // This effect runs only once when the user and category are ready.
-    if (user && !authLoading && category && !initialLoadComplete) {
+    if (!authLoading && user && category && !initialLoadComplete) {
       const fetchInitialTitles = async () => {
         setIsLoading(true);
         try {
@@ -64,7 +64,7 @@ export default function ArticleListPage() {
     if (!authLoading && !user) {
         setIsLoading(false);
     }
-  }, [user, authLoading, category, initialLoadComplete, formattedCategory, toast]);
+  }, [user, authLoading, category, formattedCategory, initialLoadComplete]);
 
 
   const handleManualRefresh = async () => {
