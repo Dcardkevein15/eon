@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { generateArticleTitles } from '@/app/actions';
@@ -31,42 +31,47 @@ export default function ArticleListPage() {
   const [titles, setTitles] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   
   const category = Array.isArray(params.category) ? params.category[0] : params.category;
   const formattedCategory = category.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
   useEffect(() => {
-    // Define the data fetching logic inside the useEffect hook
-    const fetchInitialTitles = async () => {
-      if (!user || !category || authLoading) return;
-
-      setIsLoading(true);
-      try {
-        const result = await generateArticleTitles({ category: formattedCategory });
-        setTitles(result.titles);
-      } catch (error) {
-        console.error('Failed to generate article titles:', error);
-        toast({
-          variant: 'destructive',
-          title: 'Error al cargar artículos',
-          description: 'No se pudieron generar los títulos de los artículos. Por favor, intenta de nuevo.',
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    // This effect runs only once when the user and category are ready.
+    if (user && !authLoading && category && !initialLoadComplete) {
+      const fetchInitialTitles = async () => {
+        setIsLoading(true);
+        try {
+          const result = await generateArticleTitles({ category: formattedCategory });
+          setTitles(result.titles);
+          setInitialLoadComplete(true);
+        } catch (error) {
+          console.error('Failed to generate initial article titles:', error);
+          toast({
+            variant: 'destructive',
+            title: 'Error al cargar artículos',
+            description: 'No se pudieron generar los títulos de los artículos. Por favor, intenta de nuevo.',
+          });
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      fetchInitialTitles();
+    }
     
-    // We only want this to run once when the user and category are available.
-    if (!authLoading && user) {
-        fetchInitialTitles();
-    } else if (!authLoading && !user) {
+    // If auth is done and there's no user, stop loading.
+    if (!authLoading && !user) {
         setIsLoading(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, authLoading, category]);
+  }, [user, authLoading, category, initialLoadComplete, formattedCategory, toast]);
 
 
   const handleManualRefresh = async () => {
+    if (!user) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Debes iniciar sesión para refrescar.' });
+        return;
+    }
     setIsRefreshing(true);
     try {
       const result = await generateArticleTitles({ category: formattedCategory });
