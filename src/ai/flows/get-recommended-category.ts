@@ -29,22 +29,14 @@ export type RecommendCategoryOutput = z.infer<typeof RecommendedCategorySchema>;
 // Define el prompt de la IA.
 const recommendCategoryPrompt = ai.definePrompt({
   name: 'recommendCategoryPrompt',
-  input: { schema: RecommendCategoryInputSchema },
+  input: { schema: z.object({ keyTopics: z.string() }) },
   output: { schema: AIOutputSchema },
-  config: {
-    safetySettings: [
-        {
-            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-            threshold: 'BLOCK_NONE',
-        }
-    ]
-  },
-  prompt: `Eres un psicólogo experto. Analiza el siguiente perfil psicológico y determina cuál de las siguientes categorías de blog sería MÁS beneficiosa para el usuario.
+  prompt: `Eres un editor de contenido experto. Basándote en los siguientes temas de interés y patrones de pensamiento de un usuario, determina cuál de las siguientes categorías de blog sería MÁS relevante.
 
-**Perfil del Usuario:**
-{{{userProfile}}}
+**Temas Clave del Usuario:**
+{{{keyTopics}}}
 
-**Categorías Disponibles para inspirarte (elige la que mejor se adapte):**
+**Categorías Disponibles:**
 - Terapia Cognitivo-Conductual
 - Ansiedad y Estrés
 - Mindfulness y Aceptación
@@ -64,12 +56,30 @@ export const getRecommendedCategory = ai.defineFlow(
     outputSchema: RecommendedCategorySchema, 
   },
   async (input) => {
-    const { output } = await recommendCategoryPrompt(input);
+    // 1. Extraer solo la información necesaria y menos sensible del perfil.
+    let keyTopics = "Temas generales de crecimiento personal.";
+    try {
+        const profile = JSON.parse(input.userProfile);
+        const topics = profile.emotionalConstellation?.nodes?.map((n: any) => n.id) || [];
+        const biases = profile.cognitiveBiases || [];
+        const allTopics = [...topics, ...biases];
+        if (allTopics.length > 0) {
+            keyTopics = allTopics.join(', ');
+        }
+    } catch (e) {
+        console.error("Could not parse user profile to extract key topics.", e);
+        // El valor por defecto de keyTopics se usará si el perfil está malformado.
+    }
+
+
+    // 2. Llamar a la IA con la entrada simplificada.
+    const { output } = await recommendCategoryPrompt({ keyTopics });
     
     if (!output?.categoryName) {
       throw new Error('No se pudo generar una recomendación de categoría.');
     }
 
+    // 3. Mapear la respuesta de la IA a una categoría válida.
     const aiCategory = output.categoryName.toLowerCase();
     
     const categoryMap: Record<string, { name: string; slug: string }> = {
