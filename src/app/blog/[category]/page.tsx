@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -34,71 +34,42 @@ export default function ArticleListPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   
   const category = Array.isArray(params.category) ? params.category[0] : params.category;
-  
-  const formattedCategory = useMemo(() => {
-    if (!category) return '';
-    return category.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  }, [category]);
+  const formattedCategory = category.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
-
-  useEffect(() => {
-    // Only run this effect when user/auth state is settled and we have a category
-    if (authLoading || !category) return;
-
-    if (!user) {
-      setIsLoading(false);
-      return;
-    }
-    
-    // This is the initial data fetch.
-    const fetchInitialTitles = async () => {
-      setIsLoading(true);
+  const fetchTitles = useCallback(async () => {
+      const currentIsLoading = isRefreshing ? setIsRefreshing : setIsLoading;
+      currentIsLoading(true);
       try {
         const result = await generateArticleTitles({ category: formattedCategory });
         setTitles(result.titles);
+        if (isRefreshing) {
+          toast({
+            title: '¡Nuevos títulos cargados!',
+          });
+        }
       } catch (error) {
-        console.error('Failed to generate initial article titles:', error);
+        console.error('Failed to generate article titles:', error);
         toast({
           variant: 'destructive',
           title: 'Error al cargar artículos',
-          description: 'No se pudieron generar los títulos de los artículos. Por favor, intenta de nuevo.',
+          description: 'No se pudieron generar los títulos. Por favor, intenta de nuevo.',
         });
       } finally {
-        setIsLoading(false);
+        currentIsLoading(false);
       }
-    };
-    
-    fetchInitialTitles();
-    
-  // We ONLY want this to run once when the user and category are ready.
-  // We do not depend on formattedCategory directly as it's derived from category.
+  }, [formattedCategory, toast, isRefreshing]);
+
+  useEffect(() => {
+    // Only run initial fetch when user is loaded and confirmed
+    if (!authLoading && user) {
+        fetchTitles();
+    }
+     // If auth is done loading and there's no user, stop the loading state
+    if (!authLoading && !user) {
+        setIsLoading(false);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, authLoading, category]);
-
-
-  const handleManualRefresh = async () => {
-    if (!user) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Debes iniciar sesión para refrescar.' });
-        return;
-    }
-    setIsRefreshing(true);
-    try {
-      const result = await generateArticleTitles({ category: formattedCategory });
-      setTitles(result.titles);
-      toast({
-          title: '¡Nuevos títulos cargados!',
-      });
-    } catch (error) {
-       console.error('Failed to generate article titles:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error al cargar artículos',
-        description: 'No se pudieron generar los títulos de los artículos. Por favor, intenta de nuevo.',
-      });
-    } finally {
-        setIsRefreshing(false);
-    }
-  };
+  }, [user, authLoading, category]); // Depend on category to refetch if URL changes
 
 
   const renderContent = () => {
@@ -126,7 +97,7 @@ export default function ArticleListPage() {
         return (
             <div className="text-center py-8">
                 <p className="text-muted-foreground">No se encontraron artículos para esta categoría.</p>
-                 <Button onClick={handleManualRefresh} disabled={isRefreshing} className="mt-4">
+                 <Button onClick={() => setIsRefreshing(true)} disabled={isRefreshing} className="mt-4">
                     {isRefreshing ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                     Intentar Generar de Nuevo
                 </Button>
@@ -175,7 +146,7 @@ export default function ArticleListPage() {
                     </Link>
                 </Button>
                 {user && (
-                    <Button onClick={handleManualRefresh} variant="outline" size="sm" disabled={isRefreshing || isLoading}>
+                    <Button onClick={() => setIsRefreshing(true)} variant="outline" size="sm" disabled={isRefreshing || isLoading}>
                         {isRefreshing ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                         Nuevos Títulos
                     </Button>

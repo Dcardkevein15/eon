@@ -312,8 +312,7 @@ export async function generateArticleTitles(input: GenerateArticleTitlesInput): 
 
     await batch.commit();
 
-    // IMPORTANT FIX: Return ONLY the newly generated list.
-    // The previous logic of combining old + new titles caused the UI flicker.
+    // CRUCIAL FIX: Return ONLY the newly generated list to ensure consistency.
     return result;
 
   } catch (error) {
