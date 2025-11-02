@@ -30,7 +30,7 @@ const recommendCategoryPrompt = ai.definePrompt({
   name: 'recommendCategoryPrompt',
   input: { schema: RecommendCategoryInputSchema },
   output: { schema: RecommendCategoryOutputSchema },
-  prompt: `Eres un psicólogo experto que debe recomendar categorías de lectura a un usuario. Analiza el siguiente perfil psicológico y determina cuáles de las siguientes categorías serían MÁS beneficiosa para el usuario en este momento. Basa tu decisión en el diagnóstico, el conflicto nuclear y los sesgos cognitivos.
+  prompt: `Eres un psicólogo experto. Analiza el siguiente perfil psicológico y determina cuáles de las siguientes categorías serían MÁS beneficiosas para el usuario.
 
 **Perfil del Usuario:**
 {{{userProfile}}}
@@ -43,7 +43,8 @@ const recommendCategoryPrompt = ai.definePrompt({
 - "Salud Emocional" (slug: "salud-emocional")
 - "Crecimiento Personal" (slug: "crecimiento-personal")
 
-Tu respuesta DEBE ser únicamente un objeto JSON con una clave "recommendations" que contenga un array de las 3 categorías más relevantes, ordenadas de mayor a menor importancia. No añadas ninguna explicación.`,
+Devuelve un objeto JSON con una clave "recommendations" que contenga un array de las 3 categorías más relevantes, ordenadas de mayor a menor importancia. NO añadas ninguna explicación o texto adicional fuera del JSON.
+`,
 });
 
 // Define y exporta el flujo principal.
