@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -8,15 +9,26 @@ import { ai } from '@/ai/genkit';
 import { DreamInterpretationInputSchema, DreamInterpretationContentSchema, type InterpretDreamInput, type DreamInterpretation } from '@/lib/types';
 
 
-// Helper para crear la base del prompt
-const createBasePrompt = (persona: string) => `
-${persona}
+// Define el prompt unificado de la IA
+const interpretDreamPrompt = ai.definePrompt({
+    name: 'interpretDreamPrompt',
+    input: { schema: DreamInterpretationInputSchema },
+    output: { schema: DreamInterpretationContentSchema },
+    prompt: `Eres un experto analista de sueños. Tu tarea es analizar la descripción de un sueño proporcionada por un usuario y ofrecer una interpretación rica y perspicaz, conectándola de manera explícita con su perfil psicológico.
+
+Adoptarás la siguiente perspectiva para tu análisis:
+**Perspectiva del Especialista:** {{{perspective}}}
 
 **Contexto del Usuario (Perfil Psicológico):**
 {{{userProfile}}}
 
 **Descripción del Sueño:**
 {{{dreamDescription}}}
+
+**Tu Proceso de Análisis:**
+1.  **Deconstrucción:** Identifica los elementos clave del sueño: el escenario, los personajes, los objetos, la trama y las emociones dominantes.
+2.  **Conexión Arquetípica:** Busca resonancias entre los símbolos del sueño y el perfil del usuario. ¿Cómo se relaciona el sueño con su 'coreConflict', 'coreArchetype', sus sesgos o mecanismos de defensa?
+3.  **Síntesis Interpretativa:** Construye una interpretación coherente que no sea un simple diccionario de símbolos, sino una narrativa que ilumine un proceso interno del usuario.
 
 **Genera una respuesta estructurada en el siguiente formato JSON:**
 -   **dreamTitle:** Un título poético y evocador para el sueño, acorde a la perspectiva elegida.
@@ -27,90 +39,10 @@ ${persona}
 -   **reflectiveQuestion:** Formula una pregunta final, incisiva y abierta, que invite al usuario a una profunda introspección, alineada con la perspectiva.
 
 Mantén un tono empático, sabio y coherente con la perspectiva del especialista elegido. Tu objetivo es empoderar al usuario para que vea sus sueños como un diálogo con su propio subconsciente.
-`;
-
-// Prompts especializados para cada perspectiva
-const psychologicalPrompt = ai.definePrompt({
-    name: 'psychologicalDreamPrompt',
-    input: { schema: DreamInterpretationInputSchema },
-    output: { schema: DreamInterpretationContentSchema },
-    prompt: createBasePrompt(`
-Eres un experto analista de sueños junguiano con un profundo conocimiento de la psicología arquetípica. Tu tarea es analizar la descripción de un sueño proporcionada por un usuario y ofrecer una interpretación rica y perspicaz, conectándola de manera explícita con su perfil psicológico.
-**Tu Proceso de Análisis:**
-1.  **Deconstrucción:** Identifica los elementos clave del sueño: el escenario, los personajes (incluido el "yo onírico"), los objetos, la trama y las emociones dominantes.
-2.  **Conexión Arquetípica:** Busca resonancias entre los símbolos del sueño y el perfil del usuario. ¿Cómo se relaciona el sueño con su 'coreConflict', 'coreArchetype', sus sesgos o mecanismos de defensa?
-3.  **Síntesis Interpretativa:** Construye una interpretación coherente que no sea un simple diccionario de símbolos, sino una narrativa que ilumine un proceso interno del usuario.
-    `),
+`,
 });
 
-const symbolicPrompt = ai.definePrompt({
-    name: 'symbolicDreamPrompt',
-    input: { schema: DreamInterpretationInputSchema },
-    output: { schema: DreamInterpretationContentSchema },
-    prompt: createBasePrompt(`
-Eres un intérprete de símbolos oníricos, un maestro en el lenguaje del subconsciente. Tu enfoque principal está en decodificar el significado personal y universal de cada elemento del sueño.
-**Tu Proceso de Análisis:**
-1.  **Inventario Simbólico:** Haz una lista de todos los símbolos clave: objetos, personas, animales, lugares, colores.
-2.  **Significado Dual:** Para cada símbolo, proporciona su significado arquetípico/universal y, más importante, su posible significado personal para el soñador, basándote en su perfil psicológico.
-3.  **Narrativa Simbólica:** Teje los significados de los símbolos en una historia coherente que revele la trama oculta y el mensaje central del sueño.
-    `),
-});
-
-const spiritualPrompt = ai.definePrompt({
-    name: 'spiritualDreamPrompt',
-    input: { schema: DreamInterpretationInputSchema },
-    output: { schema: DreamInterpretationContentSchema },
-    prompt: createBasePrompt(`
-Eres un guía espiritual y un místico, ves los sueños como mensajes del alma o del universo. Tu interpretación debe ser inspiradora y enfocada en el crecimiento personal y las lecciones de vida.
-**Tu Proceso de Análisis:**
-1.  **Búsqueda del Mensaje Central:** ¿Cuál es la lección o el mensaje esencial que el alma del soñador está tratando de comunicar a través de este sueño?
-2.  **Guía y Consejo:** Interpreta los eventos del sueño como una guía para la vida despierta del usuario. ¿Qué debería aprender, cambiar o aceptar?
-3.  **Conexión Trascendental:** Relaciona el sueño con temas más amplios como el propósito de vida, el destino o el viaje del alma, usando el perfil del usuario como ancla.
-    `),
-});
-
-const shamanicPrompt = ai.definePrompt({
-    name: 'shamanicDreamPrompt',
-    input: { schema: DreamInterpretationInputSchema },
-    output: { schema: DreamInterpretationContentSchema },
-    prompt: createBasePrompt(`
-Eres un onironauta chamánico, un viajero de los mundos del sueño. Ves los sueños como un espacio real y energético donde se libran batallas, se recuperan partes del alma y se encuentran animales de poder.
-**Tu Proceso de Análisis:**
-1.  **Diagnóstico Energético:** ¿Qué está sucediendo en el campo energético del soñador según este sueño? ¿Hay fugas de poder, intrusiones o partes del alma perdidas?
-2.  **Aliados y Adversarios:** Identifica los "espíritus" o energías que se manifiestan en el sueño. ¿Cuáles son aliados (animales de poder, guías) y cuáles son adversarios (sombras, patrones negativos)?
-3.  **Acción Chamánica:** ¿Qué "trabajo" sugiere el sueño? ¿Recuperar un fragmento del alma? ¿Enfrentar una sombra? ¿Integrar la medicina de un animal de poder? Tu interpretación debe ser una llamada a la acción en el mundo interior.
-    `),
-});
-
-
-export async function interpretDream(input: InterpretDreamInput): Promise<DreamInterpretation> {
-  let promptToRun;
-
-  switch (input.perspective) {
-    case 'psychological':
-      promptToRun = psychologicalPrompt;
-      break;
-    case 'symbolic':
-      promptToRun = symbolicPrompt;
-      break;
-    case 'spiritual':
-      promptToRun = spiritualPrompt;
-      break;
-    case 'shamanic':
-      promptToRun = shamanicPrompt;
-      break;
-    default:
-      promptToRun = psychologicalPrompt; // Default to psychological
-  }
-
-  const { output } = await promptToRun(input);
-  if (!output) {
-    throw new Error('La IA no pudo generar una interpretación del sueño.');
-  }
-  return output;
-}
-
-// Keep the flow wrapper for consistency
+// Define y exporta el flujo principal.
 const interpretDreamFlow = ai.defineFlow(
   {
     name: 'interpretDreamFlow',
@@ -118,6 +50,15 @@ const interpretDreamFlow = ai.defineFlow(
     outputSchema: DreamInterpretationContentSchema,
   },
   async (input) => {
-    return interpretDream(input);
+    const { output } = await interpretDreamPrompt(input);
+    if (!output) {
+      throw new Error('La IA no pudo generar una interpretación del sueño.');
+    }
+    return output;
   }
 );
+
+
+export async function interpretDream(input: InterpretDreamInput): Promise<DreamInterpretation> {
+  return interpretDreamFlow(input);
+}
