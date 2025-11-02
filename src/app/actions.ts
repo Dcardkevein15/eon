@@ -9,7 +9,7 @@ import { collection, getDocs, query, orderBy, limit, Timestamp, doc, getDoc, set
 import { firestore } from '@/lib/firebase';
 import { SUGGESTIONS_FALLBACK } from '@/lib/suggestions-fallback';
 import { generateBreakdownExercise as genExercise } from '@/ai/flows/generate-breakdown-exercise';
-import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, ProfileData, PromptSuggestion, InterpretDreamInput, DreamInterpretation, AnalyzeSentimentInput, AnalyzeSentimentOutput, GetTacticalAdviceInput, GetTacticalAdviceOutput, ClassifyIntentInput, ClassifyIntentOutput, AnalyzeVoiceInput, AnalyzeVoiceOutput, GenerateArticleTitlesInput, GenerateArticleTitlesOutput, GenerateArticleContentInput, GenerateArticleContentOutput } from '@/lib/types';
+import type { GenerateBreakdownExerciseInput, GenerateBreakdownExerciseOutput, Message, ProfileData, PromptSuggestion, InterpretDreamInput, AnalyzeSentimentInput, AnalyzeSentimentOutput, GetTacticalAdviceInput, GetTacticalAdviceOutput, ClassifyIntentInput, ClassifyIntentOutput, AnalyzeVoiceInput, AnalyzeVoiceOutput, GenerateArticleTitlesInput, GenerateArticleTitlesOutput, GenerateArticleContentInput, GenerateArticleContentOutput } from '@/lib/types';
 import { interpretDream as interpretDreamFlow } from '@/ai/flows/interpret-dream';
 import { analyzeSentiment as analyzeSentimentFlow } from '@/ai/flows/analyze-sentiment';
 import { getTacticalAdvice as getTacticalAdviceFlow } from '@/ai/flows/get-tactical-advice';
@@ -219,10 +219,10 @@ export async function generateBreakdownExerciseAction(input: GenerateBreakdownEx
 }
 
 
-export async function interpretDreamAction(input: InterpretDreamInput): Promise<DreamInterpretation> {
+export async function interpretDreamAction(input: InterpretDreamInput) {
   try {
-    const interpretation = await interpretDreamFlow(input);
-    return interpretation;
+    const result = await interpretDreamFlow(input);
+    return result;
   } catch (e: any) {
     console.error("Error in interpretDreamAction:", e);
     throw new Error('No se pudo interpretar el sueño.');
