@@ -275,15 +275,34 @@ export default function DreamWeaverPage() {
 
       const interpretation = await interpretDreamAction({
         dreamDescription: dreamDescription,
-        userProfile: JSON.stringify(profile),
+        userProfile: profile ? JSON.stringify(profile) : '{}',
         perspective: specialist.perspective,
       });
+
+      // Zod schema for validation
+      const DreamTitleSchema = z.object({ dreamTitle: z.string() });
+
+      // Fallback title
+      let dreamTitle = "Sueño Sin Título";
+      try {
+        // A simple regex to find the title, more robust than parsing the whole markdown
+        const titleMatch = interpretation.interpretationText.match(/^#\s*(.*)/);
+        if (titleMatch && titleMatch[1]) {
+            dreamTitle = titleMatch[1];
+        }
+      } catch (e) {
+        console.error("Could not parse dream title from markdown", e);
+      }
+
 
       const newDreamDoc: DreamInterpretationDoc = {
         id: uuidv4(),
         userId: user?.uid || 'local-user',
         dreamDescription: dreamDescription,
-        interpretation,
+        interpretation: { 
+            ...interpretation,
+            dreamTitle: dreamTitle, // Add the parsed/fallback title
+        },
         createdAt: new Date().toISOString(),
       };
       

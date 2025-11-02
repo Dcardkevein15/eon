@@ -189,6 +189,7 @@ export type InterpretDreamInput = z.infer<typeof DreamInterpretationInputSchema>
 // This is the new, simplified schema for the AI output.
 export const SimpleDreamInterpretationSchema = z.object({
     interpretationText: z.string().describe("La interpretación completa del sueño, formateada como un texto Markdown bien estructurado."),
+    dreamTitle: z.string().optional().describe("Un título poético para el sueño."),
 });
 
 // The type for local storage will now use the simplified output.
@@ -267,7 +268,6 @@ export type MarketData = z.infer<typeof MarketDataSchema>;
 
 export const CryptoAnalysisInputSchema = z.object({
   crypto_id: z.string().describe("El ID de la criptomoneda según CoinGecko (ej: 'bitcoin', 'ethereum')."),
-  days: z.string().describe("El número de días para el análisis histórico."),
 });
 export type CryptoAnalysisInput = z.infer<typeof CryptoAnalysisInputSchema>;
 
@@ -296,6 +296,7 @@ export const SynthesizerInputSchema = z.object({
   cryptoName: z.string(),
   apexArgument: z.string(),
   heliosArgument: z.string(),
+  technicalSummary: z.string(),
   currentPrice: z.number().describe("El precio de mercado actual en USD."),
 });
 export type SynthesizerInput = z.infer<typeof SynthesizerInputSchema>;
@@ -310,6 +311,7 @@ export type TradingSignal = z.infer<typeof TradingSignalSchema>;
 
 export const SynthesizerOutputSchema = z.object({
   synthesis: z.string().describe("Un resumen conciso del debate, destacando los puntos de acuerdo, desacuerdo y las conclusiones emergentes."),
+  technicalSummary: z.string().optional(),
   signals: z.array(TradingSignalSchema).describe("Una lista de hasta 3 señales de trading accionables."),
 });
 export type SynthesizerOutput = z.infer<typeof SynthesizerOutputSchema>;
@@ -347,6 +349,7 @@ export const FullCryptoAnalysisSchema = z.object({
     synthesis: z.string(),
     technicalSummary: z.string().optional(),
     signals: z.array(TradingSignalSchema),
+    marketData: MarketDataSchema,
     indicators: IndicatorsSchema.optional(),
 });
 export type FullCryptoAnalysis = z.infer<typeof FullCryptoAnalysisSchema>;

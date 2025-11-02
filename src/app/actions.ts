@@ -221,6 +221,7 @@ export async function generateBreakdownExerciseAction(input: GenerateBreakdownEx
 
 export async function interpretDreamAction(input: InterpretDreamInput) {
   try {
+    // El flow se encarga de convertir el perfil a string, así que lo pasamos directamente.
     const result = await interpretDreamFlow(input);
     return result;
   } catch (e: any) {
