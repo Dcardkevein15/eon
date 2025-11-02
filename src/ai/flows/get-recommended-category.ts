@@ -31,6 +31,14 @@ const recommendCategoryPrompt = ai.definePrompt({
   name: 'recommendCategoryPrompt',
   input: { schema: RecommendCategoryInputSchema },
   output: { schema: AIOutputSchema },
+  config: {
+    safetySettings: [
+        {
+            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+            threshold: 'BLOCK_NONE',
+        }
+    ]
+  },
   prompt: `Eres un psicólogo experto. Analiza el siguiente perfil psicológico y determina cuál de las siguientes categorías de blog sería MÁS beneficiosa para el usuario.
 
 **Perfil del Usuario:**
