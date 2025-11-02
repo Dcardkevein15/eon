@@ -10,17 +10,17 @@ import { DreamInterpretationInputSchema, type InterpretDreamInput } from '@/lib/
 import { z } from 'zod';
 
 
-// Esquema de salida simplificado. La IA generará un único texto en Markdown.
-const SimpleDreamInterpretationSchema = z.object({
+// Esquema de salida del FLOW, no del prompt de la IA.
+const FlowOutputSchema = z.object({
     interpretationText: z.string().describe("La interpretación completa del sueño, formateada como un texto Markdown bien estructurado."),
 });
 
 
 // Este prompt ahora espera el objeto de entrada completo y usa Handlebars para la plantilla.
+// IMPORTANTE: NO se le pide un output schema a la IA. Se espera texto plano (Markdown).
 const interpretDreamPrompt = ai.definePrompt({
     name: 'interpretDreamPrompt',
     input: { schema: DreamInterpretationInputSchema }, 
-    output: { schema: SimpleDreamInterpretationSchema },
     prompt: `Eres un experto analista de sueños. Tu tarea es analizar la descripción de un sueño y ofrecer una interpretación rica y perspicaz, conectándola con el perfil psicológico del usuario.
 
 Adoptarás la siguiente perspectiva para tu análisis:
@@ -57,6 +57,7 @@ Genera una interpretación completa del sueño como un único texto en formato *
 
 ---
 Mantén un tono empático, sabio y coherente con la perspectiva del especialista elegido. Tu objetivo es empoderar al usuario para que vea sus sueños como un diálogo con su propio subconsciente.
+NO incluyas ninguna otra frase introductoria o de cierre. Empieza directamente con el título del sueño.
 `,
 });
 
@@ -66,21 +67,23 @@ const interpretDreamFlow = ai.defineFlow(
   {
     name: 'interpretDreamFlow',
     inputSchema: DreamInterpretationInputSchema,
-    outputSchema: SimpleDreamInterpretationSchema,
+    outputSchema: FlowOutputSchema, // El flow devuelve el schema correcto
   },
   async (input) => {
     // Llamamos al prompt directamente con el objeto de entrada.
-    const { output } = await interpretDreamPrompt(input);
+    const { text } = await interpretDreamPrompt(input);
 
-    if (!output?.interpretationText) {
+    if (!text) {
       throw new Error('La IA no pudo generar una interpretación del sueño.');
     }
-    return output;
+
+    // Envolvemos el texto crudo en el objeto que la aplicación espera.
+    return { interpretationText: text };
   }
 );
 
 
 // La acción del servidor ahora devolverá el objeto simplificado.
-export async function interpretDream(input: InterpretDreamInput): Promise<z.infer<typeof SimpleDreamInterpretationSchema>> {
+export async function interpretDream(input: InterpretDreamInput): Promise<z.infer<typeof FlowOutputSchema>> {
   return interpretDreamFlow(input);
 }
