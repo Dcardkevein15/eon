@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -31,7 +32,6 @@ export default function ArticleListPage() {
   const [titles, setTitles] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   
   const category = Array.isArray(params.category) ? params.category[0] : params.category;
   
@@ -42,7 +42,7 @@ export default function ArticleListPage() {
 
 
   useEffect(() => {
-    if (!authLoading && user && category && !initialLoadComplete) {
+    if (!authLoading && user && category) {
       const fetchInitialTitles = async () => {
         setIsLoading(true);
         try {
@@ -57,7 +57,6 @@ export default function ArticleListPage() {
           });
         } finally {
           setIsLoading(false);
-          setInitialLoadComplete(true);
         }
       };
       
@@ -66,9 +65,8 @@ export default function ArticleListPage() {
     
     if (!authLoading && !user) {
         setIsLoading(false);
-        setInitialLoadComplete(true);
     }
-  }, [user, authLoading, category, formattedCategory, initialLoadComplete, toast]);
+  }, [authLoading, user, category, formattedCategory, toast]);
 
 
   const handleManualRefresh = async () => {

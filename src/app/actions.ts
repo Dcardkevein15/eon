@@ -283,7 +283,7 @@ export async function generateArticleTitles(input: GenerateArticleTitlesInput): 
 
   try {
     const querySnapshot = await getDocs(q);
-    const existingTitles = querySnapshot.docs.map(doc => doc.data().title);
+    const existingTitles = querySnapshot.docs.map(doc => doc.data().title as string);
 
     // If we have enough titles, shuffle and return them
     if (existingTitles.length >= 7) {
@@ -291,14 +291,14 @@ export async function generateArticleTitles(input: GenerateArticleTitlesInput): 
       return { titles: shuffled.slice(0, 7) };
     }
 
-    // If not enough, generate new ones
+    // If not enough, generate a completely new list
     const result = await genTitlesFlow({ category: input.category });
 
     // Save new titles to Firestore in a batch
     const batch = writeBatch(firestore);
-    const newTitles = result.titles.filter(title => !existingTitles.includes(title));
+    const newUniqueTitles = result.titles.filter(title => !existingTitles.includes(title));
     
-    newTitles.forEach(title => {
+    newUniqueTitles.forEach(title => {
       const docRef = doc(titlesCollection); // Auto-generate ID
       batch.set(docRef, {
         title,
@@ -311,10 +311,8 @@ export async function generateArticleTitles(input: GenerateArticleTitlesInput): 
 
     await batch.commit();
 
-    // Return a mix of old and new titles
-    const combined = [...existingTitles, ...newTitles];
-    const shuffled = combined.sort(() => 0.5 - Math.random());
-    return { titles: shuffled.slice(0, 7) };
+    // IMPORTANT FIX: Return ONLY the newly generated list to avoid flickering.
+    return result;
 
   } catch (error) {
     console.error("Error in generateArticleTitles (hybrid):", error);
