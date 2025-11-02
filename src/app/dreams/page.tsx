@@ -78,8 +78,7 @@ function useLocalStorage<T>(key: string, initialValue: T) {
   return [storedValue, setValue, loading] as const;
 }
 
-
-function DreamHistorySidebar({ dreams, isLoading, onSelectDream, onDeleteDream }: { dreams: DreamInterpretationDoc[], isLoading: boolean, onSelectDream: (id: string) => void, onDeleteDream: (id: string) => void }) {
+const DreamHistorySidebar = ({ dreams, isLoading, onSelectDream, onDeleteDream }: { dreams: DreamInterpretationDoc[], isLoading: boolean, onSelectDream: (id: string) => void, onDeleteDream: (id: string) => void }) => {
   
   const getFormattedDate = (dateString: string | Date) => {
     if (!dateString) return 'Fecha desconocida';
@@ -120,7 +119,7 @@ function DreamHistorySidebar({ dreams, isLoading, onSelectDream, onDeleteDream }
                         <Card className="bg-sidebar-accent/50 border-sidebar-border hover:bg-sidebar-accent hover:border-primary/50 transition-colors">
                             <CardHeader className="p-3">
                                 <CardTitle className="text-sm font-semibold truncate text-sidebar-foreground">{dream.interpretation.dreamTitle}</CardTitle>
-                                <CardDescription className="text-xs text-muted-foreground">{getFormattedDate(dream.createdAt)}</CardHeader>
+                                <CardDescription className="text-xs text-muted-foreground">{getFormattedDate(dream.createdAt)}</CardDescription>
                             </CardHeader>
                         </Card>
                     </button>
@@ -150,7 +149,8 @@ function DreamHistorySidebar({ dreams, isLoading, onSelectDream, onDeleteDream }
       </ScrollArea>
     </div>
   )
-}
+};
+
 
 // Helper to convert blob URL to data URI
 const blobUrlToDataUri = (blobUrl: string): Promise<string> => {
