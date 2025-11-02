@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -26,59 +25,67 @@ function slugify(text: string) {
 
 export default function ArticleListPage() {
   const params = useParams();
-  const router = useRouter();
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
 
   const [titles, setTitles] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [initialLoadDone, setInitialLoadDone] = useState(false);
-
+  
   const category = Array.isArray(params.category) ? params.category[0] : params.category;
   const formattedCategory = category.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
-  const fetchTitles = useCallback(async (isRefresh = false) => {
-    if (!isRefresh) setIsLoading(true);
-    else setIsRefreshing(true);
+  useEffect(() => {
+    // Define the data fetching logic inside the useEffect hook
+    const fetchInitialTitles = async () => {
+      if (!user || !category || authLoading) return;
 
+      setIsLoading(true);
+      try {
+        const result = await generateArticleTitles({ category: formattedCategory });
+        setTitles(result.titles);
+      } catch (error) {
+        console.error('Failed to generate article titles:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Error al cargar artículos',
+          description: 'No se pudieron generar los títulos de los artículos. Por favor, intenta de nuevo.',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    // We only want this to run once when the user and category are available.
+    if (!authLoading && user) {
+        fetchInitialTitles();
+    } else if (!authLoading && !user) {
+        setIsLoading(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, authLoading, category]);
+
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
     try {
       const result = await generateArticleTitles({ category: formattedCategory });
       setTitles(result.titles);
-      if (isRefresh) {
-        toast({
-            title: '¡Nuevos títulos cargados!',
-        });
-      }
+      toast({
+          title: '¡Nuevos títulos cargados!',
+      });
     } catch (error) {
-      console.error('Failed to generate article titles:', error);
+       console.error('Failed to generate article titles:', error);
       toast({
         variant: 'destructive',
         title: 'Error al cargar artículos',
         description: 'No se pudieron generar los títulos de los artículos. Por favor, intenta de nuevo.',
       });
     } finally {
-      if (!isRefresh) setIsLoading(false);
-      else setIsRefreshing(false);
+        setIsRefreshing(false);
     }
-  }, [formattedCategory, toast]);
-
-
-  const handleManualRefresh = async () => {
-    await fetchTitles(true);
   };
 
-
-  useEffect(() => {
-    if (authLoading || initialLoadDone) return;
-    
-    if (user && category) {
-        fetchTitles();
-        setInitialLoadDone(true);
-    } else if (!user && !authLoading) {
-        setIsLoading(false); // Stop loading if user is not logged in
-    }
-  }, [category, user, authLoading, initialLoadDone, fetchTitles]);
 
   const renderContent = () => {
      if (isLoading) {
@@ -154,7 +161,7 @@ export default function ArticleListPage() {
                     </Link>
                 </Button>
                 {user && (
-                    <Button onClick={handleManualRefresh} variant="outline" size="sm" disabled={isRefreshing}>
+                    <Button onClick={handleManualRefresh} variant="outline" size="sm" disabled={isRefreshing || isLoading}>
                         {isRefreshing ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                         Nuevos Títulos
                     </Button>
