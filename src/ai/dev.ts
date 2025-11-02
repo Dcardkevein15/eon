@@ -1,3 +1,4 @@
+
 'use server';
 import '@/ai/flows/summarize-chat-history.ts';
 import '@/ai/flows/initial-prompt-suggestion.ts';
@@ -14,6 +15,7 @@ import '@/ai/flows/get-tactical-advice.ts';
 import '@/ai/flows/classify-intent.ts';
 import '@/ai/flows/crypto-analysis-flow.ts';
 import '@/ai/flows/analyze-voice-message.ts';
+import '@/ai/flows/analyze-dream-voice.ts';
 import '@/ai/flows/speech.ts';
 import '@/ai/flows/generate-image-prompt.ts';
 import '@/ai/flows/generate-image-x.ts';

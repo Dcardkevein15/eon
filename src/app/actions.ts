@@ -15,6 +15,7 @@ import { analyzeSentiment as analyzeSentimentFlow } from '@/ai/flows/analyze-sen
 import { getTacticalAdvice as getTacticalAdviceFlow } from '@/ai/flows/get-tactical-advice';
 import { classifyIntent as classifyIntentFlow } from '@/ai/flows/classify-intent';
 import { analyzeVoiceMessage as analyzeVoiceMessageFlow } from '@/ai/flows/analyze-voice-message';
+import { analyzeDreamVoice as analyzeDreamVoiceFlow } from '@/ai/flows/analyze-dream-voice';
 import { generateArticleTitles as genTitlesFlow, generateArticleContent as genContentFlow } from '@/ai/flows/blog-flows';
 import { getRecommendedCategory as getRecommendedCategoryFlow } from '@/ai/flows/get-recommended-category';
 
@@ -268,9 +269,25 @@ export async function analyzeVoiceMessageAction(input: AnalyzeVoiceInput): Promi
       };
     }
     return { transcription: '' };
-  } catch (error) {
-    console.error('Error analyzing voice message:', error);
-    return { transcription: 'Error al transcribir el audio.' };
+  } catch (error: any) {
+    console.error('Error in voice analysis action:', error);
+    throw new Error(error.message || 'La transcripción de audio falló en el servidor.');
+  }
+}
+
+
+export async function analyzeDreamVoiceAction(input: AnalyzeVoiceInput): Promise<AnalyzeVoiceOutput> {
+  try {
+    if (input.audioDataUri) {
+      const voiceAnalysis = await analyzeDreamVoiceFlow({ audioDataUri: input.audioDataUri });
+      return {
+          transcription: voiceAnalysis.transcription,
+      };
+    }
+    return { transcription: '' };
+  } catch (error: any) {
+    console.error('Error in dream voice analysis action:', error);
+    throw new Error(error.message || 'La transcripción de audio falló en el servidor.');
   }
 }
 

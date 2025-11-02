@@ -1,9 +1,10 @@
+
 'use client';
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import type { CachedProfile, ProfileData, DreamInterpretationDoc, Chat, DreamSpecialist } from '@/lib/types';
-import { interpretDreamAction, analyzeVoiceMessageAction } from '@/app/actions';
+import { interpretDreamAction, analyzeDreamVoiceAction } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -31,6 +32,9 @@ import {
 import {
   Sheet,
   SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
 } from "@/components/ui/sheet";
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth, useFirestore, useCollection } from '@/firebase';
@@ -265,8 +269,8 @@ export default function DreamWeaverPage() {
 
       if (recordedAudioUrl) {
           const audioDataUri = await blobUrlToDataUri(recordedAudioUrl);
-          const voiceAnalysis = await analyzeVoiceMessageAction({ audioDataUri });
-          dreamDescription = `Transcripción de la narración: "${voiceAnalysis.transcription}"\n\nNotas adicionales del usuario: ${dreamText}`;
+          const { transcription } = await analyzeDreamVoiceAction({ audioDataUri });
+          dreamDescription = `Transcripción de la narración: "${transcription}"\n\nNotas adicionales del usuario: ${dreamText}`;
       }
 
       const interpretation = await interpretDreamAction({
@@ -345,12 +349,12 @@ export default function DreamWeaverPage() {
                          <div className="flex items-center gap-2">
                             <div className="md:hidden">
                                 <Sheet open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
-                                    <Sheet.Trigger asChild>
+                                    <SheetTrigger asChild>
                                         <Button variant="ghost" size="icon">
                                             <BookOpen className="h-5 w-5" />
                                             <span className="sr-only">Abrir diario de sueños</span>
                                         </Button>
-                                    </Sheet.Trigger>
+                                    </SheetTrigger>
                                     <SheetContent className="p-0 w-[85vw] sm:w-96">
                                          <DreamHistorySidebar dreams={dreamHistory} isLoading={isLoadingHistory} onSelectDream={handleSelectDream} onDeleteDream={handleDeleteDream} />
                                     </SheetContent>
