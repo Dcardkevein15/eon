@@ -27,27 +27,11 @@ export type AnalyzeVoiceOutput = z.infer<typeof AnalyzeVoiceOutputSchema>;
 export async function analyzeVoiceMessage(
   input: AnalyzeVoiceInput
 ): Promise<AnalyzeVoiceOutput> {
-  // Directly use ai.generate for transcription
-  const { text } = await ai.generate({
-    model: googleAI.model('gemini-1.5-flash'), // Or another suitable model
-    prompt: [
-        { text: "Tu única tarea es transcribir con la mayor precisión posible las palabras habladas en el siguiente mensaje de audio. La transcripción DEBE estar en el idioma original del audio." },
-        { media: { url: input.audioDataUri } }
-    ],
-  });
-
-  const transcription = text.trim();
-
-  // Validate the output against the Zod schema
-  const result = AnalyzeVoiceOutputSchema.safeParse({ transcription });
-  if (!result.success) {
-    console.error("Transcription output validation failed:", result.error);
-    throw new Error("La salida de la transcripción no tiene el formato esperado.");
-  }
-
-  return result.data;
+  // This function now directly calls the restored flow.
+  return analyzeVoiceMessageFlow(input);
 }
 
+// RESTORED the defineFlow wrapper to ensure Genkit manages the execution correctly.
 const analyzeVoiceMessageFlow = ai.defineFlow(
   {
     name: 'analyzeVoiceMessageFlow',
@@ -55,7 +39,24 @@ const analyzeVoiceMessageFlow = ai.defineFlow(
     outputSchema: AnalyzeVoiceOutputSchema,
   },
   async (input) => {
-    // The logic is now in the main function, this just wraps it.
-    return analyzeVoiceMessage(input);
+      // The actual transcription logic is now safely inside the flow.
+      const { text } = await ai.generate({
+        model: googleAI.model('gemini-1.5-flash'),
+        prompt: [
+            { text: "Tu única tarea es transcribir con la mayor precisión posible las palabras habladas en el siguiente mensaje de audio. La transcripción DEBE estar en el idioma original del audio." },
+            { media: { url: input.audioDataUri } }
+        ],
+      });
+
+      const transcription = text.trim();
+
+      // Validate the output against the Zod schema before returning.
+      const result = AnalyzeVoiceOutputSchema.safeParse({ transcription });
+      if (!result.success) {
+        console.error("Transcription output validation failed:", result.error);
+        throw new Error("La salida de la transcripción no tiene el formato esperado.");
+      }
+
+      return result.data;
   }
 );

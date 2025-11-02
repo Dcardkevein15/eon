@@ -206,28 +206,25 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
     }
     
     let messageContent = input.trim();
-    
+    let finalMessageContent: string;
+
     if (audioDataUri) {
       try {
-        // Get transcription first
         const { transcription } = await analyzeVoiceMessageAction({ audioDataUri });
-        messageContent = `Transcripción: "${transcription}"\n\n${input.trim()}`.trim();
+        finalMessageContent = `Transcripción: "${transcription}"\n\n${input.trim()}`.trim();
       } catch (error) {
         console.error('Error in voice analysis action:', error);
-        messageContent = `Transcripción: "Error al transcribir el audio."\n\n${input.trim()}`.trim();
-        toast({
-          variant: "destructive",
-          title: "Error de Voz",
-          description: "No se pudo procesar el mensaje de voz. Inténtalo de nuevo.",
-        });
+        finalMessageContent = `Transcripción: "Error al transcribir el audio."`;
       }
+    } else {
+      finalMessageContent = messageContent;
     }
     
-    if (!messageContent) return;
+    if (!finalMessageContent) return;
 
     const userMessage: Omit<Message, 'id'> = {
       role: 'user',
-      content: messageContent,
+      content: finalMessageContent,
       timestamp: Timestamp.now(),
     };
     
