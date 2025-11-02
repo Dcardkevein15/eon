@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useCallback, memo, useEffect, useMemo, useRef } from 'react';
@@ -207,60 +206,33 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
     }
     
     let messageContent = input.trim();
-    let finalMessageForUser: Omit<Message, 'id'>;
-
+    
     if (audioDataUri) {
-      finalMessageForUser = {
-        role: 'user',
-        content: 'Transcripción: Procesando audio...',
-        timestamp: Timestamp.now(),
-      };
-      await appendMessage(chat.id, finalMessageForUser);
-      
       try {
+        // Get transcription first
         const { transcription } = await analyzeVoiceMessageAction({ audioDataUri });
         messageContent = `Transcripción: "${transcription}"\n\n${input.trim()}`.trim();
-        finalMessageForUser.content = messageContent;
       } catch (error) {
         console.error('Error in voice analysis action:', error);
-        const errorMessage = {
-          role: 'user' as const,
-          content: `Transcripción: "Error al transcribir el audio."`,
-          timestamp: Timestamp.now(),
-        };
-        await appendMessage(chat.id, errorMessage);
+        messageContent = `Transcripción: "Error al transcribir el audio."\n\n${input.trim()}`.trim();
         toast({
           variant: "destructive",
           title: "Error de Voz",
           description: "No se pudo procesar el mensaje de voz. Inténtalo de nuevo.",
         });
-        return; // Stop execution if transcription fails
       }
-    } else {
-      if (!messageContent) return;
-      finalMessageForUser = {
-        role: 'user',
-        content: messageContent,
-        timestamp: Timestamp.now(),
-      };
     }
     
-    // Send the final message (either transcribed or text) to the AI
-    // Note: We are not re-appending the message here if it was audio, as it was already added.
-    // Let's reconsider this logic. We should add the final message once, then call the AI.
-    
-    // Corrected Logic:
-    // 1. Create the user message object with final content.
+    if (!messageContent) return;
+
     const userMessage: Omit<Message, 'id'> = {
       role: 'user',
       content: messageContent,
       timestamp: Timestamp.now(),
     };
     
-    // 2. Append this single, final message to Firestore.
     await appendMessage(chat.id, userMessage);
     
-    // 3. Get AI response based on the new state.
     await getAIResponseAndUpdate([...currentMessages, { ...userMessage, id: uuidv4() }]);
 
   }, [user, messages, appendMessage, chat.id, getAIResponseAndUpdate, toast]);
