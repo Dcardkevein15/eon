@@ -94,11 +94,18 @@ export const getRecommendedCategory = ai.defineFlow(
     // Find the best match
     const foundCategory = Object.keys(categoryMap).find(key => aiCategory.includes(key));
     
+    let result: { name: string; slug: string; };
     if (foundCategory) {
-      return categoryMap[foundCategory];
+      result = categoryMap[foundCategory];
+    } else {
+      // Fallback a una categoría por defecto si no hay coincidencia
+      result = { name: 'Crecimiento Personal', slug: 'crecimiento-personal' };
     }
-
-    // Fallback a una categoría por defecto si no hay coincidencia
-    return { name: 'Crecimiento Personal', slug: 'crecimiento-personal' };
+    
+    // Devolver el objeto con las claves correctas para que coincida con RecommendedCategorySchema
+    return {
+        categoryName: result.name,
+        categorySlug: result.slug
+    };
   }
 );
