@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -34,17 +34,20 @@ export default function ArticleListPage() {
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   
   const category = Array.isArray(params.category) ? params.category[0] : params.category;
-  const formattedCategory = category.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  
+  const formattedCategory = useMemo(() => {
+    if (!category) return '';
+    return category.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  }, [category]);
+
 
   useEffect(() => {
-    // This effect runs only once when the user and category are ready.
     if (!authLoading && user && category && !initialLoadComplete) {
       const fetchInitialTitles = async () => {
         setIsLoading(true);
         try {
           const result = await generateArticleTitles({ category: formattedCategory });
           setTitles(result.titles);
-          setInitialLoadComplete(true);
         } catch (error) {
           console.error('Failed to generate initial article titles:', error);
           toast({
@@ -54,17 +57,18 @@ export default function ArticleListPage() {
           });
         } finally {
           setIsLoading(false);
+          setInitialLoadComplete(true);
         }
       };
       
       fetchInitialTitles();
     }
     
-    // If auth is done and there's no user, stop loading.
     if (!authLoading && !user) {
         setIsLoading(false);
+        setInitialLoadComplete(true);
     }
-  }, [user, authLoading, category, formattedCategory, initialLoadComplete]);
+  }, [user, authLoading, category, formattedCategory, initialLoadComplete, toast]);
 
 
   const handleManualRefresh = async () => {
