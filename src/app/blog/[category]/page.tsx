@@ -33,15 +33,23 @@ export default function ArticleListPage() {
   const [titles, setTitles] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   const category = Array.isArray(params.category) ? params.category[0] : params.category;
   const formattedCategory = category.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
-  const fetchTitles = useCallback(async () => {
-    setIsLoading(true);
+  const fetchTitles = useCallback(async (isRefresh = false) => {
+    if (!isRefresh) setIsLoading(true);
+    else setIsRefreshing(true);
+
     try {
       const result = await generateArticleTitles({ category: formattedCategory });
       setTitles(result.titles);
+      if (isRefresh) {
+        toast({
+            title: '¡Nuevos títulos cargados!',
+        });
+      }
     } catch (error) {
       console.error('Failed to generate article titles:', error);
       toast({
@@ -49,53 +57,28 @@ export default function ArticleListPage() {
         title: 'Error al cargar artículos',
         description: 'No se pudieron generar los títulos de los artículos. Por favor, intenta de nuevo.',
       });
-      // Do not redirect, allow user to try again
     } finally {
-      setIsLoading(false);
+      if (!isRefresh) setIsLoading(false);
+      else setIsRefreshing(false);
     }
   }, [formattedCategory, toast]);
 
 
   const handleManualRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      const result = await generateArticleTitles({ category: formattedCategory });
-       if (result.titles.length === 0) {
-        toast({
-            variant: 'default',
-            title: 'No hay nuevos títulos',
-            description: 'No se encontraron nuevas sugerencias en este momento.',
-        });
-       } else {
-        setTitles(result.titles);
-        toast({
-            title: '¡Nuevos títulos cargados!',
-        });
-       }
-    } catch (error) {
-      console.error('Failed to manually refresh article titles:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error al refrescar',
-        description: 'No se pudieron generar nuevos títulos. Por favor, intenta de nuevo.',
-      });
-    } finally {
-      setIsRefreshing(false);
-    }
+    await fetchTitles(true);
   };
 
 
   useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
-        setIsLoading(false);
-        return;
-    }
-
-    if (category) {
+    if (authLoading || initialLoadDone) return;
+    
+    if (user && category) {
         fetchTitles();
+        setInitialLoadDone(true);
+    } else if (!user && !authLoading) {
+        setIsLoading(false); // Stop loading if user is not logged in
     }
-  }, [category, user, authLoading, fetchTitles]);
+  }, [category, user, authLoading, initialLoadDone, fetchTitles]);
 
   const renderContent = () => {
      if (isLoading) {
