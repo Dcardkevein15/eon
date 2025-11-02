@@ -296,10 +296,11 @@ export async function generateArticleTitles(input: GenerateArticleTitlesInput): 
 
     // Save new titles to Firestore in a batch
     const batch = writeBatch(firestore);
+    // This logic ensures we don't save duplicates if some already exist
     const newUniqueTitles = result.titles.filter(title => !existingTitles.includes(title));
     
     newUniqueTitles.forEach(title => {
-      const docRef = doc(titlesCollection); // Auto-generate ID
+      const docRef = doc(collection(firestore, 'suggestedArticleTitles')); // Auto-generate ID
       batch.set(docRef, {
         title,
         category: input.category,
@@ -311,7 +312,8 @@ export async function generateArticleTitles(input: GenerateArticleTitlesInput): 
 
     await batch.commit();
 
-    // IMPORTANT FIX: Return ONLY the newly generated list to avoid flickering.
+    // IMPORTANT FIX: Return ONLY the newly generated list.
+    // The previous logic of combining old + new titles caused the UI flicker.
     return result;
 
   } catch (error) {

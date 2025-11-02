@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -42,31 +42,38 @@ export default function ArticleListPage() {
 
 
   useEffect(() => {
-    if (!authLoading && user && category) {
-      const fetchInitialTitles = async () => {
-        setIsLoading(true);
-        try {
-          const result = await generateArticleTitles({ category: formattedCategory });
-          setTitles(result.titles);
-        } catch (error) {
-          console.error('Failed to generate initial article titles:', error);
-          toast({
-            variant: 'destructive',
-            title: 'Error al cargar artículos',
-            description: 'No se pudieron generar los títulos de los artículos. Por favor, intenta de nuevo.',
-          });
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      
-      fetchInitialTitles();
+    // Only run this effect when user/auth state is settled and we have a category
+    if (authLoading || !category) return;
+
+    if (!user) {
+      setIsLoading(false);
+      return;
     }
     
-    if (!authLoading && !user) {
+    // This is the initial data fetch.
+    const fetchInitialTitles = async () => {
+      setIsLoading(true);
+      try {
+        const result = await generateArticleTitles({ category: formattedCategory });
+        setTitles(result.titles);
+      } catch (error) {
+        console.error('Failed to generate initial article titles:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Error al cargar artículos',
+          description: 'No se pudieron generar los títulos de los artículos. Por favor, intenta de nuevo.',
+        });
+      } finally {
         setIsLoading(false);
-    }
-  }, [authLoading, user, category, formattedCategory, toast]);
+      }
+    };
+    
+    fetchInitialTitles();
+    
+  // We ONLY want this to run once when the user and category are ready.
+  // We do not depend on formattedCategory directly as it's derived from category.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, authLoading, category]);
 
 
   const handleManualRefresh = async () => {
