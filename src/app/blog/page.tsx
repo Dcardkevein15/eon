@@ -167,9 +167,9 @@ export default function BlogCategoriesPage() {
                 </Link>
              </Button>
 
-            <Button variant="outline" size="icon" onClick={() => setIsHistoryOpen(true)}>
-                <Book className="h-5 w-5" />
-                <span className="sr-only">Ver historial de artículos</span>
+            <Button variant="outline" onClick={() => setIsHistoryOpen(true)}>
+                <Book className="mr-2 h-4 w-4" />
+                Ver historial
             </Button>
            </div>
           <div className="mt-4 text-center">
@@ -183,8 +183,8 @@ export default function BlogCategoriesPage() {
         </header>
 
         {isHistoryOpen && (
-             <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm animate-in fade-in-0">
-                <div className="fixed inset-y-0 left-0 h-full w-full max-w-md bg-background border-r border-border shadow-lg animate-in slide-in-from-left duration-300 p-0 flex flex-col">
+            <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm animate-in fade-in-0" onClick={() => setIsHistoryOpen(false)}>
+                <div className="fixed inset-y-0 left-0 h-full w-full max-w-md bg-background border-r border-border shadow-lg animate-in slide-in-from-left duration-300 p-0 flex flex-col" onClick={e => e.stopPropagation()}>
                     <div className="flex items-center justify-between p-4 border-b">
                         <h2 className="text-lg font-semibold flex items-center gap-2">
                             <Book className="h-5 w-5" />
@@ -216,7 +216,7 @@ export default function BlogCategoriesPage() {
                       )}
                     </ScrollArea>
                 </div>
-             </div>
+            </div>
         )}
 
         { !loading && !user ? (

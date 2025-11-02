@@ -22,8 +22,11 @@ type Spark = {
     y: number;
 };
 
+const words = ["Investigando...", "Estructurando...", "Analizando...", "Escribiendo...", "Revisando..."];
+
 export default function RecommendationLoader() {
     const [sparks, setSparks] = useState<Spark[]>([]);
+    const [currentWordIndex, setCurrentWordIndex] = useState(0);
 
     useEffect(() => {
         // Generate spark positions only on the client-side after hydration
@@ -37,6 +40,12 @@ export default function RecommendationLoader() {
             y: -(Math.random() * 80 + 20), // Upward motion
         }));
         setSparks(newSparks);
+
+        const wordInterval = setInterval(() => {
+            setCurrentWordIndex(prevIndex => (prevIndex + 1) % words.length);
+        }, 1200); // Change word in sync with the animation cycle
+
+        return () => clearInterval(wordInterval);
     }, []); 
 
     const hammerVariants = {
@@ -84,7 +93,7 @@ export default function RecommendationLoader() {
 
 
     return (
-        <div className="relative w-full h-48 bg-card/80 rounded-xl overflow-hidden flex items-center justify-center border-2 border-dashed border-border/50">
+        <div className="relative w-full h-48 bg-card/80 rounded-xl overflow-hidden flex flex-col items-center justify-center border-2 border-dashed border-border/50">
             {/* Anvil */}
             <motion.div
                 initial={{ opacity: 0, y: 10 }}
@@ -123,6 +132,20 @@ export default function RecommendationLoader() {
                         animate="fly"
                     />
                 ))}
+            </div>
+
+            <div className="relative z-10 text-center mt-24">
+                <motion.p 
+                    key={currentWordIndex}
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.3 }}
+                    className="font-semibold text-primary"
+                >
+                    {words[currentWordIndex]}
+                </motion.p>
+                <p className="text-xs text-muted-foreground">Forjando una recomendación para ti...</p>
             </div>
             
         </div>
