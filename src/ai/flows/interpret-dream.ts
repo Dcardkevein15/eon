@@ -16,35 +16,21 @@ const SimpleDreamInterpretationSchema = z.object({
 });
 
 
-// Este prompt ahora es más simple, solo espera una cadena de texto.
+// Este prompt ahora espera el objeto de entrada completo y usa Handlebars para la plantilla.
 const interpretDreamPrompt = ai.definePrompt({
     name: 'interpretDreamPrompt',
-    input: { schema: z.string() }, // El input es ahora un string simple
+    input: { schema: DreamInterpretationInputSchema }, 
     output: { schema: SimpleDreamInterpretationSchema },
-    prompt: `{{{input}}}`, // El input completo se pasa directamente
-});
-
-// Define y exporta el flujo principal.
-// Este flujo ahora construye el prompt completo.
-const interpretDreamFlow = ai.defineFlow(
-  {
-    name: 'interpretDreamFlow',
-    inputSchema: DreamInterpretationInputSchema, // El flow sigue recibiendo el objeto complejo
-    outputSchema: SimpleDreamInterpretationSchema,
-  },
-  async (input) => {
-
-    // Construimos el prompt como un string aquí, evitando la validación compleja en el prompt.
-    const fullPrompt = `Eres un experto analista de sueños. Tu tarea es analizar la descripción de un sueño y ofrecer una interpretación rica y perspicaz, conectándola con el perfil psicológico del usuario.
+    prompt: `Eres un experto analista de sueños. Tu tarea es analizar la descripción de un sueño y ofrecer una interpretación rica y perspicaz, conectándola con el perfil psicológico del usuario.
 
 Adoptarás la siguiente perspectiva para tu análisis:
-**Perspectiva del Especialista:** ${input.perspective}
+**Perspectiva del Especialista:** {{{perspective}}}
 
 **Contexto del Usuario (Perfil Psicológico):**
-${input.userProfile}
+{{{userProfile}}}
 
 **Descripción del Sueño:**
-${input.dreamDescription}
+{{{dreamDescription}}}
 
 **Tu Tarea:**
 Genera una interpretación completa del sueño como un único texto en formato **Markdown**. La estructura debe ser clara y fácil de leer.
@@ -71,10 +57,20 @@ Genera una interpretación completa del sueño como un único texto en formato *
 
 ---
 Mantén un tono empático, sabio y coherente con la perspectiva del especialista elegido. Tu objetivo es empoderar al usuario para que vea sus sueños como un diálogo con su propio subconsciente.
-`;
+`,
+});
 
-    // Llamamos al prompt simple con el string construido.
-    const { output } = await interpretDreamPrompt(fullPrompt);
+// Define y exporta el flujo principal.
+// Este flujo ahora simplemente pasa el input directamente al prompt.
+const interpretDreamFlow = ai.defineFlow(
+  {
+    name: 'interpretDreamFlow',
+    inputSchema: DreamInterpretationInputSchema,
+    outputSchema: SimpleDreamInterpretationSchema,
+  },
+  async (input) => {
+    // Llamamos al prompt directamente con el objeto de entrada.
+    const { output } = await interpretDreamPrompt(input);
 
     if (!output?.interpretationText) {
       throw new Error('La IA no pudo generar una interpretación del sueño.');
