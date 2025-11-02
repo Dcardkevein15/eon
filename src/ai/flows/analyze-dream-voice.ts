@@ -1,4 +1,3 @@
-
 'use server';
 
 /**
@@ -37,7 +36,7 @@ const analyzeDreamVoiceFlow = ai.defineFlow(
   },
   async (input) => {
       const { text } = await ai.generate({
-        model: 'googleai/gemini-1.5-flash',
+        model: 'gemini-1.5-flash',
         prompt: [
             { text: "Tu única tarea es transcribir con la mayor precisión posible las palabras habladas en el siguiente mensaje de audio sobre un sueño. La transcripción DEBE estar en el idioma original del audio." },
             { media: { url: input.audioDataUri } }
