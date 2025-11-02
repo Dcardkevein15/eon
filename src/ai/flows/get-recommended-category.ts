@@ -13,37 +13,38 @@ const RecommendCategoryInputSchema = z.object({
 });
 export type RecommendCategoryInput = z.infer<typeof RecommendCategoryInputSchema>;
 
-// Define el esquema de salida. Ahora esperamos un array de recomendaciones.
+// Define el esquema de salida del prompt (solo el nombre de la categoría)
+const AIOutputSchema = z.object({
+  categoryName: z.string().describe('El nombre de la categoría más relevante (ej. "Ansiedad y Estrés").'),
+});
+
+// Define el esquema de salida final de la función, que es lo que la app espera.
 const RecommendedCategorySchema = z.object({
   categoryName: z.string().describe('El nombre de la categoría recomendada (ej. "Ansiedad y Estrés").'),
   categorySlug: z.string().describe('El slug de la categoría para la URL (ej. "ansiedad-y-estres").'),
 });
-
-const RecommendCategoryOutputSchema = z.object({
-    recommendations: z.array(RecommendedCategorySchema).describe('Una lista ordenada de las 3 categorías más relevantes.'),
-});
-export type RecommendCategoryOutput = z.infer<typeof RecommendCategoryOutputSchema>;
+export type RecommendCategoryOutput = z.infer<typeof RecommendedCategorySchema>;
 
 
 // Define el prompt de la IA.
 const recommendCategoryPrompt = ai.definePrompt({
   name: 'recommendCategoryPrompt',
   input: { schema: RecommendCategoryInputSchema },
-  output: { schema: RecommendCategoryOutputSchema },
-  prompt: `Eres un psicólogo experto. Analiza el siguiente perfil psicológico y determina cuáles de las siguientes categorías serían MÁS beneficiosas para el usuario.
+  output: { schema: AIOutputSchema },
+  prompt: `Eres un psicólogo experto. Analiza el siguiente perfil psicológico y determina cuál de las siguientes categorías de blog sería MÁS beneficiosa para el usuario.
 
 **Perfil del Usuario:**
 {{{userProfile}}}
 
-**Categorías Disponibles:**
-- "Terapia Cognitivo-Conductual" (slug: "terapia-cognitivo-conductual")
-- "Ansiedad y Estrés" (slug: "ansiedad-y-estres")
-- "Mindfulness y Aceptación" (slug: "mindfulness-y-aceptacion")
-- "Relaciones Interpersonales" (slug: "relaciones-interpersonales")
-- "Salud Emocional" (slug: "salud-emocional")
-- "Crecimiento Personal" (slug: "crecimiento-personal")
+**Categorías Disponibles para inspirarte (elige la que mejor se adapte):**
+- Terapia Cognitivo-Conductual
+- Ansiedad y Estrés
+- Mindfulness y Aceptación
+- Relaciones Interpersonales
+- Salud Emocional
+- Crecimiento Personal
 
-Devuelve un objeto JSON con una clave "recommendations" que contenga un array de las 3 categorías más relevantes, ordenadas de mayor a menor importancia. NO añadas ninguna explicación o texto adicional fuera del JSON.
+Devuelve SOLAMENTE el nombre de la categoría más relevante. Por ejemplo: { "categoryName": "Ansiedad y Estrés" }. NO añadas ninguna explicación.
 `,
 });
 
@@ -52,18 +53,34 @@ export const getRecommendedCategory = ai.defineFlow(
   {
     name: 'getRecommendedCategoryFlow',
     inputSchema: RecommendCategoryInputSchema,
-    // La salida del flujo sigue siendo una sola categoría para mantener la compatibilidad con el resto de la app.
     outputSchema: RecommendedCategorySchema, 
   },
   async (input) => {
     const { output } = await recommendCategoryPrompt(input);
     
-    // Si la IA no devuelve recomendaciones o la lista está vacía, lanza un error claro.
-    if (!output?.recommendations || output.recommendations.length === 0) {
+    if (!output?.categoryName) {
       throw new Error('No se pudo generar una recomendación de categoría.');
     }
+
+    const aiCategory = output.categoryName.toLowerCase();
     
-    // Devuelve solo la recomendación principal (la primera de la lista).
-    return output.recommendations[0];
+    const categoryMap: Record<string, { name: string; slug: string }> = {
+      'terapia cognitivo-conductual': { name: 'Terapia Cognitivo-Conductual', slug: 'terapia-cognitivo-conductual' },
+      'ansiedad y estrés': { name: 'Ansiedad y Estrés', slug: 'ansiedad-y-estres' },
+      'mindfulness y aceptación': { name: 'Mindfulness y Aceptación', slug: 'mindfulness-y-aceptacion' },
+      'relaciones interpersonales': { name: 'Relaciones Interpersonales', slug: 'relaciones-interpersonales' },
+      'salud emocional': { name: 'Salud Emocional', slug: 'salud-emocional' },
+      'crecimiento personal': { name: 'Crecimiento Personal', slug: 'crecimiento-personal' }
+    };
+    
+    // Find the best match
+    const foundCategory = Object.keys(categoryMap).find(key => aiCategory.includes(key));
+    
+    if (foundCategory) {
+      return categoryMap[foundCategory];
+    }
+
+    // Fallback a una categoría por defecto si no hay coincidencia
+    return { name: 'Crecimiento Personal', slug: 'crecimiento-personal' };
   }
 );
