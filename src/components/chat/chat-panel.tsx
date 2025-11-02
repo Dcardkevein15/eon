@@ -199,38 +199,51 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
 
 
  const handleSendMessage = useCallback(async (input: string, audioDataUri?: string) => {
-    const currentMessages = messages || [];
     if (!user) {
       toast({ variant: "destructive", title: "Error", description: "Debes iniciar sesión para chatear." });
       return;
     }
-    
-    let messageContent = input.trim();
-    let finalMessageContent: string;
 
+    const textInput = input.trim();
+    if (!textInput && !audioDataUri) return;
+    
+    let messageContent: string;
+    let transcriptionResult = '';
+
+    // If there's audio, transcribe it first.
     if (audioDataUri) {
-      try {
-        const { transcription } = await analyzeVoiceMessageAction({ audioDataUri });
-        finalMessageContent = `Transcripción: "${transcription}"\n\n${input.trim()}`.trim();
-      } catch (error) {
-        console.error('Error in voice analysis action:', error);
-        finalMessageContent = `Transcripción: "Error al transcribir el audio."`;
-      }
+        try {
+            const { transcription } = await analyzeVoiceMessageAction({ audioDataUri });
+            transcriptionResult = transcription;
+            messageContent = `Transcripción: "${transcription}"\n\n${textInput}`.trim();
+        } catch (error: any) {
+            // IMPORTANT: Capture the specific error from the server
+            console.error('Error in voice analysis action:', error);
+            const errorMessage = error.message || 'La transcripción de audio falló en el servidor.';
+            messageContent = `Error de Transcripción: "${errorMessage}"\n\n${textInput}`.trim();
+        }
     } else {
-      finalMessageContent = messageContent;
+        messageContent = textInput;
     }
-    
-    if (!finalMessageContent) return;
 
+    // Now, create a single message with the final content
     const userMessage: Omit<Message, 'id'> = {
       role: 'user',
-      content: finalMessageContent,
+      content: messageContent,
       timestamp: Timestamp.now(),
     };
-    
+
+    // Append this single message to the chat
     await appendMessage(chat.id, userMessage);
     
-    await getAIResponseAndUpdate([...currentMessages, { ...userMessage, id: uuidv4() }]);
+    // Only proceed to get AI response if transcription was successful
+    if (transcriptionResult) {
+      await getAIResponseAndUpdate([...(messages || []), { ...userMessage, id: uuidv4() }]);
+    } else if (!audioDataUri && textInput) {
+      // If it was just a text message, get response
+      await getAIResponseAndUpdate([...(messages || []), { ...userMessage, id: uuidv4() }]);
+    }
+    // If transcription failed, we have already posted the error message, so we stop.
 
   }, [user, messages, appendMessage, chat.id, getAIResponseAndUpdate, toast]);
 
