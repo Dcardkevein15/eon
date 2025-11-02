@@ -261,33 +261,35 @@ export async function classifyIntentAction(input: ClassifyIntentInput): Promise<
 }
 
 export async function analyzeVoiceMessageAction(input: AnalyzeVoiceInput): Promise<AnalyzeVoiceOutput> {
-  try {
-    if (input.audioDataUri) {
-      const voiceAnalysis = await analyzeVoiceMessageFlow({ audioDataUri: input.audioDataUri });
-      return {
-          transcription: voiceAnalysis.transcription,
-      };
-    }
+  if (!input.audioDataUri) {
     return { transcription: '' };
-  } catch (error: any) {
+  }
+  try {
+    const voiceAnalysis = await analyzeVoiceMessageFlow({ audioDataUri: input.audioDataUri });
+    return {
+        transcription: voiceAnalysis.transcription,
+    };
+  } catch (error) {
     console.error('Error in voice analysis action:', error);
-    throw new Error(error.message || 'La transcripción de audio falló en el servidor.');
+    // Re-throw the original error to be caught by the client
+    throw error;
   }
 }
 
 
 export async function analyzeDreamVoiceAction(input: AnalyzeVoiceInput): Promise<AnalyzeVoiceOutput> {
-  try {
-    if (input.audioDataUri) {
-      const voiceAnalysis = await analyzeDreamVoiceFlow({ audioDataUri: input.audioDataUri });
-      return {
-          transcription: voiceAnalysis.transcription,
-      };
-    }
+  if (!input.audioDataUri) {
     return { transcription: '' };
-  } catch (error: any) {
+  }
+  try {
+    const voiceAnalysis = await analyzeDreamVoiceFlow({ audioDataUri: input.audioDataUri });
+    return {
+        transcription: voiceAnalysis.transcription,
+    };
+  } catch (error) {
     console.error('Error in dream voice analysis action:', error);
-    throw new Error(error.message || 'La transcripción de audio falló en el servidor.');
+    // Re-throw the original error to be caught by the client
+    throw error;
   }
 }
 

@@ -6,7 +6,6 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { googleAI } from '@genkit-ai/google-genai';
 import { z } from 'zod';
 
 const AnalyzeVoiceInputSchema = z.object({
@@ -27,11 +26,9 @@ export type AnalyzeVoiceOutput = z.infer<typeof AnalyzeVoiceOutputSchema>;
 export async function analyzeVoiceMessage(
   input: AnalyzeVoiceInput
 ): Promise<AnalyzeVoiceOutput> {
-  // This function now directly calls the restored flow.
   return analyzeVoiceMessageFlow(input);
 }
 
-// RESTORED the defineFlow wrapper to ensure Genkit manages the execution correctly.
 const analyzeVoiceMessageFlow = ai.defineFlow(
   {
     name: 'analyzeVoiceMessageFlow',
@@ -39,9 +36,8 @@ const analyzeVoiceMessageFlow = ai.defineFlow(
     outputSchema: AnalyzeVoiceOutputSchema,
   },
   async (input) => {
-      // The actual transcription logic is now safely inside the flow.
       const { text } = await ai.generate({
-        model: googleAI.model('gemini-1.5-flash'),
+        model: 'gemini-1.5-flash',
         prompt: [
             { text: "Tu única tarea es transcribir con la mayor precisión posible las palabras habladas en el siguiente mensaje de audio. La transcripción DEBE estar en el idioma original del audio." },
             { media: { url: input.audioDataUri } }
@@ -50,7 +46,6 @@ const analyzeVoiceMessageFlow = ai.defineFlow(
 
       const transcription = text.trim();
 
-      // Validate the output against the Zod schema before returning.
       const result = AnalyzeVoiceOutputSchema.safeParse({ transcription });
       if (!result.success) {
         console.error("Transcription output validation failed:", result.error);
