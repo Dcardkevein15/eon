@@ -6,7 +6,7 @@ import { PanelLeft } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 
 // Context
 type SidebarContextProps = {
@@ -60,6 +60,12 @@ export function Sidebar({ children }: { children: React.ReactNode }) {
     return (
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="left" className="w-[300px] p-0 z-50 flex flex-col">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Menú de Navegación</SheetTitle>
+              <SheetDescription>
+                Navega entre las diferentes secciones de la aplicación y gestiona tus chats.
+              </SheetDescription>
+            </SheetHeader>
           {children}
         </SheetContent>
       </Sheet>
