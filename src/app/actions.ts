@@ -5,7 +5,7 @@ import { ai } from '@/ai/genkit';
 import { smartComposeMessage } from '@/ai/flows/smart-compose-message';
 import { getInitialPrompts } from '@/ai/flows/initial-prompt-suggestion';
 import { generateChatTitle as genTitle } from '@/ai/flows/generate-chat-title';
-import { collection, getDocs, query, orderBy, limit, Timestamp, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, Timestamp, doc, getDoc, setDoc, serverTimestamp, where, writeBatch } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { SUGGESTIONS_FALLBACK } from '@/lib/suggestions-fallback';
 import { generateBreakdownExercise as genExercise } from '@/ai/flows/generate-breakdown-exercise';
@@ -31,6 +31,17 @@ const expertRoles = [
     'El Neuropsicólogo (El Arquitecto del Cerebro)', 'El Terapeuta de Esquemas (El Arqueólogo de la Infancia)', 'El Especialista en Trauma (El Guía Resiliente)',
     'El Validador Empático', 'El Experto en Idiomas'
 ];
+
+
+function slugify(text: string) {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-') // Replace spaces with -
+    .replace(/[^\w\-]+/g, '') // Remove all non-word chars
+    .replace(/\-\-+/g, '-'); // Replace multiple - with single -
+}
 
 
 export async function determineAnchorRole(firstMessage: string): Promise<string> {
@@ -266,7 +277,50 @@ export async function analyzeVoiceMessageAction(input: AnalyzeVoiceInput): Promi
 // --- Blog Actions ---
 
 export async function generateArticleTitles(input: GenerateArticleTitlesInput): Promise<GenerateArticleTitlesOutput> {
+  const titlesCollection = collection(firestore, 'suggestedArticleTitles');
+  const categorySlug = slugify(input.category);
+  const q = query(titlesCollection, where('categorySlug', '==', categorySlug));
+
+  try {
+    const querySnapshot = await getDocs(q);
+    const existingTitles = querySnapshot.docs.map(doc => doc.data().title);
+
+    // If we have enough titles, shuffle and return them
+    if (existingTitles.length >= 7) {
+      const shuffled = existingTitles.sort(() => 0.5 - Math.random());
+      return { titles: shuffled.slice(0, 7) };
+    }
+
+    // If not enough, generate new ones
+    const result = await genTitlesFlow({ category: input.category });
+
+    // Save new titles to Firestore in a batch
+    const batch = writeBatch(firestore);
+    const newTitles = result.titles.filter(title => !existingTitles.includes(title));
+    
+    newTitles.forEach(title => {
+      const docRef = doc(titlesCollection); // Auto-generate ID
+      batch.set(docRef, {
+        title,
+        category: input.category,
+        categorySlug: categorySlug,
+        slug: slugify(title),
+        createdAt: serverTimestamp(),
+      });
+    });
+
+    await batch.commit();
+
+    // Return a mix of old and new titles
+    const combined = [...existingTitles, ...newTitles];
+    const shuffled = combined.sort(() => 0.5 - Math.random());
+    return { titles: shuffled.slice(0, 7) };
+
+  } catch (error) {
+    console.error("Error in generateArticleTitles (hybrid):", error);
+    // Fallback to only generating if Firestore fails
     return genTitlesFlow(input);
+  }
 }
 
 export async function generateArticleContent(input: GenerateArticleContentInput): Promise<GenerateArticleContentOutput> {

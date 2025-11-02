@@ -16,7 +16,16 @@
             "items": { "type": "string" },
             "description": "User roles (e.g., 'admin', 'professional')."
         },
-        "therapistId": { "type": "string", "description": "The ID of the associated therapist profile, if any." }
+        "therapistId": { "type": "string", "description": "The ID of the associated therapist profile, if any." },
+        "articleGenerationCredits": {
+          "type": "number",
+          "description": "Number of credits available for generating articles."
+        },
+        "lastCreditRefresh": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The last time the user's article generation credits were refreshed."
+        }
       },
       "required": ["uid"]
     },
@@ -140,43 +149,48 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["title", "slug", "category", "content", "createdAt"]
+    },
+    "suggestedArticleTitle": {
+        "title": "Suggested Article Title",
+        "description": "An AI-generated article title suggestion for the blog.",
+        "type": "object",
+        "properties": {
+            "title": { "type": "string" },
+            "category": { "type": "string" },
+            "categorySlug": { "type": "string" },
+            "slug": { "type": "string" },
+            "createdAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["title", "category", "categorySlug", "slug", "createdAt"]
     }
   },
   "auth": {
     "providers": ["google.com"]
   },
   "firestore": {
-    "/users/{userId}": { "schema": { "$ref": "#/entities/user" }, "rules": "request.auth.uid == userId" },
-    "/users/{userId}/chats/{chatId}": { "schema": { "$ref": "#/entities/chat" }, "rules": "request.auth.uid == userId" },
-    "/users/{userId}/chats/{chatId}/messages/{messageId}": { "schema": { "$ref": "#/entities/message" }, "rules": "request.auth.uid == userId" },
-    "/users/{userId}/chatbotState/main": { "schema": { "$ref": "#/entities/chatbotState" }, "rules": "request.auth.uid == userId" },
-    "/users/{userId}/profile/main": { "schema": { "$ref": "#/entities/userProfile" }, "rules": "request.auth.uid == userId" },
-    "/users/{userId}/gymSessions/{sessionId}": { "schema": { "$ref": "#/entities/simulationSession" }, "rules": "request.auth.uid == userId" },
-    "/users/{userId}/gymSessions/{sessionId}/messages/{messageId}": { "schema": { "$ref": "#/entities/message" }, "rules": "request.auth.uid == userId" },
-    "/users/{userId}/dreams/{dreamId}": { "schema": { "$ref": "#/entities/dreamInterpretation" }, "rules": "request.auth.uid == userId" },
-    
+    "/users/{userId}": { "schema": { "$ref": "#/entities/user" }, "description": "User profile data." },
+    "/users/{userId}/chats/{chatId}": { "schema": { "$ref": "#/entities/chat" }, "description": "Chat sessions for a user." },
+    "/users/{userId}/chats/{chatId}/messages/{messageId}": { "schema": { "$ref": "#/entities/message" }, "description": "Messages within a chat." },
+    "/users/{userId}/chatbotState/main": { "schema": { "$ref": "#/entities/chatbotState" }, "description": "Chatbot state for a user." },
+    "/users/{userId}/profile/main": { "schema": { "$ref": "#/entities/userProfile" }, "description": "User's psychological profile." },
+    "/users/{userId}/gymSessions/{sessionId}": { "schema": { "$ref": "#/entities/simulationSession" }, "description": "Emotional Gym sessions." },
+    "/users/{userId}/gymSessions/{sessionId}/messages/{messageId}": { "schema": { "$ref": "#/entities/message" }, "description": "Messages within a gym session." },
+    "/users/{userId}/dreams/{dreamId}": { "schema": { "$ref": "#/entities/dreamInterpretation" }, "description": "Dream interpretations for a user." },
     "/therapists/{therapistId}": {
         "schema": { "$ref": "#/entities/therapist" },
-        "rules": {
-            "read": "true",
-            "write": "request.auth.token.roles.hasAny(['admin'])"
-        }
+        "description": "Public therapist profiles."
     },
     "/therapistApplications/{applicationId}": {
         "schema": { "$ref": "#/entities/therapistApplication" },
-        "rules": {
-            "get": "resource.data.userId == request.auth.uid || request.auth.token.roles.hasAny(['admin'])",
-            "list": "request.auth.token.roles.hasAny(['admin'])",
-            "create": "request.resource.data.userId == request.auth.uid",
-            "update": "request.auth.token.roles.hasAny(['admin'])"
-        }
+        "description": "Applications from users to become therapists."
     },
     "/articles/{articleSlug}": {
         "schema": { "$ref": "#/entities/article" },
-        "rules": {
-            "read": "true",
-            "write": "request.auth.token.roles.hasAny(['admin'])"
-        }
+        "description": "AI-generated blog articles, readable by any authenticated user and writable only by authenticated users."
+    },
+    "/suggestedArticleTitles/{titleId}": {
+        "schema": { "$ref": "#/entities/suggestedArticleTitle" },
+        "description": "A collection of AI-generated article titles for various categories."
     }
   }
 }

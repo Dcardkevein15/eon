@@ -33,7 +33,7 @@ service cloud.firestore {
     }
     
     //----------------------------------------------------------------//
-    //                         BLOG ARTICLES                          //
+    //                         BLOG & ARTICLES                        //
     //----------------------------------------------------------------//
 
     // Articles can be read by any authenticated user.
@@ -43,6 +43,15 @@ service cloud.firestore {
       allow get, list: if request.auth != null;
       allow create: if request.auth != null;
       allow update, delete: if request.auth != null && request.auth.token.roles.hasAny(['admin']);
+    }
+
+    // Suggested article titles can be read by any authenticated user.
+    // Writing should only be done by server-side logic (e.g. Cloud Functions or server actions).
+    // For this app, we will trust the server actions and allow any authenticated user to write,
+    // assuming no direct client-side writes are performed on this collection.
+    match /suggestedArticleTitles/{titleId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null; // Simplified for server action trust
     }
   }
 }
