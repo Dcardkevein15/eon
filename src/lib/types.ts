@@ -186,18 +186,15 @@ export const DreamInterpretationInputSchema = z.object({
 });
 export type InterpretDreamInput = z.infer<typeof DreamInterpretationInputSchema>;
 
-// This is the new, simplified schema for the AI output.
-export const SimpleDreamInterpretationSchema = z.object({
-    interpretationText: z.string().describe("La interpretación completa del sueño, formateada como un texto Markdown bien estructurado."),
-    dreamTitle: z.string().optional().describe("Un título poético para el sueño."),
-});
-
 // The type for local storage will now use the simplified output.
 export type DreamInterpretationDoc = {
     id: string;
     userId: string;
     dreamDescription: string;
-    interpretation: z.infer<typeof SimpleDreamInterpretationSchema>;
+    interpretation: {
+      interpretationText: string;
+      dreamTitle?: string;
+    };
     createdAt: string; // ISO string for easy JSON serialization
 };
 
