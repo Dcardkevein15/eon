@@ -16,6 +16,9 @@ import { useDocument } from '@/firebase/use-doc';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { doc, setDoc, serverTimestamp, updateDoc, increment, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import type { Article, User } from '@/lib/types';
+import { cn } from '@/lib/utils';
+import rehypeRaw from 'rehype-raw';
+import remarkGfm from 'remark-gfm';
 
 
 export default function ArticlePage() {
@@ -41,25 +44,33 @@ export default function ArticlePage() {
 
   // This effect fetches the original title if the article doesn't exist yet.
   useEffect(() => {
-    if (firestore && slug && !article && !articleLoading) {
+    if (firestore && slug && !article && !articleLoading && !initialTitle) {
       const fetchTitle = async () => {
-        const q = query(
-            collection(firestore, 'suggestedArticleTitles'),
-            where('slug', '==', slug),
-            limit(1)
-        );
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-            const suggestedTitleDoc = querySnapshot.docs[0];
-            setInitialTitle(suggestedTitleDoc.data().title);
-        } else {
-            // Fallback for slugs that might not be in the suggestions
-             setInitialTitle(slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()));
+        try {
+          const q = query(
+              collection(firestore, 'suggestedArticleTitles'),
+              where('slug', '==', slug),
+              limit(1)
+          );
+          const querySnapshot = await getDocs(q);
+          if (!querySnapshot.empty) {
+              const suggestedTitleDoc = querySnapshot.docs[0];
+              setInitialTitle(suggestedTitleDoc.data().title);
+          } else {
+              // Fallback for slugs that might not be in the suggestions, decode and format
+              const decodedSlug = decodeURIComponent(slug).replace(/-/g, ' ');
+              const formattedTitle = decodedSlug.replace(/\b\w/g, l => l.toUpperCase());
+              setInitialTitle(formattedTitle);
+          }
+        } catch (error) {
+            console.error("Error fetching initial title:", error);
+            const fallbackTitle = decodeURIComponent(slug).replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            setInitialTitle(fallbackTitle);
         }
       };
       fetchTitle();
     }
-  }, [firestore, slug, article, articleLoading]);
+  }, [firestore, slug, article, articleLoading, initialTitle]);
 
 
   const title = article?.title || initialTitle;
@@ -190,6 +201,8 @@ export default function ArticlePage() {
           >
             <ReactMarkdown
               className="prose dark:prose-invert max-w-none"
+              rehypePlugins={[rehypeRaw]}
+              remarkPlugins={[remarkGfm]}
             >
               {article.content}
             </ReactMarkdown>

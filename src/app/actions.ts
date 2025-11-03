@@ -38,13 +38,13 @@ function slugify(text: string): string {
   return text
     .toString()
     .toLowerCase()
-    .normalize('NFD') // Split accented characters into the base character and the accent
-    .replace(/[\u0300-\u036f]/g, '') // Remove all accents
-    .replace(/\s+/g, '-') // Replace spaces with -
-    .replace(/[^\w\-]+/g, '') // Remove all non-word chars
-    .replace(/\-\-+/g, '-') // Replace multiple - with single -
-    .replace(/^-+/, '') // Trim - from start of text
-    .replace(/-+$/, ''); // Trim - from end of text
+    .normalize('NFD') // Normaliza los caracteres con tilde a su forma base + diacrítico
+    .replace(/[\u0300-\u036f]/g, '') // Elimina los diacríticos (las tildes)
+    .replace(/\s+/g, '-') // Reemplaza espacios con guiones
+    .replace(/[^\w\-]+/g, '') // Elimina todos los caracteres que no sean palabras o guiones
+    .replace(/\-\-+/g, '-') // Reemplaza múltiples guiones con uno solo
+    .replace(/^-+/, '') // Elimina guiones al principio
+    .replace(/-+$/, ''); // Elimina guiones al final
 }
 
 
