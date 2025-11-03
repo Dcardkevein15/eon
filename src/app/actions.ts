@@ -15,6 +15,7 @@ import { analyzeSentiment as analyzeSentimentFlow } from '@/ai/flows/analyze-sen
 import { getTacticalAdvice as getTacticalAdviceFlow } from '@/ai/flows/get-tactical-advice';
 import { classifyIntent as classifyIntentFlow } from '@/ai/flows/classify-intent';
 import { analyzeVoiceMessage as analyzeVoiceMessageFlow } from '@/ai/flows/analyze-voice-message';
+import { analyzeDreamVoice as analyzeDreamVoiceFlow } from '@/ai/flows/analyze-dream-voice';
 import { generateArticleTitles as genTitlesFlow, generateArticleContent as genContentFlow } from '@/ai/flows/blog-flows';
 import { getRecommendedCategory as getRecommendedCategoryFlow } from '@/ai/flows/get-recommended-category';
 
@@ -283,6 +284,19 @@ export async function analyzeVoiceMessageAction(input: AnalyzeVoiceInput): Promi
     // Re-throw the original error to be caught by the client
     throw error;
   }
+}
+
+export async function analyzeDreamVoiceAction(input: AnalyzeVoiceInput): Promise<AnalyzeVoiceOutput> {
+    if (!input.audioDataUri) {
+        return { transcription: '' };
+    }
+    try {
+        const { transcription } = await analyzeDreamVoiceFlow({ audioDataUri: input.audioDataUri });
+        return { transcription };
+    } catch (error) {
+        console.error('Error in dream voice analysis action:', error);
+        throw error;
+    }
 }
 
 

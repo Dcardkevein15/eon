@@ -1,13 +1,14 @@
+
 'use client';
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import type { CachedProfile, ProfileData, DreamInterpretationDoc, Chat, DreamSpecialist } from '@/lib/types';
-import { interpretDreamAction } from '@/app/actions';
+import { interpretDreamAction, analyzeDreamVoiceAction } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ChevronLeft, Loader2, Wand2, Info, BookOpen, Trash2 } from 'lucide-react';
+import { ChevronLeft, Loader2, Wand2, Info, BookOpen, Trash2, Mic, Square } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Sidebar, SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -157,9 +158,13 @@ export default function DreamWeaverPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   const [dreamText, setDreamText] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -263,6 +268,57 @@ export default function DreamWeaverPage() {
     setIsHistoryOpen(false); // Close sheet on selection
   }
 
+  const blobToDataUri = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            resolve(reader.result as string);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+  }
+
+  const handleStartRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      audioChunksRef.current = [];
+      
+      mediaRecorderRef.current.addEventListener("dataavailable", event => {
+        audioChunksRef.current.push(event.data);
+      });
+
+      mediaRecorderRef.current.addEventListener("stop", async () => {
+        setIsTranscribing(true);
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        try {
+            const audioDataUri = await blobToDataUri(audioBlob);
+            const { transcription } = await analyzeDreamVoiceAction({ audioDataUri });
+            setDreamText(prev => prev ? `${prev}\n${transcription}` : transcription);
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error de transcripción", description: "No se pudo transcribir el audio." });
+        } finally {
+            setIsTranscribing(false);
+        }
+      });
+
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Error accessing microphone:", err);
+      toast({ variant: "destructive", title: "Error de Micrófono", description: "No se pudo acceder al micrófono." });
+    }
+  };
+
+  const handleStopRecording = () => {
+    if (mediaRecorderRef.current) {
+        mediaRecorderRef.current.stop();
+        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+        setIsRecording(false);
+    }
+  };
+
 
   return (
     <SidebarProvider>
@@ -347,9 +403,19 @@ export default function DreamWeaverPage() {
                                     <Textarea
                                         value={dreamText}
                                         onChange={(e) => setDreamText(e.target.value)}
-                                        placeholder="Escribe aquí tu sueño..."
-                                        className="min-h-[160px] bg-card/80 border-border rounded-xl p-4 text-base ring-offset-background focus-visible:ring-2 focus-visible:ring-primary/80 focus-visible:ring-offset-2 transition-all duration-300"
+                                        placeholder="Escribe o graba tu sueño aquí..."
+                                        className="min-h-[160px] bg-card/80 border-border rounded-xl p-4 pr-12 text-base ring-offset-background focus-visible:ring-2 focus-visible:ring-primary/80 focus-visible:ring-offset-2 transition-all duration-300"
                                     />
+                                    <Button 
+                                      type="button" 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="absolute right-3 top-3 h-8 w-8 text-muted-foreground" 
+                                      onClick={isRecording ? handleStopRecording : handleStartRecording} 
+                                      disabled={isTranscribing}
+                                    >
+                                      {isTranscribing ? <Loader2 className="h-5 w-5 animate-spin" /> : isRecording ? <Square className="h-5 w-5 text-red-500 fill-red-500" /> : <Mic className="h-5 w-5" />}
+                                    </Button>
                                 </div>
                             </div>
 
