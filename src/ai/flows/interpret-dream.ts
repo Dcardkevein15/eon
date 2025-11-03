@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -44,8 +45,6 @@ Genera una interpretación completa del sueño como un único texto en formato *
 # [Genera aquí un título poético y evocador para el sueño]
 
 **Atmósfera Dominante:** [Describe la emoción o sentimiento principal del sueño]
-
-**Arquetipo Central:** [Identifica el arquetipo principal activo y explica brevemente su relevancia]
 
 ## Interpretación Narrativa
 [Explica la trama del sueño como una metáfora del viaje psicológico del usuario, basándote en su perfil y desde la perspectiva elegida.]
