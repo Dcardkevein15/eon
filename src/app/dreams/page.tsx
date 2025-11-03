@@ -39,163 +39,12 @@ import {
 } from "@/components/ui/sheet";
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth, useFirestore, useCollection } from '@/firebase';
-import { query, collection, orderBy } from 'firebase/firestore';
+import { query, collection, orderBy, doc, setDoc, deleteDoc, getDocs } from 'firebase/firestore';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AnimatePresence, motion } from 'framer-motion';
 import DreamSpecialistSelection from '@/components/dreams/DreamSpecialistSelection';
 import AudioVisualizer from '@/components/dreams/AudioVisualizer';
 import RecordingControls from '@/components/dreams/RecordingControls';
-
-// Custom hook for managing state in localStorage
-function useLocalStorage<T>(key: string, initialValue: T) {
-  const [storedValue, setStoredValue] = useState<T>(initialValue);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    try {
-      const item = window.localStorage.getItem(key);
-      if (item) {
-        setStoredValue(JSON.parse(item));
-      }
-    } catch (error) {
-      console.log(error);
-    } finally {
-        setLoading(false);
-    }
-  }, [key]);
-
-  const setValue = (value: T | ((val: T) => T)) => {
-    try {
-      const valueToStore = value instanceof Function ? value(storedValue) : value;
-      setStoredValue(valueToStore);
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(key, JSON.stringify(valueToStore));
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  const removeValue = () => {
-    try {
-        setStoredValue(initialValue);
-        if (typeof window !== 'undefined') {
-            window.localStorage.removeItem(key);
-        }
-    } catch (error) {
-        console.log(error);
-    }
-  };
-
-  return [storedValue, setValue, loading, removeValue] as const;
-}
-
-
-const DreamHistorySidebar = ({ dreams, isLoading, onSelectDream, onDeleteDream, onClearHistory }: { dreams: DreamInterpretationDoc[], isLoading: boolean, onSelectDream: (id: string) => void, onDeleteDream: (id: string) => void, onClearHistory: () => void }) => {
-  
-  const getFormattedDate = (dateString: string | Date) => {
-    if (!dateString) return { relative: 'Fecha desconocida', absolute: '' };
-    try {
-      const date = new Date(dateString);
-      return {
-          relative: formatDistanceToNow(date, { addSuffix: true, locale: es }),
-          absolute: format(date, "d MMM, HH:mm", { locale: es })
-      };
-    } catch {
-      return { relative: 'Fecha inválida', absolute: '' };
-    }
-  };
-
-  return (
-    <div className="h-full flex flex-col bg-sidebar-background border-r border-sidebar-border text-sidebar-foreground">
-      <div className="p-4 border-b border-sidebar-border">
-        <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-primary" />
-                Diario de Sueños
-            </h2>
-        </div>
-      </div>
-      <ScrollArea className="flex-1">
-         {isLoading ? (
-            <div className="p-4 space-y-3">
-              <Skeleton className="h-20 w-full bg-sidebar-accent" />
-              <Skeleton className="h-20 w-full bg-sidebar-accent" />
-              <Skeleton className="h-20 w-full bg-sidebar-accent" />
-            </div>
-          ) : dreams.length === 0 ? (
-            <div className="p-4 text-center text-sm text-muted-foreground mt-8">
-              <p>Tu diario está vacío. ¡Interpreta tu primer sueño para empezar!</p>
-            </div>
-          ) : (
-            <div className="p-2 space-y-2">
-              {[...dreams].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(dream => {
-                const { relative, absolute } = getFormattedDate(dream.createdAt);
-                return (
-                <div key={dream.id} className="relative group/item flex items-center gap-2">
-                    <button onClick={() => onSelectDream(dream.id)} className="flex-grow text-left">
-                        <Card className="bg-sidebar-accent/50 border-sidebar-border hover:bg-sidebar-accent hover:border-primary/50 transition-colors">
-                            <CardHeader className="p-3">
-                                <CardTitle className="text-sm font-semibold truncate text-sidebar-foreground">{dream.interpretation.dreamTitle}</CardTitle>
-                                <CardDescription className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
-                                    <span className='flex items-center gap-1.5'><Calendar className="w-3 h-3"/> {absolute}</span>
-                                    <span className='flex items-center gap-1.5'><ClockIcon className="w-3 h-3"/> {relative}</span>
-                                </CardDescription>
-                            </CardHeader>
-                        </Card>
-                    </button>
-                     <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                           <Button variant="ghost" size="icon" className="flex-shrink-0 h-8 w-8 text-destructive/70 hover:bg-destructive/10 hover:text-destructive">
-                            <Trash2 className="w-4 h-4"/>
-                           </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>¿Eliminar este sueño?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Esta acción es permanente y no se puede deshacer. Se eliminará de tu diario en este dispositivo.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => onDeleteDream(dream.id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                </div>
-                )
-              })}
-            </div>
-          )}
-      </ScrollArea>
-       {dreams.length > 0 && (
-         <div className="p-2 border-t border-sidebar-border">
-            <AlertDialog>
-                <AlertDialogTrigger asChild>
-                   <Button variant="ghost" size="sm" className="w-full justify-center text-xs text-destructive hover:bg-destructive/10 hover:text-destructive">
-                    <Trash2 className="mr-2 h-3 w-3" />
-                    Limpiar Diario
-                   </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Esto eliminará permanentemente TODOS los sueños de tu diario en este dispositivo. Esta acción no se puede deshacer.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={onClearHistory} className="bg-destructive hover:bg-destructive/90">Sí, limpiar todo</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-         </div>
-      )}
-    </div>
-  )
-};
 
 type AnalysisStep = 'input' | 'specialist';
 type RecordingStatus = 'idle' | 'recording' | 'paused' | 'transcribing' | 'done';
@@ -217,9 +66,6 @@ export default function DreamWeaverPage() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [analysisStep, setAnalysisStep] = useState<AnalysisStep>('input');
 
-  const [dreamHistory, setDreamHistory, isLoadingHistory, removeDreamHistory] = useLocalStorage<DreamInterpretationDoc[]>('dream-journal', []);
-  const [audioDraft, setAudioDraft, isLoadingDraft, removeAudioDraft] = useLocalStorage<DreamAudioDraft | null>('dream-audio-draft', null);
-  
   // --- RECORDING STATE ---
   const [recordingStatus, setRecordingStatus] = useState<RecordingStatus>('idle');
   const [audioStream, setAudioStream] = useState<MediaStream | null>(null);
@@ -235,7 +81,13 @@ export default function DreamWeaverPage() {
   );
   const { data: chats, loading: chatsLoading } = useCollection<Chat>(chatsQuery);
 
-  // --- PROFILE & DRAFT LOADING ---
+  const dreamsQuery = useMemo(
+    () => (user?.uid && firestore ? query(collection(firestore, `users/${user.uid}/dreams`), orderBy('createdAt', 'desc')) : undefined),
+    [user?.uid, firestore]
+  );
+  const { data: dreamHistory, loading: isLoadingHistory } = useCollection<DreamInterpretationDoc>(dreamsQuery);
+
+  // --- PROFILE LOADING ---
   useEffect(() => {
     if (user) {
       const storageKey = `psych-profile-${user.uid}`;
@@ -252,11 +104,7 @@ export default function DreamWeaverPage() {
         setProfileError("No se ha generado un perfil psicológico. Ve a la sección 'Perfil Psicológico' para crear uno y obtener interpretaciones más profundas.");
       }
     }
-    if (audioDraft) {
-        setRecordedAudioUrl(audioDraft.audioDataUri);
-        setRecordingStatus('done');
-    }
-  }, [user, audioDraft]);
+  }, [user]);
 
 
   // --- CORE ACTIONS ---
@@ -273,6 +121,7 @@ export default function DreamWeaverPage() {
   };
   
   const handleAnalyzeDream = async (specialist: DreamSpecialist) => {
+    if (!user || !firestore) return;
     setIsAnalyzing(true);
     try {
         let dreamDescription = dreamText;
@@ -294,10 +143,10 @@ export default function DreamWeaverPage() {
                 dreamTitle = titleMatch[1];
             }
         } catch (e) { console.error("Could not parse dream title", e); }
-
-        const newDreamDoc: DreamInterpretationDoc = {
-            id: uuidv4(),
-            userId: user?.uid || 'local-user',
+        
+        const dreamId = uuidv4();
+        const newDreamDoc: Omit<DreamInterpretationDoc, 'id'> = {
+            userId: user.uid,
             dreamDescription: dreamDescription,
             interpretation: { 
                 interpretationText: interpretationResult.interpretationText,
@@ -305,10 +154,12 @@ export default function DreamWeaverPage() {
             },
             createdAt: new Date().toISOString(),
         };
+
+        const dreamRef = doc(firestore, `users/${user.uid}/dreams`, dreamId);
+        await setDoc(dreamRef, newDreamDoc);
       
-        setDreamHistory(prevDreams => [...prevDreams, newDreamDoc]);
-        clearRecording(true); // Clear recording from state and storage
-        router.push(`/dreams/analysis?id=${newDreamDoc.id}`);
+        clearRecording();
+        router.push(`/dreams/analysis?id=${dreamId}`);
 
     } catch (error: any) {
       console.error(error);
@@ -319,14 +170,29 @@ export default function DreamWeaverPage() {
     }
   };
 
-  const handleDeleteDream = (id: string) => {
-    setDreamHistory(prev => prev.filter(d => d.id !== id));
-    toast({ title: 'Éxito', description: 'El sueño ha sido eliminado de tu diario local.' });
+  const handleDeleteDream = async (id: string) => {
+    if (!user || !firestore) return;
+    try {
+        await deleteDoc(doc(firestore, `users/${user.uid}/dreams`, id));
+        toast({ title: 'Éxito', description: 'El sueño ha sido eliminado de tu diario.' });
+    } catch (error) {
+        console.error("Error deleting dream:", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'No se pudo eliminar el sueño.' });
+    }
   };
   
-  const handleClearHistory = () => {
-    removeDreamHistory();
-    toast({ title: 'Éxito', description: 'Tu diario de sueños ha sido vaciado.' });
+  const handleClearHistory = async () => {
+    if (!user || !firestore || !dreamHistory) return;
+    const dreamsCollectionRef = collection(firestore, `users/${user.uid}/dreams`);
+    try {
+        const querySnapshot = await getDocs(dreamsCollectionRef);
+        const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
+        await Promise.all(deletePromises);
+        toast({ title: 'Éxito', description: 'Tu diario de sueños ha sido vaciado.' });
+    } catch (error) {
+        console.error("Error clearing dream history:", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'No se pudo limpiar el historial.' });
+    }
   };
   
   const handleSelectDream = (id: string) => {
@@ -360,9 +226,6 @@ export default function DreamWeaverPage() {
                 setRecordingStatus('done');
             }
         }, 20); // Typing effect speed
-
-        const newDraft: DreamAudioDraft = { audioDataUri, timestamp: new Date().toISOString() };
-        setAudioDraft(newDraft);
 
     } catch (error) {
         toast({ variant: "destructive", title: "Error de transcripción", description: "No se pudo transcribir el audio." });
@@ -429,14 +292,123 @@ export default function DreamWeaverPage() {
     }
   };
   
-  const clearRecording = (clearFromStorage: boolean = false) => {
+  const clearRecording = () => {
     setRecordedAudioUrl(null);
     setDreamText('');
     setRecordingStatus('idle');
-    if (clearFromStorage) {
-      removeAudioDraft();
-    }
   };
+
+  const DreamHistorySidebar = ({ dreams, isLoading, onSelectDream, onDeleteDream, onClearHistory }: { dreams: DreamInterpretationDoc[], isLoading: boolean, onSelectDream: (id: string) => void, onDeleteDream: (id: string) => void, onClearHistory: () => void }) => {
+  
+    const getFormattedDate = (dateString: string | Date) => {
+      if (!dateString) return { relative: 'Fecha desconocida', absolute: '' };
+      try {
+        const date = new Date(dateString);
+        return {
+            relative: formatDistanceToNow(date, { addSuffix: true, locale: es }),
+            absolute: format(date, "d MMM, HH:mm", { locale: es })
+        };
+      } catch {
+        return { relative: 'Fecha inválida', absolute: '' };
+      }
+    };
+
+    const sortedDreams = useMemo(() => {
+        if (!dreams) return [];
+        return [...dreams].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    }, [dreams]);
+  
+    return (
+      <div className="h-full flex flex-col bg-sidebar-background border-r border-sidebar-border text-sidebar-foreground">
+        <div className="p-4 border-b border-sidebar-border">
+          <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-primary" />
+                  Diario de Sueños
+              </h2>
+          </div>
+        </div>
+        <ScrollArea className="flex-1">
+           {isLoading ? (
+              <div className="p-4 space-y-3">
+                <Skeleton className="h-20 w-full bg-sidebar-accent" />
+                <Skeleton className="h-20 w-full bg-sidebar-accent" />
+                <Skeleton className="h-20 w-full bg-sidebar-accent" />
+              </div>
+            ) : sortedDreams.length === 0 ? (
+              <div className="p-4 text-center text-sm text-muted-foreground mt-8">
+                <p>Tu diario está vacío. ¡Interpreta tu primer sueño para empezar!</p>
+              </div>
+            ) : (
+              <div className="p-2 space-y-2">
+                {sortedDreams.map(dream => {
+                  const { relative, absolute } = getFormattedDate(dream.createdAt);
+                  return (
+                  <div key={dream.id} className="relative group/item flex items-center gap-2">
+                      <button onClick={() => onSelectDream(dream.id)} className="flex-grow text-left">
+                          <Card className="bg-sidebar-accent/50 border-sidebar-border hover:bg-sidebar-accent hover:border-primary/50 transition-colors">
+                              <CardHeader className="p-3">
+                                  <CardTitle className="text-sm font-semibold truncate text-sidebar-foreground">{dream.interpretation?.dreamTitle || 'Sueño sin título'}</CardTitle>
+                                  <CardDescription className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
+                                      <span className='flex items-center gap-1.5'><Calendar className="w-3 h-3"/> {absolute}</span>
+                                      <span className='flex items-center gap-1.5'><ClockIcon className="w-3 h-3"/> {relative}</span>
+                                  </CardDescription>
+                              </CardHeader>
+                          </Card>
+                      </button>
+                       <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                             <Button variant="ghost" size="icon" className="flex-shrink-0 h-8 w-8 text-destructive/70 hover:bg-destructive/10 hover:text-destructive">
+                              <Trash2 className="w-4 h-4"/>
+                             </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>¿Eliminar este sueño?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta acción es permanente y no se puede deshacer.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => onDeleteDream(dream.id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                  </div>
+                  )
+                })}
+              </div>
+            )}
+        </ScrollArea>
+         {dreamHistory && dreamHistory.length > 0 && (
+           <div className="p-2 border-t border-sidebar-border">
+              <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                     <Button variant="ghost" size="sm" className="w-full justify-center text-xs text-destructive hover:bg-destructive/10 hover:text-destructive">
+                      <Trash2 className="mr-2 h-3 w-3" />
+                      Limpiar Diario
+                     </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esto eliminará permanentemente TODOS los sueños de tu diario. Esta acción no se puede deshacer.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleClearHistory} className="bg-destructive hover:bg-destructive/90">Sí, limpiar todo</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+              </AlertDialog>
+           </div>
+        )}
+      </div>
+    )
+  };
+
 
   return (
     <SidebarProvider>
@@ -446,7 +418,7 @@ export default function DreamWeaverPage() {
         </Sidebar>
         <SidebarInset className="flex overflow-hidden">
             <aside className="w-80 border-r border-sidebar-border flex-shrink-0 hidden md:flex overflow-y-auto">
-                <DreamHistorySidebar dreams={dreamHistory} isLoading={isLoadingHistory} onSelectDream={handleSelectDream} onDeleteDream={handleDeleteDream} onClearHistory={handleClearHistory} />
+                <DreamHistorySidebar dreams={dreamHistory || []} isLoading={isLoadingHistory} onSelectDream={handleSelectDream} onDeleteDream={handleDeleteDream} onClearHistory={handleClearHistory} />
             </aside>
             <main className="flex-1 flex flex-col overflow-y-auto">
                 <div className="sticky top-0 bg-background/80 backdrop-blur-sm border-b border-border/80 p-4 z-10">
@@ -483,7 +455,7 @@ export default function DreamWeaverPage() {
                                             <SheetTitle>Diario de Sueños</SheetTitle>
                                             <SheetDescription>Explora tus sueños interpretados anteriormente.</SheetDescription>
                                         </SheetHeader>
-                                         <DreamHistorySidebar dreams={dreamHistory} isLoading={isLoadingHistory} onSelectDream={handleSelectDream} onDeleteDream={handleDeleteDream} onClearHistory={handleClearHistory} />
+                                         <DreamHistorySidebar dreams={dreamHistory || []} isLoading={isLoadingHistory} onSelectDream={handleSelectDream} onDeleteDream={handleDeleteDream} onClearHistory={handleClearHistory} />
                                     </SheetContent>
                                 </Sheet>
                             </div>
@@ -577,5 +549,3 @@ export default function DreamWeaverPage() {
     </SidebarProvider>
   );
 }
-
-    

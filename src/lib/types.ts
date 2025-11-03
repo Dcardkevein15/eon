@@ -186,7 +186,6 @@ export const DreamInterpretationInputSchema = z.object({
 });
 export type InterpretDreamInput = z.infer<typeof DreamInterpretationInputSchema>;
 
-// The type for local storage will now use the simplified output.
 export type DreamInterpretationDoc = {
     id: string;
     userId: string;

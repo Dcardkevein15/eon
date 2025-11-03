@@ -13,48 +13,33 @@ import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
+import { useAuth, useFirestore, useDocument } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 
 export default function DreamAnalysisPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-
-  const [dreamDoc, setDreamDoc] = useState<DreamInterpretationDoc | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const firestore = useFirestore();
 
   const dreamId = useMemo(() => searchParams.get('id'), [searchParams]);
 
-  useEffect(() => {
-    if (!dreamId) {
-      toast({ variant: "destructive", title: "ID de sueño no encontrado", description: "Vuelve al portal para seleccionar un sueño." });
-      router.push('/dreams');
-      return;
-    }
+  const dreamRef = useMemo(
+      () => (user && firestore && dreamId ? doc(firestore, `users/${user.uid}/dreams`, dreamId) : undefined),
+      [user, firestore, dreamId]
+  );
+  
+  const { data: dreamDoc, loading } = useDocument<DreamInterpretationDoc>(dreamRef);
 
-    try {
-      const storedDreams = localStorage.getItem('dream-journal');
-      if (storedDreams) {
-        const dreams: DreamInterpretationDoc[] = JSON.parse(storedDreams);
-        const foundDream = dreams.find(d => d.id === dreamId);
-        if (foundDream) {
-          setDreamDoc(foundDream);
-        } else {
-          toast({ variant: "destructive", title: "Análisis no encontrado", description: "No pudimos encontrar este sueño en tu diario local." });
-          router.push('/dreams');
-        }
-      } else {
-        toast({ variant: "destructive", title: "Diario de sueños no encontrado", description: "No se encontraron sueños guardados." });
-        router.push('/dreams');
-      }
-    } catch (e) {
-      console.error("Error loading dream from localStorage", e);
-      toast({ variant: "destructive", title: "Error", description: "No se pudo cargar el análisis del sueño desde tu dispositivo." });
+
+  useEffect(() => {
+    if (!loading && !dreamDoc && dreamId) {
+      toast({ variant: "destructive", title: "Análisis no encontrado", description: "No pudimos encontrar este sueño en tu diario." });
       router.push('/dreams');
-    } finally {
-      setLoading(false);
     }
-  }, [dreamId, router, toast]);
+  }, [loading, dreamDoc, dreamId, router, toast]);
 
   const interpretationText = dreamDoc?.interpretation?.interpretationText;
 
