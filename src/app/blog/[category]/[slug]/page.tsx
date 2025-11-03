@@ -30,13 +30,15 @@ export default function ArticlePage() {
 
   const category = Array.isArray(params.category) ? params.category[0] : params.category;
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
-  const title = slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  
 
   const articleRef = useMemo(() => firestore && slug ? doc(firestore, 'articles', slug) : undefined, [firestore, slug]);
   const userRef = useMemo(() => firestore && user ? doc(firestore, 'users', user.uid) : undefined, [firestore, user]);
 
   const { data: article, loading: articleLoading } = useDocument<Article>(articleRef);
   const { data: userData, loading: userLoading } = useDocument<User>(userRef);
+
+  const title = article?.title || slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
   const credits = userData?.articleGenerationCredits ?? 0;
 
@@ -163,14 +165,8 @@ export default function ArticlePage() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
           >
-            <h1 className="text-3xl font-bold !mb-8 text-primary tracking-tight">{article.title}</h1>
             <ReactMarkdown
               className="prose dark:prose-invert max-w-none"
-              components={{
-                h2: ({node, ...props}) => <h2 className="text-2xl font-bold mt-8 mb-4 text-primary/90" {...props} />,
-                p: ({node, ...props}) => <p className="leading-relaxed" {...props} />,
-                a: ({node, ...props}) => <a className="text-accent hover:underline" {...props} />,
-              }}
             >
               {article.content}
             </ReactMarkdown>
@@ -189,6 +185,7 @@ export default function ArticlePage() {
             </Link>
           </Button>
         </header>
+        <h1 className="text-3xl font-bold !mb-8 text-primary tracking-tight">{title}</h1>
         {renderContent()}
       </div>
     </div>
