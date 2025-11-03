@@ -13,6 +13,7 @@ import { SidebarTrigger } from '../ui/sidebar';
 import { Timestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { motion } from 'framer-motion';
 
 
 interface EmptyChatProps {
@@ -113,10 +114,15 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
                   {corporateFeatures.map((feature, index) => (
                     <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
                       <div className="p-1 h-full">
-                        <Card 
-                            className="bg-card/50 hover:border-primary/50 hover:bg-card/80 transition-all cursor-pointer flex flex-col h-full"
-                            onClick={() => router.push(feature.href)}
+                        <motion.div
+                          whileHover={{ scale: 1.05, rotateY: 5, rotateX: -5 }}
+                          transition={{ type: 'spring', stiffness: 300 }}
+                          className="relative h-full w-full rounded-xl cursor-pointer"
+                          style={{ perspective: '1000px' }}
+                          onClick={() => router.push(feature.href)}
                         >
+                          <div className="animated-border rounded-xl"></div>
+                          <Card className="bg-background/80 backdrop-blur-sm h-full flex flex-col">
                             <CardHeader className="flex-row items-center gap-4 space-y-0">
                                 <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
                                     <feature.Icon className="w-6 h-6 text-primary" />
@@ -132,7 +138,8 @@ export default function EmptyChat({ createChat }: EmptyChatProps) {
                                     <ChevronRight className="w-4 h-4 ml-1" />
                                 </div>
                             </CardContent>
-                        </Card>
+                          </Card>
+                        </motion.div>
                       </div>
                     </CarouselItem>
                   ))}
