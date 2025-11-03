@@ -206,6 +206,11 @@ export type DreamSpecialist = {
   icon: React.ComponentType<{ className?: string }>;
 };
 
+export type DreamAudioDraft = {
+  audioDataUri: string;
+  timestamp: string;
+};
+
 
 // Sentiment Analysis types
 export const AnalyzeSentimentInputSchema = z.object({

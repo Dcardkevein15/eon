@@ -3,19 +3,19 @@
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import type { CachedProfile, ProfileData, DreamInterpretationDoc, Chat, DreamSpecialist } from '@/lib/types';
+import type { CachedProfile, ProfileData, DreamInterpretationDoc, Chat, DreamSpecialist, DreamAudioDraft } from '@/lib/types';
 import { interpretDreamAction, analyzeDreamVoiceAction } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ChevronLeft, Loader2, Wand2, Info, BookOpen, Trash2, Mic, Square } from 'lucide-react';
+import { ChevronLeft, Loader2, Wand2, Info, BookOpen, Trash2, Mic, Square, Pause, Play, Ear } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Sidebar, SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import ChatSidebar from '@/components/chat/chat-sidebar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -34,7 +34,6 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
   SheetDescription,
 } from "@/components/ui/sheet";
 import { v4 as uuidv4 } from 'uuid';
@@ -43,7 +42,8 @@ import { query, collection, orderBy } from 'firebase/firestore';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AnimatePresence, motion } from 'framer-motion';
 import DreamSpecialistSelection from '@/components/dreams/DreamSpecialistSelection';
-import { z } from 'zod';
+import AudioVisualizer from '@/components/dreams/AudioVisualizer';
+import RecordingControls from '@/components/dreams/RecordingControls';
 
 // Custom hook for managing state in localStorage
 function useLocalStorage<T>(key: string, initialValue: T) {
@@ -75,8 +75,20 @@ function useLocalStorage<T>(key: string, initialValue: T) {
     }
   };
 
-  return [storedValue, setValue, loading] as const;
+  const removeValue = () => {
+    try {
+        setStoredValue(initialValue);
+        if (typeof window !== 'undefined') {
+            window.localStorage.removeItem(key);
+        }
+    } catch (error) {
+        console.log(error);
+    }
+  };
+
+  return [storedValue, setValue, loading, removeValue] as const;
 }
+
 
 const DreamHistorySidebar = ({ dreams, isLoading, onSelectDream, onDeleteDream }: { dreams: DreamInterpretationDoc[], isLoading: boolean, onSelectDream: (id: string) => void, onDeleteDream: (id: string) => void }) => {
   
@@ -152,6 +164,9 @@ const DreamHistorySidebar = ({ dreams, isLoading, onSelectDream, onDeleteDream }
 };
 
 type AnalysisStep = 'input' | 'specialist';
+type RecordingStatus = 'idle' | 'recording' | 'paused' | 'transcribing' | 'done';
+
+const SILENCE_TIMEOUT = 7000; // 7 seconds
 
 export default function DreamWeaverPage() {
   const router = useRouter();
@@ -159,19 +174,26 @@ export default function DreamWeaverPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-
+  
+  // --- STATE MANAGEMENT ---
   const [dreamText, setDreamText] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isTranscribing, setIsTranscribing] = useState(false);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [analysisStep, setAnalysisStep] = useState<AnalysisStep>('input');
 
   const [dreamHistory, setDreamHistory, isLoadingHistory] = useLocalStorage<DreamInterpretationDoc[]>('dream-journal', []);
+  const [audioDraft, setAudioDraft, isLoadingDraft, removeAudioDraft] = useLocalStorage<DreamAudioDraft | null>('dream-audio-draft', null);
+  
+  // --- RECORDING STATE ---
+  const [recordingStatus, setRecordingStatus] = useState<RecordingStatus>('idle');
+  const [audioStream, setAudioStream] = useState<MediaStream | null>(null);
+  const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
+  const [transcriptionMagic, setTranscriptionMagic] = useState('');
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const chatsQuery = useMemo(
     () => (user?.uid && firestore ? query(collection(firestore, `users/${user.uid}/chats`), orderBy('createdAt', 'desc')) : undefined),
@@ -179,6 +201,7 @@ export default function DreamWeaverPage() {
   );
   const { data: chats, loading: chatsLoading } = useCollection<Chat>(chatsQuery);
 
+  // --- PROFILE & DRAFT LOADING ---
   useEffect(() => {
     if (user) {
       const storageKey = `psych-profile-${user.uid}`;
@@ -195,11 +218,17 @@ export default function DreamWeaverPage() {
         setProfileError("No se ha generado un perfil psicológico. Ve a la sección 'Perfil Psicológico' para crear uno y obtener interpretaciones más profundas.");
       }
     }
-  }, [user]);
+    if (audioDraft) {
+        setRecordedAudioUrl(audioDraft.audioDataUri);
+        setRecordingStatus('done');
+    }
+  }, [user, audioDraft]);
 
+
+  // --- CORE ACTIONS ---
   const handleProceedToSelection = () => {
-      if (!dreamText.trim()) {
-          toast({ variant: 'destructive', title: 'Sueño Vacío', description: 'Por favor, describe tu sueño antes de continuar.' });
+      if (!dreamText.trim() && !recordedAudioUrl) {
+          toast({ variant: 'destructive', title: 'Sueño Vacío', description: 'Por favor, describe o graba tu sueño antes de continuar.' });
           return;
       }
       if (!profile) {
@@ -212,48 +241,45 @@ export default function DreamWeaverPage() {
   const handleAnalyzeDream = async (specialist: DreamSpecialist) => {
     setIsAnalyzing(true);
     try {
-      const dreamDescription = dreamText;
-
-      const interpretationResult = await interpretDreamAction({
-        dreamDescription: dreamDescription,
-        userProfile: profile ? JSON.stringify(profile) : '{}',
-        perspective: specialist.perspective,
-      });
-
-      // Fallback title
-      let dreamTitle = "Sueño Sin Título";
-      try {
-        const titleMatch = interpretationResult.interpretationText.match(/^#\s*(.*)/);
-        if (titleMatch && titleMatch[1]) {
-            dreamTitle = titleMatch[1];
+        let dreamDescription = dreamText;
+        if(recordedAudioUrl && !dreamText){
+            const { transcription } = await analyzeDreamVoiceAction({ audioDataUri: recordedAudioUrl });
+            dreamDescription = transcription;
         }
-      } catch (e) {
-        console.error("Could not parse dream title from markdown", e);
-      }
 
-      const newDreamDoc: DreamInterpretationDoc = {
-        id: uuidv4(),
-        userId: user?.uid || 'local-user',
-        dreamDescription: dreamDescription,
-        interpretation: { 
-            interpretationText: interpretationResult.interpretationText,
-            dreamTitle: dreamTitle,
-        },
-        createdAt: new Date().toISOString(),
-      };
+        const interpretationResult = await interpretDreamAction({
+            dreamDescription: dreamDescription,
+            userProfile: profile ? JSON.stringify(profile) : '{}',
+            perspective: specialist.perspective,
+        });
+
+        let dreamTitle = "Sueño Sin Título";
+        try {
+            const titleMatch = interpretationResult.interpretationText.match(/^#\s*(.*)/);
+            if (titleMatch && titleMatch[1]) {
+                dreamTitle = titleMatch[1];
+            }
+        } catch (e) { console.error("Could not parse dream title", e); }
+
+        const newDreamDoc: DreamInterpretationDoc = {
+            id: uuidv4(),
+            userId: user?.uid || 'local-user',
+            dreamDescription: dreamDescription,
+            interpretation: { 
+                interpretationText: interpretationResult.interpretationText,
+                dreamTitle: dreamTitle,
+            },
+            createdAt: new Date().toISOString(),
+        };
       
-      setDreamHistory(prevDreams => [...prevDreams, newDreamDoc]);
-      
-      router.push(`/dreams/analysis?id=${newDreamDoc.id}`);
+        setDreamHistory(prevDreams => [...prevDreams, newDreamDoc]);
+        clearRecording(true); // Clear recording from state and storage
+        router.push(`/dreams/analysis?id=${newDreamDoc.id}`);
 
     } catch (error: any) {
       console.error(error);
-      toast({
-        variant: 'destructive',
-        title: 'Error en el análisis',
-        description: error.message || 'No se pudo interpretar el sueño. Por favor, inténtalo de nuevo.',
-      });
-      setAnalysisStep('input'); // Return to input step on error
+      toast({ variant: 'destructive', title: 'Error en el análisis', description: error.message || 'No se pudo interpretar el sueño.' });
+      setAnalysisStep('input');
     } finally {
         setIsAnalyzing(false);
     }
@@ -266,60 +292,112 @@ export default function DreamWeaverPage() {
   
   const handleSelectDream = (id: string) => {
     router.push(`/dreams/analysis?id=${id}`);
-    setIsHistoryOpen(false); // Close sheet on selection
-  }
+    setIsHistoryOpen(false);
+  };
 
-  const blobToDataUri = (blob: Blob): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            resolve(reader.result as string);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-    });
-  }
+  // --- RECORDING LOGIC ---
+  const blobToDataUri = (blob: Blob): Promise<string> => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+
+  const transcribeAndSetText = async (audioBlob: Blob) => {
+    setRecordingStatus('transcribing');
+    setAudioStream(null);
+    try {
+        const audioDataUri = await blobToDataUri(audioBlob);
+        setRecordedAudioUrl(audioDataUri);
+        const { transcription } = await analyzeDreamVoiceAction({ audioDataUri });
+        setTranscriptionMagic(transcription);
+        
+        let i = 0;
+        const intervalId = setInterval(() => {
+            setDreamText(transcription.substring(0, i+1));
+            i++;
+            if (i > transcription.length) {
+                clearInterval(intervalId);
+                setRecordingStatus('done');
+            }
+        }, 20); // Typing effect speed
+
+        const newDraft: DreamAudioDraft = { audioDataUri, timestamp: new Date().toISOString() };
+        setAudioDraft(newDraft);
+
+    } catch (error) {
+        toast({ variant: "destructive", title: "Error de transcripción", description: "No se pudo transcribir el audio." });
+        setRecordingStatus('idle');
+    }
+  };
+
+  const startSilenceDetection = useCallback(() => {
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    silenceTimerRef.current = setTimeout(() => {
+        if(mediaRecorderRef.current?.state === 'recording') {
+            mediaRecorderRef.current.stop();
+            toast({ title: "Grabación finalizada", description: "Se detectó un silencio prolongado." });
+        }
+    }, SILENCE_TIMEOUT);
+  }, [toast]);
 
   const handleStartRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setAudioStream(stream);
       mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
       audioChunksRef.current = [];
+      setRecordedAudioUrl(null);
       
       mediaRecorderRef.current.addEventListener("dataavailable", event => {
         audioChunksRef.current.push(event.data);
+        startSilenceDetection();
       });
 
-      mediaRecorderRef.current.addEventListener("stop", async () => {
-        setIsTranscribing(true);
+      mediaRecorderRef.current.addEventListener("stop", () => {
+        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        try {
-            const audioDataUri = await blobToDataUri(audioBlob);
-            const { transcription } = await analyzeDreamVoiceAction({ audioDataUri });
-            setDreamText(prev => prev ? `${prev}\n${transcription}` : transcription);
-        } catch (error) {
-            toast({ variant: "destructive", title: "Error de transcripción", description: "No se pudo transcribir el audio." });
-        } finally {
-            setIsTranscribing(false);
+        if(audioBlob.size > 0) {
+            transcribeAndSetText(audioBlob);
         }
+        mediaRecorderRef.current?.stream.getTracks().forEach(track => track.stop());
       });
-
-      mediaRecorderRef.current.start();
-      setIsRecording(true);
+      
+      mediaRecorderRef.current.start(1000); // Trigger dataavailable every second
+      setRecordingStatus('recording');
+      startSilenceDetection();
     } catch (err) {
       console.error("Error accessing microphone:", err);
       toast({ variant: "destructive", title: "Error de Micrófono", description: "No se pudo acceder al micrófono." });
     }
   };
 
-  const handleStopRecording = () => {
-    if (mediaRecorderRef.current) {
-        mediaRecorderRef.current.stop();
-        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
-        setIsRecording(false);
+  const handlePauseOrResume = () => {
+    if (mediaRecorderRef.current?.state === 'recording') {
+        mediaRecorderRef.current.pause();
+        setRecordingStatus('paused');
+        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    } else if (mediaRecorderRef.current?.state === 'paused') {
+        mediaRecorderRef.current.resume();
+        setRecordingStatus('recording');
+        startSilenceDetection();
     }
   };
 
+  const handleStopRecording = () => {
+    if (mediaRecorderRef.current && (mediaRecorderRef.current.state === 'recording' || mediaRecorderRef.current.state === 'paused')) {
+        mediaRecorderRef.current.stop();
+    }
+  };
+  
+  const clearRecording = (clearFromStorage: boolean = false) => {
+    setRecordedAudioUrl(null);
+    setDreamText('');
+    setRecordingStatus('idle');
+    if (clearFromStorage) {
+      removeAudioDraft();
+    }
+  };
 
   return (
     <SidebarProvider>
@@ -363,10 +441,8 @@ export default function DreamWeaverPage() {
                                     </SheetTrigger>
                                     <SheetContent className="p-0 w-[85vw] sm:w-96">
                                         <SheetHeader className="sr-only">
-                                          <SheetTitle>Diario de Sueños</SheetTitle>
-                                          <SheetDescription>
-                                            Explora tus sueños interpretados anteriormente.
-                                          </SheetDescription>
+                                            <SheetTitle>Diario de Sueños</SheetTitle>
+                                            <SheetDescription>Explora tus sueños interpretados anteriormente.</SheetDescription>
                                         </SheetHeader>
                                          <DreamHistorySidebar dreams={dreamHistory} isLoading={isLoadingHistory} onSelectDream={handleSelectDream} onDeleteDream={handleDeleteDream} />
                                     </SheetContent>
@@ -392,7 +468,7 @@ export default function DreamWeaverPage() {
                                  <h2 className="text-4xl md:text-5xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-chart-5 via-chart-1 to-chart-2">
                                     ¿Qué te ha mostrado tu subconsciente?
                                  </h2>
-                                 <p className="text-lg text-muted-foreground">Describe tu sueño con todos los detalles que recuerdes. Luego, elige un especialista para la interpretación.</p>
+                                 <p className="text-lg text-muted-foreground">Describe o relata tu sueño. Luego, elige un especialista para la interpretación.</p>
                              </div>
                             
                              {profileError && (
@@ -406,23 +482,34 @@ export default function DreamWeaverPage() {
                              )}
 
                             <div className="space-y-4">
+                                {recordingStatus !== 'idle' && (
+                                  <div className="w-full h-20 rounded-lg bg-card/80 border-border flex items-center justify-center">
+                                      <AudioVisualizer stream={audioStream} />
+                                  </div>
+                                )}
+                                {recordedAudioUrl && recordingStatus === 'done' && (
+                                    <div className="p-2 border rounded-lg bg-card flex items-center gap-2 group justify-center">
+                                        <audio src={recordedAudioUrl} controls className="h-10 max-w-full" />
+                                    </div>
+                                )}
                                 <div className="relative">
                                     <Textarea
                                         value={dreamText}
                                         onChange={(e) => setDreamText(e.target.value)}
                                         placeholder="Escribe o graba tu sueño aquí..."
                                         className="min-h-[160px] bg-card/80 border-border rounded-xl p-4 pr-12 text-base ring-offset-background focus-visible:ring-2 focus-visible:ring-primary/80 focus-visible:ring-offset-2 transition-all duration-300"
+                                        disabled={recordingStatus === 'transcribing'}
                                     />
-                                    <Button 
-                                      type="button" 
-                                      variant="ghost" 
-                                      size="icon" 
-                                      className="absolute right-3 top-3 h-8 w-8 text-muted-foreground" 
-                                      onClick={isRecording ? handleStopRecording : handleStartRecording} 
-                                      disabled={isTranscribing}
-                                    >
-                                      {isTranscribing ? <Loader2 className="h-5 w-5 animate-spin" /> : isRecording ? <Square className="h-5 w-5 text-red-500 fill-red-500" /> : <Mic className="h-5 w-5" />}
-                                    </Button>
+                                    <div className="absolute right-3 top-3">
+                                      <RecordingControls
+                                        status={recordingStatus}
+                                        onStart={handleStartRecording}
+                                        onPause={handlePauseOrResume}
+                                        onResume={handlePauseOrResume}
+                                        onStop={handleStopRecording}
+                                        onClear={clearRecording}
+                                      />
+                                    </div>
                                 </div>
                             </div>
 
@@ -451,5 +538,3 @@ export default function DreamWeaverPage() {
     </SidebarProvider>
   );
 }
-
-    
