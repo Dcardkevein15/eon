@@ -35,6 +35,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
+  SheetDescription,
 } from "@/components/ui/sheet";
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth, useFirestore, useCollection } from '@/firebase';
@@ -361,6 +362,12 @@ export default function DreamWeaverPage() {
                                         </Button>
                                     </SheetTrigger>
                                     <SheetContent className="p-0 w-[85vw] sm:w-96">
+                                        <SheetHeader className="sr-only">
+                                          <SheetTitle>Diario de Sueños</SheetTitle>
+                                          <SheetDescription>
+                                            Explora tus sueños interpretados anteriormente.
+                                          </SheetDescription>
+                                        </SheetHeader>
                                          <DreamHistorySidebar dreams={dreamHistory} isLoading={isLoadingHistory} onSelectDream={handleSelectDream} onDeleteDream={handleDeleteDream} />
                                     </SheetContent>
                                 </Sheet>
@@ -444,3 +451,5 @@ export default function DreamWeaverPage() {
     </SidebarProvider>
   );
 }
+
+    
