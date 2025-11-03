@@ -56,9 +56,9 @@ const articleContentPrompt = ai.definePrompt({
   name: 'articleContentPrompt',
   input: { schema: GenerateArticleContentInputSchema },
   output: { schema: GenerateArticleContentOutputSchema },
-  prompt: `Eres un psicólogo experto y un excelente comunicador, especializado en la categoría de "{{category}}". Tu tarea es escribir un artículo completo y bien estructurado en formato Markdown sobre el siguiente tema:
+  prompt: `Eres un psicólogo experto y un excelente comunicador, especializado en la categoría de "{{category}}". Tu tarea es escribir un artículo completo y bien estructurado en formato Markdown sobre el tema: "{{title}}".
 
-**Título: {{title}}**
+NO incluyas el título en tu respuesta; empieza directamente con el cuerpo del artículo.
 
 El artículo debe ser:
 - **Informativo y Práctico:** Ofrece consejos accionables, técnicas y explicaciones claras.
