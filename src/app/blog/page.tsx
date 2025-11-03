@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -66,6 +65,12 @@ const categories = [
   },
 ];
 
+type CachedRecommendation = {
+    name: string;
+    slug: string;
+    profileTimestamp: number;
+}
+
 export default function BlogCategoriesPage() {
   const { user, loading } = useAuth();
   const firestore = useFirestore();
@@ -90,27 +95,54 @@ export default function BlogCategoriesPage() {
   useEffect(() => {
     if (user && !loading && !initialFetchDone.current) {
       initialFetchDone.current = true;
-      setIsLoadingRec(true);
+
       const fetchRecommendation = async () => {
         try {
-          const storageKey = `psych-profile-${user.uid}`;
-          const cachedItem = localStorage.getItem(storageKey);
-          if (cachedItem) {
-            const data: CachedProfile = JSON.parse(cachedItem);
-            if (data.profile) {
-              const recommendation = await getRecommendedCategory(JSON.stringify(data.profile));
-              setRecommended({
-                name: recommendation.categoryName,
-                slug: recommendation.categorySlug,
-              });
+          const profileKey = `psych-profile-${user.uid}`;
+          const recommendationKey = `blog-recommendation-${user.uid}`;
+          
+          const cachedProfileItem = localStorage.getItem(profileKey);
+          const cachedRecItem = localStorage.getItem(recommendationKey);
+
+          if (!cachedProfileItem) {
+            // No profile, no recommendation
+            setIsLoadingRec(false);
+            return;
+          }
+
+          const profileData: CachedProfile = JSON.parse(cachedProfileItem);
+          const currentProfileTimestamp = profileData.lastMessageTimestamp;
+
+          if (cachedRecItem) {
+            const recData: CachedRecommendation = JSON.parse(cachedRecItem);
+            // If the recommendation was generated for the current version of the profile, use it
+            if (recData.profileTimestamp === currentProfileTimestamp) {
+              setRecommended({ name: recData.name, slug: recData.slug });
+              setIsLoadingRec(false);
+              return;
             }
           }
+          
+          // If we are here, it means we need to generate a new recommendation
+          setIsLoadingRec(true);
+          const recommendation = await getRecommendedCategory(JSON.stringify(profileData.profile));
+          
+          const newRecData: CachedRecommendation = {
+            name: recommendation.categoryName,
+            slug: recommendation.categorySlug,
+            profileTimestamp: currentProfileTimestamp,
+          };
+
+          setRecommended(newRecData);
+          localStorage.setItem(recommendationKey, JSON.stringify(newRecData));
+
         } catch (error) {
           console.error("Failed to fetch recommendation:", error);
         } finally {
           setIsLoadingRec(false);
         }
       };
+
       fetchRecommendation();
     } else if (!user && !loading) {
         setIsLoadingRec(false);
