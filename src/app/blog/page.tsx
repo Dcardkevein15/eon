@@ -1,6 +1,7 @@
+
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ArrowRight, BrainCircuit, Heart, Users, GitMerge, Sun, Moon, LogIn, Star, Book, ChevronRight, FileText, Calendar, X } from 'lucide-react';
@@ -71,6 +72,7 @@ export default function BlogCategoriesPage() {
   const [recommended, setRecommended] = useState<{ name: string; slug: string } | null>(null);
   const [isLoadingRec, setIsLoadingRec] = useState(true);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const initialFetchDone = useRef(false);
 
   const articlesQuery = (firestore ? query(collection(firestore, 'articles'), orderBy('createdAt', 'desc')) : undefined);
   const { data: articles, loading: articlesLoading } = useCollection<Article>(articlesQuery);
@@ -86,7 +88,8 @@ export default function BlogCategoriesPage() {
   };
   
   useEffect(() => {
-    if (user && !loading) {
+    if (user && !loading && !initialFetchDone.current) {
+      initialFetchDone.current = true;
       setIsLoadingRec(true);
       const fetchRecommendation = async () => {
         try {
@@ -109,7 +112,7 @@ export default function BlogCategoriesPage() {
         }
       };
       fetchRecommendation();
-    } else if (!loading) {
+    } else if (!user && !loading) {
         setIsLoadingRec(false);
     }
   }, [user, loading]);
