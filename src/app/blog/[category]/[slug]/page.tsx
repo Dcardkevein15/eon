@@ -14,7 +14,7 @@ import ReactMarkdown from 'react-markdown';
 import { useAuth, useFirestore } from '@/firebase';
 import { useDocument } from '@/firebase/use-doc';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { doc, setDoc, serverTimestamp, updateDoc, increment } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, updateDoc, increment, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import type { Article, User } from '@/lib/types';
 
 
@@ -27,6 +27,7 @@ export default function ArticlePage() {
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [initialTitle, setInitialTitle] = useState('');
 
   const category = Array.isArray(params.category) ? params.category[0] : params.category;
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
@@ -38,8 +39,30 @@ export default function ArticlePage() {
   const { data: article, loading: articleLoading } = useDocument<Article>(articleRef);
   const { data: userData, loading: userLoading } = useDocument<User>(userRef);
 
-  const title = article?.title || slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  // This effect fetches the original title if the article doesn't exist yet.
+  useEffect(() => {
+    if (firestore && slug && !article && !articleLoading) {
+      const fetchTitle = async () => {
+        const q = query(
+            collection(firestore, 'suggestedArticleTitles'),
+            where('slug', '==', slug),
+            limit(1)
+        );
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+            const suggestedTitleDoc = querySnapshot.docs[0];
+            setInitialTitle(suggestedTitleDoc.data().title);
+        } else {
+            // Fallback for slugs that might not be in the suggestions
+             setInitialTitle(slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()));
+        }
+      };
+      fetchTitle();
+    }
+  }, [firestore, slug, article, articleLoading]);
 
+
+  const title = article?.title || initialTitle;
   const credits = userData?.articleGenerationCredits ?? 0;
 
   const handleGenerateArticle = async () => {
@@ -95,7 +118,7 @@ export default function ArticlePage() {
 
 
   const renderContent = () => {
-    const isLoading = articleLoading || authLoading || userLoading;
+    const isLoading = articleLoading || authLoading || userLoading || (initialTitle === '' && !article);
 
     if (isLoading) {
        return (
@@ -185,7 +208,7 @@ export default function ArticlePage() {
             </Link>
           </Button>
         </header>
-        <h1 className="text-3xl font-bold !mb-8 text-primary tracking-tight">{title}</h1>
+        <h1 className="text-3xl font-bold !mb-8 tracking-tight">{title}</h1>
         {renderContent()}
       </div>
     </div>
