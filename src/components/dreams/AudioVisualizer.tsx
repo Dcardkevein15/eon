@@ -82,7 +82,7 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ stream }) => {
     };
   }, [stream]);
 
-  return <canvas ref={canvasRef} className="w-full h-full" />;
+  return <canvas ref={canvasRef} className="w-full h-full" style={{ backgroundColor: 'transparent' }} />;
 };
 
 export default AudioVisualizer;

@@ -91,7 +91,7 @@ function useLocalStorage<T>(key: string, initialValue: T) {
 }
 
 
-const DreamHistorySidebar = ({ dreams, isLoading, onSelectDream, onDeleteDream }: { dreams: DreamInterpretationDoc[], isLoading: boolean, onSelectDream: (id: string) => void, onDeleteDream: (id: string) => void }) => {
+const DreamHistorySidebar = ({ dreams, isLoading, onSelectDream, onDeleteDream, onClearHistory }: { dreams: DreamInterpretationDoc[], isLoading: boolean, onSelectDream: (id: string) => void, onDeleteDream: (id: string) => void, onClearHistory: () => void }) => {
   
   const getFormattedDate = (dateString: string | Date) => {
     if (!dateString) return 'Fecha desconocida';
@@ -128,7 +128,7 @@ const DreamHistorySidebar = ({ dreams, isLoading, onSelectDream, onDeleteDream }
             <div className="p-2 space-y-2">
               {[...dreams].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(dream => (
                 <div key={dream.id} className="relative group/item">
-                    <button onClick={() => onSelectDream(dream.id)} className="w-full text-left">
+                    <button onClick={() => onSelectDream(dream.id)} className="w-full text-left pr-10">
                         <Card className="bg-sidebar-accent/50 border-sidebar-border hover:bg-sidebar-accent hover:border-primary/50 transition-colors">
                             <CardHeader className="p-3">
                                 <CardTitle className="text-sm font-semibold truncate text-sidebar-foreground">{dream.interpretation.dreamTitle}</CardTitle>
@@ -138,7 +138,7 @@ const DreamHistorySidebar = ({ dreams, isLoading, onSelectDream, onDeleteDream }
                     </button>
                      <AlertDialog>
                         <AlertDialogTrigger asChild>
-                           <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 opacity-0 group-hover/item:opacity-100 text-red-400 hover:bg-red-500/10 hover:text-red-400">
+                           <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 text-red-400 hover:bg-red-500/10 hover:text-red-400">
                             <Trash2 className="w-4 h-4"/>
                            </Button>
                         </AlertDialogTrigger>
@@ -146,7 +146,7 @@ const DreamHistorySidebar = ({ dreams, isLoading, onSelectDream, onDeleteDream }
                           <AlertDialogHeader>
                             <AlertDialogTitle>¿Eliminar este sueño?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Esta acción es permanente y no se puede deshacer.
+                              Esta acción es permanente y no se puede deshacer. Se eliminará de tu diario en este dispositivo.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -160,6 +160,30 @@ const DreamHistorySidebar = ({ dreams, isLoading, onSelectDream, onDeleteDream }
             </div>
           )}
       </ScrollArea>
+       {dreams.length > 0 && (
+         <div className="p-2 border-t border-sidebar-border">
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                   <Button variant="ghost" size="sm" className="w-full justify-center text-xs text-destructive hover:bg-destructive/10 hover:text-destructive">
+                    <Trash2 className="mr-2 h-3 w-3" />
+                    Limpiar Diario
+                   </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esto eliminará permanentemente TODOS los sueños de tu diario en este dispositivo. Esta acción no se puede deshacer.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={onClearHistory} className="bg-destructive hover:bg-destructive/90">Sí, limpiar todo</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+         </div>
+      )}
     </div>
   )
 };
@@ -184,7 +208,7 @@ export default function DreamWeaverPage() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [analysisStep, setAnalysisStep] = useState<AnalysisStep>('input');
 
-  const [dreamHistory, setDreamHistory, isLoadingHistory] = useLocalStorage<DreamInterpretationDoc[]>('dream-journal', []);
+  const [dreamHistory, setDreamHistory, isLoadingHistory, removeDreamHistory] = useLocalStorage<DreamInterpretationDoc[]>('dream-journal', []);
   const [audioDraft, setAudioDraft, isLoadingDraft, removeAudioDraft] = useLocalStorage<DreamAudioDraft | null>('dream-audio-draft', null);
   
   // --- RECORDING STATE ---
@@ -289,6 +313,11 @@ export default function DreamWeaverPage() {
   const handleDeleteDream = (id: string) => {
     setDreamHistory(prev => prev.filter(d => d.id !== id));
     toast({ title: 'Éxito', description: 'El sueño ha sido eliminado de tu diario local.' });
+  };
+  
+  const handleClearHistory = () => {
+    removeDreamHistory();
+    toast({ title: 'Éxito', description: 'Tu diario de sueños ha sido vaciado.' });
   };
   
   const handleSelectDream = (id: string) => {
@@ -408,7 +437,7 @@ export default function DreamWeaverPage() {
         </Sidebar>
         <SidebarInset className="flex overflow-hidden">
             <aside className="w-80 border-r border-sidebar-border flex-shrink-0 hidden md:flex overflow-y-auto">
-                <DreamHistorySidebar dreams={dreamHistory} isLoading={isLoadingHistory} onSelectDream={handleSelectDream} onDeleteDream={handleDeleteDream} />
+                <DreamHistorySidebar dreams={dreamHistory} isLoading={isLoadingHistory} onSelectDream={handleSelectDream} onDeleteDream={handleDeleteDream} onClearHistory={handleClearHistory} />
             </aside>
             <main className="flex-1 flex flex-col overflow-y-auto">
                 <div className="sticky top-0 bg-background/80 backdrop-blur-sm border-b border-border/80 p-4 z-10">
@@ -445,7 +474,7 @@ export default function DreamWeaverPage() {
                                             <SheetTitle>Diario de Sueños</SheetTitle>
                                             <SheetDescription>Explora tus sueños interpretados anteriormente.</SheetDescription>
                                         </SheetHeader>
-                                         <DreamHistorySidebar dreams={dreamHistory} isLoading={isLoadingHistory} onSelectDream={handleSelectDream} onDeleteDream={handleDeleteDream} />
+                                         <DreamHistorySidebar dreams={dreamHistory} isLoading={isLoadingHistory} onSelectDream={handleSelectDream} onDeleteDream={handleDeleteDream} onClearHistory={handleClearHistory} />
                                     </SheetContent>
                                 </Sheet>
                             </div>
@@ -484,7 +513,7 @@ export default function DreamWeaverPage() {
 
                             <div className="space-y-4">
                                 {recordingStatus !== 'idle' && (
-                                  <div className="w-full h-20 rounded-lg bg-card/80 border-border flex items-center justify-center">
+                                  <div className="w-full h-20 rounded-lg bg-transparent flex items-center justify-center">
                                       <AudioVisualizer stream={audioStream} />
                                   </div>
                                 )}
@@ -539,5 +568,3 @@ export default function DreamWeaverPage() {
     </SidebarProvider>
   );
 }
-
-    
