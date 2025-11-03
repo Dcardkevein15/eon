@@ -44,8 +44,8 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ stream }) => {
       animationFrameId.current = requestAnimationFrame(draw);
       analyser.getByteTimeDomainData(dataArray);
 
-      canvasCtx.fillStyle = 'hsl(var(--card))';
-      canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+      // Set canvas background to transparent
+      canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
 
       canvasCtx.lineWidth = 2;
       canvasCtx.strokeStyle = 'hsl(var(--primary))';
