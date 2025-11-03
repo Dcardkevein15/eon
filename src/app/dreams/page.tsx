@@ -35,6 +35,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetDescription,
+  SheetTrigger,
 } from "@/components/ui/sheet";
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth, useFirestore, useCollection } from '@/firebase';
@@ -538,3 +539,5 @@ export default function DreamWeaverPage() {
     </SidebarProvider>
   );
 }
+
+    
