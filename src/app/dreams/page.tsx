@@ -8,7 +8,7 @@ import { interpretDreamAction, analyzeDreamVoiceAction } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ChevronLeft, Loader2, Wand2, Info, BookOpen, Trash2, Mic, Square, Pause, Play, Ear } from 'lucide-react';
+import { ChevronLeft, Loader2, Wand2, Info, BookOpen, Trash2, Mic, Square, Pause, Play, Ear, Calendar, Clock as ClockIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Sidebar, SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -94,12 +94,15 @@ function useLocalStorage<T>(key: string, initialValue: T) {
 const DreamHistorySidebar = ({ dreams, isLoading, onSelectDream, onDeleteDream, onClearHistory }: { dreams: DreamInterpretationDoc[], isLoading: boolean, onSelectDream: (id: string) => void, onDeleteDream: (id: string) => void, onClearHistory: () => void }) => {
   
   const getFormattedDate = (dateString: string | Date) => {
-    if (!dateString) return 'Fecha desconocida';
+    if (!dateString) return { relative: 'Fecha desconocida', absolute: '' };
     try {
       const date = new Date(dateString);
-      return formatDistanceToNow(date, { addSuffix: true, locale: es });
+      return {
+          relative: formatDistanceToNow(date, { addSuffix: true, locale: es }),
+          absolute: format(date, "d MMM, HH:mm", { locale: es })
+      };
     } catch {
-      return 'Fecha inválida';
+      return { relative: 'Fecha inválida', absolute: '' };
     }
   };
 
@@ -126,19 +129,24 @@ const DreamHistorySidebar = ({ dreams, isLoading, onSelectDream, onDeleteDream, 
             </div>
           ) : (
             <div className="p-2 space-y-2">
-              {[...dreams].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(dream => (
-                <div key={dream.id} className="relative group/item">
-                    <button onClick={() => onSelectDream(dream.id)} className="w-full text-left pr-10">
+              {[...dreams].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(dream => {
+                const { relative, absolute } = getFormattedDate(dream.createdAt);
+                return (
+                <div key={dream.id} className="relative group/item flex items-center gap-2">
+                    <button onClick={() => onSelectDream(dream.id)} className="flex-grow text-left">
                         <Card className="bg-sidebar-accent/50 border-sidebar-border hover:bg-sidebar-accent hover:border-primary/50 transition-colors">
                             <CardHeader className="p-3">
                                 <CardTitle className="text-sm font-semibold truncate text-sidebar-foreground">{dream.interpretation.dreamTitle}</CardTitle>
-                                <CardDescription className="text-xs text-muted-foreground">{getFormattedDate(dream.createdAt)}</CardDescription>
+                                <CardDescription className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
+                                    <span className='flex items-center gap-1.5'><Calendar className="w-3 h-3"/> {absolute}</span>
+                                    <span className='flex items-center gap-1.5'><ClockIcon className="w-3 h-3"/> {relative}</span>
+                                </CardDescription>
                             </CardHeader>
                         </Card>
                     </button>
                      <AlertDialog>
                         <AlertDialogTrigger asChild>
-                           <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 text-red-400 hover:bg-red-500/10 hover:text-red-400">
+                           <Button variant="ghost" size="icon" className="flex-shrink-0 h-8 w-8 text-destructive/70 hover:bg-destructive/10 hover:text-destructive">
                             <Trash2 className="w-4 h-4"/>
                            </Button>
                         </AlertDialogTrigger>
@@ -156,7 +164,8 @@ const DreamHistorySidebar = ({ dreams, isLoading, onSelectDream, onDeleteDream, 
                         </AlertDialogContent>
                       </AlertDialog>
                 </div>
-              ))}
+                )
+              })}
             </div>
           )}
       </ScrollArea>
@@ -568,3 +577,5 @@ export default function DreamWeaverPage() {
     </SidebarProvider>
   );
 }
+
+    
