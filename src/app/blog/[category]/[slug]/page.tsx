@@ -48,11 +48,13 @@ function ArticlePageContent() {
           if (!querySnapshot.empty) {
             setInitialTitle(querySnapshot.docs[0].data().title);
           } else {
-            setInitialTitle(decodeURIComponent(slug).replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()));
+            setError("No se pudo encontrar el título para este artículo.");
+            setInitialTitle("Título no encontrado");
           }
         } catch (error) {
           console.error("Error fetching initial title:", error);
-          setInitialTitle(decodeURIComponent(slug).replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()));
+          setError("Error al cargar el título.");
+          setInitialTitle("Título no encontrado");
         }
       };
       fetchTitle();
@@ -63,7 +65,7 @@ function ArticlePageContent() {
     if (article?.content) {
       const words = article.content.split(/\s+/).length;
       setEstimatedTime(Math.ceil(words / 200)); // Avg reading speed 200 wpm
-      if (user && userRef) {
+      if (user && userRef && article?.id) {
           updateDoc(userRef, { [`readArticles.${article.id}`]: true });
       }
     }
