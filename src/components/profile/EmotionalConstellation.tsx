@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
@@ -57,7 +58,7 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
       '210 40% 98%'  // chart-5 Blanco Estelar
     ];
   }, []);
-
+  
   const filteredData = useMemo(() => {
     if (sentimentFilter === 'all') {
       return data;
@@ -71,24 +72,47 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
         const targetId = typeof link.target === 'object' ? (link.target as MyNodeObject).id : link.target;
         return [sourceId, targetId];
     }));
-
+    
+    // Also include nodes that might not have links but should be visible
      const filteredNodes = data.nodes.filter(node => {
-      // Keep node if it's part of any visible link
-      return visibleNodeIds.has(node.id);
+      const hasLinksInFilter = filteredLinks.some(link => {
+         const sourceId = typeof link.source === 'object' ? (link.source as MyNodeObject).id : link.source;
+        const targetId = typeof link.target === 'object' ? (link.target as MyNodeObject).id : link.target;
+        return sourceId === node.id || targetId === node.id
+      });
+      // If a node is part of any visible link, keep it.
+      return hasLinksInFilter;
     });
+
+
+    if (filteredNodes.length === 0 && filteredLinks.length > 0) {
+        // This case can happen if links exist but nodes were somehow filtered out.
+        // Re-add nodes based on links.
+        const nodesFromLinks = new Set<string>();
+        filteredLinks.forEach(l => {
+            nodesFromLinks.add(typeof l.source === 'object' ? (l.source as MyNodeObject).id : l.source);
+            nodesFromLinks.add(typeof l.target === 'object' ? (l.target as MyNodeObject).id : l.target);
+        });
+        return {
+            nodes: data.nodes.filter(n => nodesFromLinks.has(n.id)),
+            links: filteredLinks
+        };
+    }
+
 
     return { nodes: filteredNodes, links: filteredLinks };
   }, [data, sentimentFilter]);
+
 
 
   const togglePhysics = () => {
     setIsPhysicsActive(prev => {
       const next = !prev;
       if (next) {
+        fgRef.current?.d3Force('link', null)?.d3Force('charge', null);
         fgRef.current?.d3ReheatSimulation();
-        fgRef.current?.d3AlphaDecay(0.0228);
       } else {
-        fgRef.current?.d3AlphaDecay(1);
+        fgRef.current?.d3Force('link')?.d3Force('charge');
       }
       return next;
     });
@@ -235,8 +259,8 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
             linkDirectionalParticleSpeed={(link: LinkObject) => (Math.abs((link as MyLinkObject).sentiment) * 0.006) + 0.001}
             onNodeClick={handleNodeClick}
             onBackgroundClick={handleBackgroundClick}
-            cooldownTicks={isPhysicsActive ? 100 : Infinity}
-            d3AlphaDecay={hasLoaded ? 0.0228 : 1}
+            cooldownTicks={hasLoaded && isPhysicsActive ? 100 : Infinity}
+            d3AlphaDecay={hasLoaded && isPhysicsActive ? 0.0228 : 1}
             d3VelocityDecay={0.3}
             warmupTicks={hasLoaded ? 0 : 100}
         />
