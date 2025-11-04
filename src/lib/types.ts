@@ -1,5 +1,3 @@
-
-
 import { Timestamp } from 'firebase/firestore';
 import { z } from 'zod';
 
@@ -9,6 +7,8 @@ export type User = import('firebase/auth').User & {
   therapistId?: string;
   articleGenerationCredits?: number;
   lastCreditRefresh?: Timestamp;
+  favoriteArticles?: { [slug: string]: string }; // Map slug to ISO timestamp
+  readArticles?: { [slug: string]: boolean };
 };
 
 export type Message = {
@@ -403,4 +403,15 @@ export type Article = {
   category: string;
   content: string;
   createdAt: Timestamp;
+  avgRating: number;
+  ratingCount: number;
+};
+
+export type SuggestedArticleTitle = {
+  id: string;
+  title: string;
+  slug: string;
+  category: string;
+  categorySlug: string;
+  createdAt: string;
 };

@@ -1,175 +1,155 @@
-
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams } from 'next/navigation';
+import { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { generateArticleTitles } from '@/app/actions';
 import { Button } from '@/components/ui/button';
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronLeft, ArrowRight, FileText, LogIn, RefreshCw } from 'lucide-react';
+import { ChevronLeft, LogIn, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/firebase';
+import { useAuth, useCollection, useFirestore } from '@/firebase';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import ArticleCard from '@/components/blog/ArticleCard';
+import FilterTabs from '@/components/blog/FilterTabs';
+import type { Article, SuggestedArticleTitle, User } from '@/lib/types';
+import { collection, query, where } from 'firebase/firestore';
 
 function slugify(text: string) {
-  return text
-    .toString()
-    .toLowerCase()
-    .normalize('NFD') // Normaliza los caracteres con tilde a su forma base + diacrítico
-    .replace(/[\u0300-\u036f]/g, '') // Elimina los diacríticos (las tildes)
-    .replace(/\s+/g, '-') // Reemplaza espacios con guiones
-    .replace(/[^\w\-]+/g, '') // Elimina todos los caracteres que no sean palabras o guiones
-    .replace(/\-\-+/g, '-') // Reemplaza múltiples guiones con uno solo
-    .replace(/^-+/, '') // Elimina guiones al principio
-    .replace(/-+$/, ''); // Elimina guiones al final
+  return text.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-').replace(/[^\w\-]+/g, '').replace(/\-\-+/g, '-').replace(/^-+/, '').replace(/-+$/, '');
 }
 
-export default function ArticleListPage() {
+type FilterValue = 'all' | 'generated' | 'new';
+
+function ArticleListPageContent() {
   const params = useParams();
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
-  const initialFetchDone = useRef(false);
+  const firestore = useFirestore();
 
-  const [titles, setTitles] = useState<string[]>([]);
+  const [filter, setFilter] = useState<FilterValue>('all');
+  const [titles, setTitles] = useState<SuggestedArticleTitle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  const category = Array.isArray(params.category) ? params.category[0] : params.category;
-  const formattedCategory = category.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  const categorySlug = Array.isArray(params.category) ? params.category[0] : params.category;
+  const formattedCategory = categorySlug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
-  const fetchTitles = useCallback(async (isRefresh: boolean = false) => {
-      const setLoadingState = isRefresh ? setIsRefreshing : setIsLoading;
-      setLoadingState(true);
-      try {
+  const articlesQuery = useMemo(() => firestore ? query(collection(firestore, 'articles'), where('category', '==', categorySlug)) : undefined, [firestore, categorySlug]);
+  const { data: generatedArticles, loading: articlesLoading } = useCollection<Article>(articlesQuery);
+
+  const fetchTitles = useCallback(async (forceRefresh: boolean = false) => {
+    const setLoadingState = forceRefresh ? setIsRefreshing : setIsLoading;
+    setLoadingState(true);
+    try {
+      if (forceRefresh || titles.length === 0) {
         const result = await generateArticleTitles({ category: formattedCategory });
-        setTitles(result.titles);
-        if (isRefresh) {
-          toast({
-            title: '¡Nuevos títulos cargados!',
-          });
-        }
-      } catch (error) {
-        console.error('Failed to generate article titles:', error);
-        toast({
-          variant: 'destructive',
-          title: 'Error al cargar artículos',
-          description: 'No se pudieron generar los títulos. Por favor, intenta de nuevo.',
-        });
-      } finally {
-        setLoadingState(false);
+        const suggestedWithSlugs = result.titles.map(title => ({
+            title,
+            category: formattedCategory,
+            categorySlug: categorySlug,
+            slug: slugify(title),
+            createdAt: new Date().toISOString()
+        }));
+        setTitles(suggestedWithSlugs);
       }
-  }, [formattedCategory, toast]);
+    } catch (error) {
+      console.error('Failed to generate article titles:', error);
+      toast({ variant: 'destructive', title: 'Error al cargar artículos', description: 'No se pudieron generar los títulos.' });
+    } finally {
+      setLoadingState(false);
+    }
+  }, [formattedCategory, categorySlug, toast, titles.length]);
 
   useEffect(() => {
-    // Only run initial fetch when user is loaded and it hasn't been done yet.
-    if (user && !authLoading && !initialFetchDone.current) {
-        fetchTitles();
-        initialFetchDone.current = true;
+    if (!authLoading) {
+      fetchTitles();
     }
-     // If auth is done loading and there's no user, stop the loading state.
-    if (!user && !authLoading) {
-        setIsLoading(false);
+  }, [authLoading, fetchTitles]);
+
+  const filteredItems = useMemo(() => {
+    const generatedSlugs = new Set(generatedArticles?.map(a => a.slug));
+    
+    switch (filter) {
+      case 'generated':
+        return generatedArticles || [];
+      case 'new':
+        return titles.filter(t => !generatedSlugs.has(t.slug));
+      case 'all':
+      default:
+        const combined = [...(generatedArticles || [])];
+        const newTitles = titles.filter(t => !generatedSlugs.has(t.slug));
+        return [...combined, ...newTitles];
     }
-  }, [user, authLoading, fetchTitles, category]); // Also depend on category to refetch if URL changes
-
-
+  }, [filter, generatedArticles, titles]);
+  
   const renderContent = () => {
-     if (isLoading) {
-      return (
-        Array.from({ length: 5 }).map((_, index) => (
-            <Skeleton key={index} className="h-28 w-full" />
-        ))
-      )
+    if (isLoading || articlesLoading) {
+      return Array.from({ length: 6 }).map((_, index) => <Skeleton key={index} className="h-40 w-full" />);
     }
-
     if (!user) {
       return (
-        <Alert>
+        <Alert className="col-span-full">
           <LogIn className="h-4 w-4" />
           <AlertTitle>Acceso Restringido</AlertTitle>
-          <AlertDescription>
-            Debes iniciar sesión para ver los artículos de esta categoría.
-          </AlertDescription>
+          <AlertDescription>Debes iniciar sesión para ver los artículos de esta categoría.</AlertDescription>
         </Alert>
-      )
+      );
     }
-    
-    if (titles.length === 0 && !isLoading) {
-        return (
-            <div className="text-center py-8">
-                <p className="text-muted-foreground">No se encontraron artículos para esta categoría.</p>
-                 <Button onClick={() => fetchTitles(true)} disabled={isRefreshing} className="mt-4">
-                    {isRefreshing ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                    Intentar Generar de Nuevo
-                </Button>
-            </div>
-        )
+    if (filteredItems.length === 0) {
+      return (
+        <div className="text-center py-8 col-span-full">
+          <p className="text-muted-foreground">No se encontraron artículos para esta categoría.</p>
+          <Button onClick={() => fetchTitles(true)} disabled={isRefreshing} className="mt-4">
+            {isRefreshing ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+            Intentar Generar de Nuevo
+          </Button>
+        </div>
+      );
     }
-
-    return (
-        titles.map((title) => (
-              <motion.div
-                key={title}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Link href={`/blog/${category}/${slugify(title)}`} passHref>
-                  <Card className="group cursor-pointer bg-card/50 transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
-                    <CardHeader className="flex flex-row items-center justify-between gap-4">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
-                          {title}
-                        </CardTitle>
-                        <CardDescription className="mt-2 flex items-center text-xs">
-                          <FileText className="mr-2 h-4 w-4"/>
-                          Leer artículo
-                        </CardDescription>
-                      </div>
-                      <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform duration-300 group-hover:translate-x-1 group-hover:text-primary" />
-                    </CardHeader>
-                  </Card>
-                </Link>
-              </motion.div>
-        ))
-    )
-  }
+    return filteredItems.map((item) => (
+      <motion.div key={item.slug} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+        <ArticleCard item={item} categorySlug={categorySlug} />
+      </motion.div>
+    ));
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="container mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-        <header className="mb-12">
-            <div className="flex justify-between items-center">
-                <Button asChild variant="ghost" className="-ml-4 text-muted-foreground hover:bg-accent/10 hover:text-foreground">
-                    <Link href="/blog">
-                    <ChevronLeft className="h-4 w-4 mr-2" />
-                    Volver a Categorías
-                    </Link>
-                </Button>
-                {user && (
-                    <Button onClick={() => fetchTitles(true)} variant="outline" size="sm" disabled={isRefreshing || isLoading}>
-                        {isRefreshing ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                        Nuevos Títulos
-                    </Button>
-                )}
-            </div>
+      <div className="container mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+        <header className="mb-8">
+          <div className="flex justify-between items-center flex-wrap gap-4">
+            <Button asChild variant="ghost" className="-ml-4 text-muted-foreground hover:bg-accent/10 hover:text-foreground">
+              <Link href="/blog"><ChevronLeft className="h-4 w-4 mr-2" />Volver a Categorías</Link>
+            </Button>
+            {user && (
+              <Button onClick={() => fetchTitles(true)} variant="outline" size="sm" disabled={isRefreshing || isLoading}>
+                {isRefreshing ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                Nuevos Títulos
+              </Button>
+            )}
+          </div>
           <div className="mt-4">
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-primary">
-              {formattedCategory}
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              { user ? 'Artículos generados por IA para profundizar en este tema. Elige uno para leerlo.' : 'Inicia sesión para explorar nuestros artículos.'}
-            </p>
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-primary">{formattedCategory}</h1>
+            <p className="text-muted-foreground mt-2">{user ? 'Artículos generados por IA. Elige uno para leerlo o genera uno nuevo.' : 'Inicia sesión para explorar nuestros artículos.'}</p>
           </div>
         </header>
 
-        <div className="space-y-6">
-            {renderContent()}
+        {user && <FilterTabs filter={filter} setFilter={setFilter} />}
+
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {renderContent()}
         </div>
       </div>
     </div>
   );
+}
+
+export default function ArticleListPage() {
+    return (
+        <Suspense fallback={<div>Cargando...</div>}>
+            <ArticleListPageContent />
+        </Suspense>
+    );
 }
