@@ -6,11 +6,12 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTr
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Book, Heart, TrendingUp, FileText, Star, Tag, History } from 'lucide-react';
-import type { Article, User } from '@/lib/types';
+import { Book, Heart, TrendingUp, FileText, Star, Tag, History, Sparkles } from 'lucide-react';
+import type { Article, User, SuggestedArticleTitle } from '@/lib/types';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
+import { Badge } from '../ui/badge';
 
 interface BlogHistorySheetProps {
   user: User | null;
@@ -18,17 +19,37 @@ interface BlogHistorySheetProps {
   userData: User | null;
 }
 
-const ArticleListItem = ({ article }: { article: Article }) => (
-    <Link href={`/blog/${article.category}/${article.slug}?title=${encodeURIComponent(article.title)}`} passHref>
-        <div className="block border p-3 rounded-lg bg-card/50 hover:bg-accent/10 hover:border-primary/50 transition-colors">
-            <p className="font-semibold text-sm truncate">{article.title}</p>
-            <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1.5">
-                <span className="flex items-center gap-1"><Star className="w-3 h-3 text-amber-500"/>{article.avgRating.toFixed(1)}</span>
-                <span className="flex items-center gap-1 capitalize"><Tag className="w-3 h-3"/>{article.category.replace(/-/g, ' ')}</span>
+// Helper to check if an item is a fully generated Article
+function isGeneratedArticle(item: Article | SuggestedArticleTitle): item is Article {
+    return 'content' in item && 'avgRating' in item;
+}
+
+const ArticleListItem = ({ article }: { article: Article | SuggestedArticleTitle }) => {
+    const isGenerated = isGeneratedArticle(article);
+    const avgRating = isGenerated ? article.avgRating ?? 0 : 0;
+    const categoryName = ('category' in article ? article.category : '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    const slug = 'slug' in article ? article.slug : '';
+    const categorySlug = 'categorySlug' in article ? article.categorySlug : article.category;
+
+    if (!slug || !categorySlug) return null; // Don't render if we can't form a valid link
+
+    return (
+        <Link href={`/blog/${categorySlug}/${slug}?title=${encodeURIComponent(article.title)}`} passHref>
+            <div className="block border p-3 rounded-lg bg-card/50 hover:bg-accent/10 hover:border-primary/50 transition-colors">
+                <p className="font-semibold text-sm truncate">{article.title}</p>
+                <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1.5">
+                    {isGenerated ? (
+                         <span className="flex items-center gap-1"><Star className="w-3 h-3 text-amber-500"/>{avgRating.toFixed(1)}</span>
+                    ) : (
+                        <Badge variant="outline" className="flex-shrink-0 border-primary/50 text-primary text-xs"><Sparkles className="w-3 h-3 mr-1"/>Nuevo</Badge>
+                    )}
+                   
+                    <span className="flex items-center gap-1 capitalize"><Tag className="w-3 h-3"/>{categoryName}</span>
+                </div>
             </div>
-        </div>
-    </Link>
-);
+        </Link>
+    );
+}
 
 
 export default function BlogHistorySheet({ user, articles, userData }: BlogHistorySheetProps) {
