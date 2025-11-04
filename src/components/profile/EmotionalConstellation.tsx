@@ -45,7 +45,13 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
   }, []);
 
   const nodeColors = useMemo(() => {
-    return ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#00C49F'];
+    return [
+        'hsl(var(--chart-1))',
+        'hsl(var(--chart-2))',
+        'hsl(var(--chart-3))',
+        'hsl(var(--chart-4))',
+        'hsl(var(--chart-5))'
+    ];
   }, []);
 
   const filteredData = useMemo(() => {
@@ -55,21 +61,31 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
     const filteredLinks = data.links.filter(link => 
       sentimentFilter === 'positive' ? link.sentiment > 0.1 : link.sentiment < -0.1
     );
-    const visibleNodeIds = new Set(filteredLinks.flatMap(link => [link.source, link.target]));
-    const filteredNodes = data.nodes.filter(node => visibleNodeIds.has(node.id as string));
+
+    // FIX: Ensure all nodes involved in the filtered links are included.
+    const visibleNodeIds = new Set(filteredLinks.flatMap(link => {
+        const sourceId = typeof link.source === 'object' ? (link.source as MyNodeObject).id : link.source;
+        const targetId = typeof link.target === 'object' ? (link.target as MyNodeObject).id : link.target;
+        return [sourceId, targetId];
+    }));
+    
+    const filteredNodes = data.nodes.filter(node => visibleNodeIds.has(node.id));
 
     return { nodes: filteredNodes, links: filteredLinks };
   }, [data, sentimentFilter]);
 
+
   const handleNodeClick = useCallback((node: NodeObject) => {
-    const nodeId = node.id as string;
-    if (focusedNode === nodeId) {
+    const myNode = node as MyNodeObject;
+    if (focusedNode === myNode.id) {
       setFocusedNode(null);
       fgRef.current?.zoomToFit(400);
     } else {
-      setFocusedNode(nodeId);
-      fgRef.current?.centerAt(node.x, node.y, 500);
-      fgRef.current?.zoom(4, 500);
+      setFocusedNode(myNode.id);
+      if (myNode.x !== undefined && myNode.y !== undefined) {
+         fgRef.current?.centerAt(myNode.x, myNode.y, 500);
+         fgRef.current?.zoom(4, 500);
+      }
     }
   }, [focusedNode]);
 
@@ -108,17 +124,23 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
     const radius = Math.sqrt(Math.abs(myNode.val)) * 2.5;
 
     const isFocused = focusedNode === myNode.id;
-    const isNeighbor = focusedNode && filteredData.links.some(link => (link.source === myNode.id && link.target === focusedNode) || (link.target === myNode.id && link.source === focusedNode));
+    const isNeighbor = focusedNode && filteredData.links.some(link => {
+        const sourceId = typeof link.source === 'object' ? (link.source as MyNodeObject).id : link.source;
+        const targetId = typeof link.target === 'object' ? (link.target as MyNodeObject).id : link.target;
+        return (sourceId === myNode.id && targetId === focusedNode) || (targetId === myNode.id && sourceId === focusedNode);
+    });
+
     const isDimmed = focusedNode !== null && !isFocused && !isNeighbor;
     
     // --- Draw Node ---
     ctx.beginPath();
-    ctx.arc(myNode.x!, myNode.y!, radius, 0, 2 * Math.PI, false);
+    ctx.arc(myNode.x, myNode.y, radius, 0, 2 * Math.PI, false);
     
     const opacity = isDimmed ? 0.1 : 1;
     ctx.globalAlpha = opacity;
     
-    const gradient = ctx.createRadialGradient(myNode.x!, myNode.y!, 0, myNode.x!, myNode.y!, radius);
+    // Create a radial gradient for a 3D/glowing effect
+    const gradient = ctx.createRadialGradient(myNode.x, myNode.y, 0, myNode.x, myNode.y, radius);
     gradient.addColorStop(0, `${color}ff`);
     gradient.addColorStop(0.9, `${color}aa`);
     gradient.addColorStop(1, `${color}00`);
@@ -141,7 +163,7 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
 
       const words = label.split('/');
       const lineHeight = fontSize * 1.1;
-      const startY = myNode.y! - (words.length - 1) * lineHeight / 2;
+      const startY = myNode.y - (words.length - 1) * lineHeight / 2;
 
       words.forEach((word, i) => {
         ctx.fillText(word, myNode.x!, startY + i * lineHeight);
@@ -183,16 +205,26 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
             ref={fgRef}
             graphData={filteredData}
             nodeCanvasObject={nodeCanvasObject}
-            linkWidth={link => focusedNode && (link.source.id === focusedNode || link.target.id === focusedNode) ? 2.5 : 1}
+            linkWidth={(link) => {
+                const sourceId = typeof link.source === 'object' ? (link.source as MyNodeObject).id : link.source;
+                const targetId = typeof link.target === 'object' ? (link.target as MyNodeObject).id : link.target;
+                return focusedNode && (sourceId === focusedNode || targetId === focusedNode) ? 2.5 : 1
+            }}
             linkColor={(link) => {
               const myLink = link as MyLinkObject;
-              const isFocused = focusedNode && (myLink.source === focusedNode || myLink.target === focusedNode);
+              const sourceId = typeof link.source === 'object' ? (link.source as MyNodeObject).id : link.source;
+              const targetId = typeof link.target === 'object' ? (link.target as MyNodeObject).id : link.target;
+              const isFocused = focusedNode && (sourceId === focusedNode || targetId === focusedNode);
               const color = getSentimentColor(myLink.sentiment);
               return isFocused ? color.replace(/[\d\.]+\)$/, `1.0)`) : color;
             }}
             linkCurvature={0.1}
             linkDirectionalParticles={1}
-            linkDirectionalParticleWidth={link => focusedNode && (link.source.id === focusedNode || link.target.id === focusedNode) ? 3 : 0}
+            linkDirectionalParticleWidth={(link) => {
+                const sourceId = typeof link.source === 'object' ? (link.source as MyNodeObject).id : link.source;
+                const targetId = typeof link.target === 'object' ? (link.target as MyNodeObject).id : link.target;
+                return focusedNode && (sourceId === focusedNode || targetId === focusedNode) ? 3 : 0
+            }}
             linkDirectionalParticleSpeed={() => 0.006}
             onNodeClick={handleNodeClick}
             onBackgroundClick={handleBackgroundClick}
