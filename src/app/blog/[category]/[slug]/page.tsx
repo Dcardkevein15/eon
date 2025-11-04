@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
@@ -45,22 +46,8 @@ function ArticlePageContent() {
     const titleFromQuery = searchParams.get('title');
     if (titleFromQuery) {
       setInitialTitle(decodeURIComponent(titleFromQuery));
-    } else if (firestore && slug && !article && !articleLoading && !initialTitle) {
-      // Fallback for bookmarked URLs or direct navigation
-      const fetchTitleFromDB = async () => {
-        try {
-          const q = query(collection(firestore, 'suggestedArticleTitles'), where('slug', '==', slug), limit(1));
-          const querySnapshot = await getDocs(q);
-          if (!querySnapshot.empty) {
-            setInitialTitle(querySnapshot.docs[0].data().title);
-          }
-        } catch (error) {
-          console.error("Error fetching initial title from DB:", error);
-        }
-      };
-      fetchTitleFromDB();
     }
-  }, [firestore, slug, article, articleLoading, initialTitle, searchParams]);
+  }, [searchParams]);
 
   useEffect(() => {
     if (article?.content) {
@@ -87,7 +74,8 @@ function ArticlePageContent() {
     setIsGenerating(true);
     setError(null);
     try {
-      const result = await generateArticleContent({ category: category.replace(/-/g, ' '), slug, title });
+      // Use the new dispatcher flow
+      const result = await generateArticleContent({ category, slug, title });
       if (!result.content) throw new Error("La IA no pudo generar el contenido.");
       
       const newArticleData: Omit<Article, 'id'> = { title, slug, category, content: result.content, createdAt: serverTimestamp(), avgRating: 0, ratingCount: 0 };

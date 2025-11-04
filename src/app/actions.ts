@@ -1,3 +1,4 @@
+
 'use server';
 
 import { ai } from '@/ai/genkit';
@@ -15,7 +16,7 @@ import { getTacticalAdvice as getTacticalAdviceFlow } from '@/ai/flows/get-tacti
 import { classifyIntent as classifyIntentFlow } from '@/ai/flows/classify-intent';
 import { analyzeVoiceMessage as analyzeVoiceMessageFlow } from '@/ai/flows/analyze-voice-message';
 import { analyzeDreamVoice as analyzeDreamVoiceFlow } from '@/ai/flows/analyze-dream-voice';
-import { generateArticleTitles as genTitlesFlow, generateArticleContent as genContentFlow } from '@/ai/flows/blog-flows';
+import { generateArticleTitles as genTitlesFlow, dispatchArticleWriter } from '@/ai/flows/blog-flows';
 import { getRecommendedCategory as getRecommendedCategoryFlow } from '@/ai/flows/get-recommended-category';
 
 
@@ -231,11 +232,8 @@ export async function analyzeDreamVoiceAction(input: AnalyzeVoiceInput): Promise
 
 // --- Blog Actions ---
 export async function generateArticleTitles(input: GenerateArticleTitlesInput): Promise<GenerateArticleTitlesOutput> {
-  // This now just generates titles and doesn't save them.
-  // The saving logic was causing race conditions.
   try {
-    const result = await genTitlesFlow({ category: input.category });
-    return result;
+    return await genTitlesFlow({ category: input.category });
   } catch (error) {
     console.error("Error in generateArticleTitles:", error);
     throw new Error('No se pudieron generar nuevos títulos.');
@@ -244,7 +242,7 @@ export async function generateArticleTitles(input: GenerateArticleTitlesInput): 
 
 
 export async function generateArticleContent(input: GenerateArticleContentInput): Promise<GenerateArticleContentOutput> {
-  return genContentFlow(input);
+  return dispatchArticleWriter(input);
 }
 
 export async function getRecommendedCategory(userProfile: string) {
