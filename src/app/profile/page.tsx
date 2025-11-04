@@ -437,28 +437,28 @@ export default function PsychologicalProfile() {
                   </CardHeader>
                   <CardContent>
                     <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                        <div className="flex flex-col items-center">
+                        <div className="flex flex-col items-center overflow-hidden">
                             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 mb-2">
                                 <GitCommit className="w-6 h-6 -rotate-90" />
                             </div>
                             <h4 className="font-semibold">Disparador</h4>
                             <p className="text-sm text-muted-foreground px-2 break-words">{profile.habitLoop.trigger}</p>
                         </div>
-                        <div className="flex flex-col items-center">
+                        <div className="flex flex-col items-center overflow-hidden">
                             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 mb-2">
                                 <BrainCircuit className="w-6 h-6" />
                             </div>
                             <h4 className="font-semibold">Pensamiento</h4>
                             <p className="text-sm text-muted-foreground px-2 break-words">{profile.habitLoop.thought}</p>
                         </div>
-                        <div className="flex flex-col items-center">
+                        <div className="flex flex-col items-center overflow-hidden">
                             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 mb-2">
                                 <ShieldQuestion className="w-6 h-6" />
                             </div>
                             <h4 className="font-semibold">Acción</h4>
                             <p className="text-sm text-muted-foreground px-2 break-words">{profile.habitLoop.action}</p>
                         </div>
-                        <div className="flex flex-col items-center">
+                        <div className="flex flex-col items-center overflow-hidden">
                             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 mb-2">
                                 <AlertTriangle className="w-6 h-6" />
                             </div>
