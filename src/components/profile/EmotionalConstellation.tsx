@@ -85,8 +85,9 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
       const next = !prev;
       if (next) {
         fgRef.current?.d3ReheatSimulation();
+        fgRef.current?.d3AlphaDecay(0.0228);
       } else {
-        fgRef.current?.d3AlphaTarget(0);
+        fgRef.current?.d3AlphaDecay(1);
       }
       return next;
     });
@@ -101,6 +102,7 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
   const nodeCanvasObject = (node: NodeObject, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const myNode = node as MyNodeObject;
     if (typeof myNode.x !== 'number' || typeof myNode.y !== 'number') return;
+
     const label = myNode.id;
     const color = nodeColors[(myNode.index || 0) % nodeColors.length];
     const radius = Math.sqrt(Math.abs(myNode.val)) * 2.5;
@@ -131,11 +133,11 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
     
     // --- Draw Text ---
     const fontSize = Math.min(14, radius / 2) / globalScale;
-    if (fontSize > 1.5) { // Don't draw text if too small
+    if (fontSize > 1.5 && !isDimmed) { // Only draw text if not dimmed
       ctx.font = `bold ${fontSize}px Sans-Serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = `rgba(255, 255, 255, ${isDimmed ? 0.2 : 0.9})`;
+      ctx.fillStyle = `rgba(255, 255, 255, 0.9)`;
 
       const words = label.split('/');
       const lineHeight = fontSize * 1.1;
