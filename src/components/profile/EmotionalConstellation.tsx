@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import ForceGraph2D, { ForceGraphMethods, LinkObject, NodeObject } from 'react-force-graph-2d';
 import { Button } from '@/components/ui/button';
-import { Play, ZapOff, Plus, Minus, Search } from 'lucide-react';
+import { Play, ZapOff, Plus, Minus, Search, Check, X } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 
@@ -151,14 +151,14 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
     
     // Create a radial gradient for a 3D/glowing effect
     const gradient = ctx.createRadialGradient(myNode.x, myNode.y, 0, myNode.x, myNode.y, radius);
-    gradient.addColorStop(0, `hsla(${color}, 1)`);
-    gradient.addColorStop(0.9, `hsla(${color}, 0.9)`);
-    gradient.addColorStop(1, `hsla(${color}, 0)`);
+    gradient.addColorStop(0, `hsla(${color.replace(/ /g, ', ')}, 1)`);
+    gradient.addColorStop(0.9, `hsla(${color.replace(/ /g, ', ')}, 0.9)`);
+    gradient.addColorStop(1, `hsla(${color.replace(/ /g, ', ')}, 0)`);
     ctx.fillStyle = gradient;
     ctx.fill();
 
     if(isFocused) {
-        ctx.strokeStyle = `hsl(${color})`;
+        ctx.strokeStyle = `hsl(${color.replace(/ /g, ', ')})`;
         ctx.lineWidth = 2 / globalScale;
         ctx.stroke();
     }
