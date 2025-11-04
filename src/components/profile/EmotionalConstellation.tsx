@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import ForceGraph2D, { ForceGraphMethods, LinkObject, NodeObject } from 'react-force-graph-2d';
 import { Button } from '@/components/ui/button';
-import { Play, ZapOff, Plus, Minus, Search, Check, X } from 'lucide-react';
+import { Play, ZapOff, Plus, Minus, Search } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 
@@ -11,6 +11,10 @@ import { Label } from '@/components/ui/label';
 interface MyNodeObject extends NodeObject {
   id: string;
   val: number;
+  description?: string;
+  archetype?: string;
+  conflict?: string;
+  habitLoop?: string;
 }
 
 interface MyLinkObject extends LinkObject {
@@ -30,7 +34,7 @@ interface EmotionalConstellationProps {
 const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data }) => {
   const [isClient, setIsClient] = useState(false);
   const fgRef = useRef<ForceGraphMethods>();
-  const [focusedNode, setFocusedNode] = useState<string | null>(null);
+  const [focusedNode, setFocusedNode] = useState<MyNodeObject | null>(null);
   const [isPhysicsActive, setIsPhysicsActive] = useState(true);
   const [sentimentFilter, setSentimentFilter] = useState<'all' | 'positive' | 'negative'>('all');
   const [hasLoaded, setHasLoaded] = useState(false);
@@ -46,11 +50,11 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
 
   const nodeColors = useMemo(() => {
     return [
-      '190 80% 80%', // chart-1
-      '45 90% 75%',  // chart-2
-      '280 80% 80%', // chart-3
-      '340 80% 80%', // chart-4
-      '210 40% 98%'  // chart-5
+      '190, 80%, 80%', // chart-1 Cian Celestial
+      '45, 90%, 75%',  // chart-2 Oro Pálido
+      '280, 80%, 80%', // chart-3 Amatista
+      '340, 80%, 80%', // chart-4 Rosa Cósmico
+      '210, 40%, 98%'  // chart-5 Blanco Estelar
     ];
   }, []);
 
@@ -58,7 +62,7 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
     if (sentimentFilter === 'all') {
       return data;
     }
-    const filteredLinks = data.links.filter(link => 
+    const filteredLinks = data.links.filter(link =>
       sentimentFilter === 'positive' ? link.sentiment > 0.1 : link.sentiment < -0.1
     );
 
@@ -67,17 +71,6 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
         const targetId = typeof link.target === 'object' ? (link.target as MyNodeObject).id : link.target;
         return [sourceId, targetId];
     }));
-    
-    // Also include all nodes that don't have any links, they should be visible always
-    data.nodes.forEach(node => {
-      if (!data.links.some(link => {
-        const sourceId = typeof link.source === 'object' ? (link.source as MyNodeObject).id : link.source;
-        const targetId = typeof link.target === 'object' ? (link.target as MyNodeObject).id : link.target;
-        return sourceId === node.id || targetId === node.id;
-      })) {
-        visibleNodeIds.add(node.id);
-      }
-    });
 
     const filteredNodes = data.nodes.filter(node => visibleNodeIds.has(node.id));
 
@@ -100,11 +93,11 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
 
   const handleNodeClick = useCallback((node: NodeObject) => {
     const myNode = node as MyNodeObject;
-    if (focusedNode === myNode.id) {
+    if (focusedNode?.id === myNode.id) {
       setFocusedNode(null);
       fgRef.current?.zoomToFit(400);
     } else {
-      setFocusedNode(myNode.id);
+      setFocusedNode(myNode);
       if (myNode.x !== undefined && myNode.y !== undefined) {
          fgRef.current?.centerAt(myNode.x, myNode.y, 500);
          fgRef.current?.zoom(4, 500);
@@ -120,8 +113,8 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
   }, [focusedNode]);
 
   const getSentimentColor = (sentiment: number) => {
-    if (sentiment > 0.1) return 'rgba(130, 202, 157, 0.8)'; // Greenish (chart-1)
-    if (sentiment < -0.1) return 'rgba(255, 128, 66, 0.8)'; // Reddish (chart-4)
+    if (sentiment > 0.1) return 'rgba(102, 255, 179, 0.8)'; // Greenish
+    if (sentiment < -0.1) return 'rgba(255, 102, 102, 0.8)'; // Reddish
     return 'rgba(170, 170, 170, 0.6)'; // Neutral gray
   };
 
@@ -133,22 +126,22 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
     const color = nodeColors[(myNode.index || 0) % nodeColors.length];
     const radius = Math.sqrt(Math.abs(myNode.val)) * 2.5;
 
-    const isFocused = focusedNode === myNode.id;
+    const isFocused = focusedNode?.id === myNode.id;
     const isNeighbor = focusedNode && filteredData.links.some(link => {
         const sourceId = typeof link.source === 'object' ? (link.source as MyNodeObject).id : link.source;
         const targetId = typeof link.target === 'object' ? (link.target as MyNodeObject).id : link.target;
-        return (sourceId === myNode.id && targetId === focusedNode) || (targetId === myNode.id && sourceId === focusedNode);
+        return (sourceId === myNode.id && targetId === focusedNode.id) || (targetId === myNode.id && sourceId === focusedNode.id);
     });
 
     const isDimmed = focusedNode !== null && !isFocused && !isNeighbor;
-    
+
     // --- Draw Node ---
     ctx.beginPath();
     ctx.arc(myNode.x, myNode.y, radius, 0, 2 * Math.PI, false);
-    
+
     const opacity = isDimmed ? 0.1 : 1;
     ctx.globalAlpha = opacity;
-    
+
     // Create a radial gradient for a 3D/glowing effect
     const gradient = ctx.createRadialGradient(myNode.x, myNode.y, 0, myNode.x, myNode.y, radius);
     gradient.addColorStop(0, `hsla(${color.replace(/ /g, ', ')}, 1)`);
@@ -157,20 +150,21 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
     ctx.fillStyle = gradient;
     ctx.fill();
 
+
     if(isFocused) {
         ctx.strokeStyle = `hsl(${color.replace(/ /g, ', ')})`;
         ctx.lineWidth = 2 / globalScale;
         ctx.stroke();
     }
-    
+
     // --- Draw Text ---
     const fontSize = Math.min(14, radius / 2) / globalScale;
     if (fontSize > 1.5 && !isDimmed) {
       ctx.font = `bold ${fontSize}px Sans-Serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = `rgba(255, 255, 255, 0.9)`;
-      
+      ctx.fillStyle = `rgba(0, 0, 0, 0.8)`; // Changed to black for better contrast
+
       const words = label.split(/[\s/]+/);
       const lineHeight = fontSize * 1.1;
       const startY = myNode.y - (words.length - 1) * lineHeight / 2;
@@ -182,7 +176,7 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
 
     ctx.globalAlpha = 1; // Reset global alpha
   };
-  
+
   if (!isClient) {
     return <div style={{ height: '400px', width: '100%' }} />;
   }
@@ -210,7 +204,7 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
             <Button variant="ghost" size="icon" className="h-7 w-7 bg-card/80 border" onClick={() => fgRef.current?.zoom(fgRef.current.zoom() * 0.8)}><Minus className="h-4 w-4" /></Button>
             <Button variant="ghost" size="icon" className="h-7 w-7 bg-card/80 border" onClick={() => { setFocusedNode(null); fgRef.current?.zoomToFit(400); }}><Search className="h-4 w-4" /></Button>
         </div>
-        
+
         <ForceGraph2D
             ref={fgRef}
             graphData={filteredData}
@@ -218,13 +212,13 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
             linkWidth={(link) => {
                 const sourceId = typeof link.source === 'object' ? (link.source as MyNodeObject).id : link.source;
                 const targetId = typeof link.target === 'object' ? (link.target as MyNodeObject).id : link.target;
-                return focusedNode && (sourceId === focusedNode || targetId === focusedNode) ? 2.5 : 1
+                return focusedNode && (sourceId === focusedNode.id || targetId === focusedNode.id) ? 2.5 : 1
             }}
             linkColor={(link) => {
               const myLink = link as MyLinkObject;
               const sourceId = typeof link.source === 'object' ? (link.source as MyNodeObject).id : link.source;
               const targetId = typeof link.target === 'object' ? (link.target as MyNodeObject).id : link.target;
-              const isFocused = focusedNode && (sourceId === focusedNode || targetId === focusedNode);
+              const isFocused = focusedNode && (sourceId === focusedNode.id || targetId === focusedNode.id);
               const color = getSentimentColor(myLink.sentiment);
               return isFocused ? color.replace(/[\d\.]+\)$/, `1.0)`) : color;
             }}
@@ -232,7 +226,7 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
             linkDirectionalParticles={(link: LinkObject) => {
                  const sourceId = typeof link.source === 'object' ? (link.source as MyNodeObject).id : link.source;
                  const targetId = typeof link.target === 'object' ? (link.target as MyNodeObject).id : link.target;
-                 return focusedNode && (sourceId === focusedNode || targetId === focusedNode) ? 2 : 0
+                 return focusedNode && (sourceId === focusedNode.id || targetId === focusedNode.id) ? 2 : 0
             }}
             linkDirectionalParticleWidth={2}
             linkDirectionalParticleSpeed={(link: LinkObject) => (Math.abs((link as MyLinkObject).sentiment) * 0.006) + 0.001}
