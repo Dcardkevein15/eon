@@ -33,10 +33,13 @@ export default function Rating({ article, refetch }: RatingProps) {
     }
   };
 
+  const avgRating = article.avgRating ?? 0;
+  const ratingCount = article.ratingCount ?? 0;
+
   const stars = useMemo(() => {
     return Array(5).fill(0).map((_, i) => {
       const ratingValue = i + 1;
-      const isFilled = ratingValue <= (hoverRating || Math.round(article.avgRating));
+      const isFilled = ratingValue <= (hoverRating || Math.round(avgRating));
       return (
         <Star
           key={i}
@@ -50,7 +53,7 @@ export default function Rating({ article, refetch }: RatingProps) {
         />
       );
     });
-  }, [hoverRating, article.avgRating]);
+  }, [hoverRating, avgRating]);
 
   return (
     <TooltipProvider>
@@ -58,11 +61,11 @@ export default function Rating({ article, refetch }: RatingProps) {
         <TooltipTrigger asChild>
           <div className="flex items-center gap-1">
             {stars}
-            <span className="text-xs text-muted-foreground ml-1">({article.ratingCount})</span>
+            <span className="text-xs text-muted-foreground ml-1">({ratingCount})</span>
           </div>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Valoración media: {article.avgRating.toFixed(2)} de 5</p>
+          <p>Valoración media: {avgRating.toFixed(2)} de 5</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

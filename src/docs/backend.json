@@ -1,5 +1,4 @@
 
-
 {
   "entities": {
     "user": {
@@ -11,21 +10,12 @@
         "displayName": { "type": "string", "description": "The user's display name." },
         "email": { "type": "string", "format": "email", "description": "The user's email address." },
         "photoURL": { "type": "string", "format": "uri", "description": "The URL of the user's profile picture." },
-        "roles": {
-            "type": "array",
-            "items": { "type": "string" },
-            "description": "User roles (e.g., 'admin', 'professional')."
-        },
+        "roles": { "type": "array", "items": { "type": "string" }, "description": "User roles (e.g., 'admin', 'professional')." },
         "therapistId": { "type": "string", "description": "The ID of the associated therapist profile, if any." },
-        "articleGenerationCredits": {
-          "type": "number",
-          "description": "Number of credits available for generating articles."
-        },
-        "lastCreditRefresh": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The last time the user's article generation credits were refreshed."
-        }
+        "articleGenerationCredits": { "type": "number", "description": "Number of credits available for generating articles." },
+        "lastCreditRefresh": { "type": "string", "format": "date-time", "description": "The last time the user's article generation credits were refreshed." },
+        "favoriteArticles": { "type": "object", "description": "Map of favorited article slugs to timestamps." },
+        "readArticles": { "type": "object", "description": "Map of read article slugs to timestamps." }
       },
       "required": ["uid"]
     },
@@ -77,33 +67,33 @@
       "required": ["id", "userId", "name", "photoUrl", "specialties", "pricePerSession", "languages", "credentials", "bio"]
     },
     "therapistApplication": {
-        "title": "Therapist Application",
-        "description": "An application submitted by a user to become a therapist.",
-        "type": "object",
-        "properties": {
-            "userId": { "type": "string" },
-            "displayName": { "type": "string" },
-            "email": { "type": "string" },
-            "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
-            "submittedAt": { "type": "string", "format": "date-time" },
-            "applicationData": { "$ref": "#/entities/therapistApplicationData" }
-        },
-        "required": ["userId", "status", "submittedAt", "applicationData"]
+      "title": "Therapist Application",
+      "description": "An application submitted by a user to become a therapist.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "submittedAt": { "type": "string", "format": "date-time" },
+        "applicationData": { "$ref": "#/entities/therapistApplicationData" }
+      },
+      "required": ["userId", "status", "submittedAt", "applicationData"]
     },
     "therapistApplicationData": {
-        "title": "Therapist Application Data",
-        "description": "Detailed information and files submitted in a therapist application.",
-        "type": "object",
-        "properties": {
-            "name": { "type": "string" },
-            "credentials": { "type": "string" },
-            "bio": { "type": "string" },
-            "specialties": { "type": "array", "items": { "type": "string" } },
-            "languages": { "type": "array", "items": { "type": "string" } },
-            "pricePerSession": { "type": "number" },
-            "identityDocumentUrl": { "type": "string", "format": "uri" },
-            "professionalLicenseUrl": { "type": "string", "format": "uri" }
-        }
+      "title": "Therapist Application Data",
+      "description": "Detailed information and files submitted in a therapist application.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "credentials": { "type": "string" },
+        "bio": { "type": "string" },
+        "specialties": { "type": "array", "items": { "type": "string" } },
+        "languages": { "type": "array", "items": { "type": "string" } },
+        "pricePerSession": { "type": "number" },
+        "identityDocumentUrl": { "type": "string", "format": "uri" },
+        "professionalLicenseUrl": { "type": "string", "format": "uri" }
+      }
     },
     "userProfile": {
       "title": "User Profile",
@@ -146,9 +136,34 @@
         "slug": { "type": "string" },
         "category": { "type": "string" },
         "content": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "createdAt": { "type": "string", "format": "date-time" },
+        "avgRating": { "type": "number", "description": "Average user rating from 1 to 5." },
+        "ratingCount": { "type": "number", "description": "Total number of ratings submitted." }
       },
       "required": ["title", "slug", "category", "content", "createdAt"]
+    },
+    "articleRating": {
+        "title": "Article Rating",
+        "description": "A user's rating for a specific article.",
+        "type": "object",
+        "properties": {
+            "userId": { "type": "string" },
+            "rating": { "type": "number", "minimum": 1, "maximum": 5 }
+        },
+        "required": ["userId", "rating"]
+    },
+    "suggestedArticleTitle": {
+        "title": "Suggested Article Title",
+        "description": "An AI-generated article title suggestion for the blog.",
+        "type": "object",
+        "properties": {
+            "title": { "type": "string" },
+            "category": { "type": "string" },
+            "categorySlug": { "type": "string" },
+            "slug": { "type": "string" },
+            "createdAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["title", "category", "categorySlug", "slug", "createdAt"]
     }
   },
   "auth": {
@@ -163,17 +178,10 @@
     "/users/{userId}/gymSessions/{sessionId}": { "schema": { "$ref": "#/entities/simulationSession" }, "description": "Emotional Gym sessions." },
     "/users/{userId}/gymSessions/{sessionId}/messages/{messageId}": { "schema": { "$ref": "#/entities/message" }, "description": "Messages within a gym session." },
     "/users/{userId}/dreams/{dreamId}": { "schema": { "$ref": "#/entities/dreamInterpretation" }, "description": "Dream interpretations for a user." },
-    "/therapists/{therapistId}": {
-        "schema": { "$ref": "#/entities/therapist" },
-        "description": "Public therapist profiles."
-    },
-    "/therapistApplications/{applicationId}": {
-        "schema": { "$ref": "#/entities/therapistApplication" },
-        "description": "Applications from users to become therapists."
-    },
-    "/articles/{articleSlug}": {
-        "schema": { "$ref": "#/entities/article" },
-        "description": "AI-generated blog articles, readable by any authenticated user and writable only by authenticated users."
-    }
+    "/therapists/{therapistId}": { "schema": { "$ref": "#/entities/therapist" }, "description": "Public therapist profiles." },
+    "/therapistApplications/{applicationId}": { "schema": { "$ref": "#/entities/therapistApplication" }, "description": "Applications from users to become therapists." },
+    "/articles/{articleSlug}": { "schema": { "$ref": "#/entities/article" }, "description": "AI-generated blog articles." },
+    "/articles/{articleSlug}/ratings/{userId}": { "schema": { "$ref": "#/entities/articleRating" }, "description": "Individual user ratings for an article." },
+    "/suggestedArticleTitles/{titleId}": { "schema": { "$ref": "#/entities/suggestedArticleTitle" }, "description": "A collection of AI-generated article titles for various categories." }
   }
 }

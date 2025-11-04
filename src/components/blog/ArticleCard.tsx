@@ -30,6 +30,8 @@ export default function ArticleCard({ item, categorySlug }: ArticleCardProps) {
   };
   
   const estimatedTime = isGeneratedArticle ? Math.ceil(item.content.split(/\s+/).length / 200) : 0;
+  const avgRating = isGeneratedArticle ? item.avgRating ?? 0 : 0;
+  const ratingCount = isGeneratedArticle ? item.ratingCount ?? 0 : 0;
 
   return (
     <Card className="flex flex-col h-full bg-card/50 transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
@@ -47,7 +49,7 @@ export default function ArticleCard({ item, categorySlug }: ArticleCardProps) {
         {isGeneratedArticle && (
             <CardDescription className="text-xs flex items-center gap-4 pt-2">
                 <span className="flex items-center gap-1.5"><Clock className="w-3 h-3"/> {estimatedTime} min de lectura</span>
-                <span className="flex items-center gap-1.5"><Star className="w-3 h-3 fill-amber-400 text-amber-500"/> {item.avgRating.toFixed(1)} ({item.ratingCount})</span>
+                <span className="flex items-center gap-1.5"><Star className="w-3 h-3 fill-amber-400 text-amber-500"/> {avgRating.toFixed(1)} ({ratingCount})</span>
             </CardDescription>
         )}
       </CardHeader>

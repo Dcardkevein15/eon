@@ -403,8 +403,8 @@ export type Article = {
   category: string;
   content: string;
   createdAt: Timestamp;
-  avgRating: number;
-  ratingCount: number;
+  avgRating?: number;
+  ratingCount?: number;
 };
 
 export type SuggestedArticleTitle = {
