@@ -509,17 +509,18 @@ export default function PsychologicalProfile() {
              <Accordion type="multiple" className="w-full space-y-4">
                 <AccordionItem value="item-1">
                     <Card className="bg-card/50 border-border/50">
-                        <AccordionTrigger className="w-full text-left p-6 hover:no-underline [&>svg]:ml-auto">
-                           <div className="flex flex-row justify-between items-center w-full">
+                        <CardHeader className="flex flex-row justify-between items-center pr-6">
                              <CardTitle className="flex items-center gap-3 text-xl">
                                 <UserCheck className="w-6 h-6 text-accent"/>
                                 Caracterización de la Personalidad
                             </CardTitle>
                             <TextSizeControl size={personalityTextSize} onSizeChange={setPersonalityTextSize} />
-                           </div>
+                        </CardHeader>
+                        <AccordionTrigger className="w-full text-left p-6 pt-0 text-sm text-primary hover:no-underline [&>svg]:ml-auto">
+                           <span>Mostrar/Ocultar Análisis</span>
                         </AccordionTrigger>
                         <AccordionContent>
-                            <CardContent>
+                            <CardContent className="pt-0">
                                 <ReactMarkdown className={cn(
                                     "prose dark:prose-invert max-w-none text-foreground/80 leading-relaxed",
                                     {
@@ -534,18 +535,19 @@ export default function PsychologicalProfile() {
                 </AccordionItem>
                 
                 <AccordionItem value="item-2">
-                    <Card className="bg-card/50 border-border/50">
-                        <AccordionTrigger className="w-full text-left p-6 hover:no-underline [&>svg]:ml-auto">
-                            <div className="flex flex-row justify-between items-center w-full">
-                                <CardTitle className="flex items-center gap-3 text-xl">
-                                    <Sparkles className="w-6 h-6 text-accent"/>
-                                    Fortalezas Psicológicas
-                                </CardTitle>
-                                <TextSizeControl size={strengthsTextSize} onSizeChange={setStrengthsTextSize} />
-                            </div>
+                     <Card className="bg-card/50 border-border/50">
+                        <CardHeader className="flex flex-row justify-between items-center pr-6">
+                            <CardTitle className="flex items-center gap-3 text-xl">
+                                <Sparkles className="w-6 h-6 text-accent"/>
+                                Fortalezas Psicológicas
+                            </CardTitle>
+                            <TextSizeControl size={strengthsTextSize} onSizeChange={setStrengthsTextSize} />
+                        </CardHeader>
+                        <AccordionTrigger className="w-full text-left p-6 pt-0 text-sm text-primary hover:no-underline [&>svg]:ml-auto">
+                           <span>Mostrar/Ocultar Análisis</span>
                         </AccordionTrigger>
                         <AccordionContent>
-                            <CardContent>
+                            <CardContent className="pt-0">
                                 <ReactMarkdown className={cn(
                                      "prose dark:prose-invert max-w-none text-foreground/80 leading-relaxed",
                                     {
