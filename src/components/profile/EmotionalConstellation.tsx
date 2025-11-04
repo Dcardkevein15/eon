@@ -67,38 +67,15 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
       sentimentFilter === 'positive' ? link.sentiment > 0.1 : link.sentiment < -0.1
     );
 
-    const visibleNodeIds = new Set(filteredLinks.flatMap(link => {
+    const visibleNodeIds = new Set<string>();
+    filteredLinks.forEach(link => {
         const sourceId = typeof link.source === 'object' ? (link.source as MyNodeObject).id : link.source;
         const targetId = typeof link.target === 'object' ? (link.target as MyNodeObject).id : link.target;
-        return [sourceId, targetId];
-    }));
-    
-    // Also include nodes that might not have links but should be visible
-     const filteredNodes = data.nodes.filter(node => {
-      const hasLinksInFilter = filteredLinks.some(link => {
-         const sourceId = typeof link.source === 'object' ? (link.source as MyNodeObject).id : link.source;
-        const targetId = typeof link.target === 'object' ? (link.target as MyNodeObject).id : link.target;
-        return sourceId === node.id || targetId === node.id
-      });
-      // If a node is part of any visible link, keep it.
-      return hasLinksInFilter;
+        visibleNodeIds.add(sourceId);
+        visibleNodeIds.add(targetId);
     });
 
-
-    if (filteredNodes.length === 0 && filteredLinks.length > 0) {
-        // This case can happen if links exist but nodes were somehow filtered out.
-        // Re-add nodes based on links.
-        const nodesFromLinks = new Set<string>();
-        filteredLinks.forEach(l => {
-            nodesFromLinks.add(typeof l.source === 'object' ? (l.source as MyNodeObject).id : l.source);
-            nodesFromLinks.add(typeof l.target === 'object' ? (l.target as MyNodeObject).id : l.target);
-        });
-        return {
-            nodes: data.nodes.filter(n => nodesFromLinks.has(n.id)),
-            links: filteredLinks
-        };
-    }
-
+    const filteredNodes = data.nodes.filter(node => visibleNodeIds.has(node.id));
 
     return { nodes: filteredNodes, links: filteredLinks };
   }, [data, sentimentFilter]);
@@ -109,10 +86,10 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
     setIsPhysicsActive(prev => {
       const next = !prev;
       if (next) {
-        fgRef.current?.d3Force('link', null)?.d3Force('charge', null);
+        fgRef.current?.d3AlphaDecay(0.0228);
         fgRef.current?.d3ReheatSimulation();
       } else {
-        fgRef.current?.d3Force('link')?.d3Force('charge');
+        fgRef.current?.d3AlphaDecay(1);
       }
       return next;
     });
