@@ -68,6 +68,7 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
 
   const nodeCanvasObject = (node: NodeObject, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const myNode = node as MyNodeObject;
+    if (typeof myNode.x !== 'number' || typeof myNode.y !== 'number') return;
     const label = myNode.id;
     const color = nodeColors[(myNode.index || 0) % nodeColors.length];
     
@@ -78,25 +79,25 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
     const isNeighbor = focusedNode && graphData.links.some(link => (link.source === myNode.id && link.target === focusedNode) || (link.target === myNode.id && link.source === focusedNode));
     const isDimmed = focusedNode !== null && !isFocused && !isNeighbor;
 
-    // --- Draw Node ---
-    ctx.beginPath();
-    ctx.arc(myNode.x!, myNode.y!, radius, 0, 2 * Math.PI, false);
-    
-    const opacity = isDimmed ? 0.1 : 1;
-    
     // Create a radial gradient for a 3D/glowing effect
     const gradient = ctx.createRadialGradient(myNode.x!, myNode.y!, 0, myNode.x!, myNode.y!, radius);
     gradient.addColorStop(0, `${color}ff`);
     gradient.addColorStop(0.9, `${color}aa`);
     gradient.addColorStop(1, `${color}00`);
 
+    // --- Draw Node ---
+    ctx.beginPath();
+    ctx.arc(myNode.x!, myNode.y!, radius, 0, 2 * Math.PI, false);
+    
+    const opacity = isDimmed ? 0.1 : 1;
+    
     ctx.globalAlpha = opacity;
     ctx.fillStyle = gradient;
     ctx.fill();
 
     if(isFocused) {
         ctx.strokeStyle = color;
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2 / globalScale;
         ctx.stroke();
     }
 
