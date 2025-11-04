@@ -29,7 +29,7 @@ const ArticleListItem = ({ article }: { article: Article | SuggestedArticleTitle
     const avgRating = isGenerated ? article.avgRating ?? 0 : 0;
     const categoryName = ('category' in article ? article.category : '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     const slug = 'slug' in article ? article.slug : '';
-    const categorySlug = 'categorySlug' in article ? article.categorySlug : article.category;
+    const categorySlug = 'categorySlug' in article ? article.categorySlug : (article as Article).category;
 
     if (!slug || !categorySlug) return null; // Don't render if we can't form a valid link
 
