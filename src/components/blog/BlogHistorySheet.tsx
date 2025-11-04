@@ -73,12 +73,12 @@ export default function BlogHistorySheet({ user, articles, userData }: BlogHisto
                   {topCategories.length > 0 ? (
                       <ul className="space-y-2 text-sm text-foreground">
                         {topCategories.map(([category, count]) => (
-                            <li key={category} className="flex items-center justify-between capitalize">
-                                <span className="flex items-center gap-2">
-                                  <Tag className="w-3.5 h-3.5 text-muted-foreground"/>
-                                  {category}
+                            <li key={category} className="flex items-center justify-between gap-4">
+                                <span className="flex items-center gap-2 truncate">
+                                  <Tag className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0"/>
+                                  <span className="truncate">{category}</span>
                                 </span>
-                                <span className="font-medium text-muted-foreground text-xs bg-secondary px-2 py-0.5 rounded-full">{count} art.</span>
+                                <span className="font-medium text-muted-foreground text-xs bg-secondary px-2 py-0.5 rounded-full flex-shrink-0">{count} art.</span>
                             </li>
                         ))}
                       </ul>
