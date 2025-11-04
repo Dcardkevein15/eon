@@ -8,7 +8,6 @@ import type { NodeObject, LinkObject } from 'react-force-graph-2d';
 interface MyNodeObject extends NodeObject {
   id: string;
   val: number;
-  color: string;
 }
 
 interface MyLinkObject extends LinkObject {
@@ -33,23 +32,21 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
   useEffect(() => {
     setIsClient(true);
   }, []);
+  
+  const nodeColors = useMemo(() => {
+    return ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#00C49F'];
+  }, []);
+
 
   const graphData = useMemo(() => {
     if (!data || !data.nodes) return { nodes: [], links: [] };
-
-    const colors = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#00C49F'];
-    const nodes = data.nodes.map((node, i) => ({
-      ...node,
-      color: colors[i % colors.length],
-    })) as MyNodeObject[];
-    
-    return { nodes, links: data.links };
+    return { nodes: data.nodes, links: data.links };
   }, [data]);
   
   const getSentimentColor = (sentiment: number) => {
-    if (sentiment > 0) return 'rgba(130, 202, 157, 0.8)'; // Greenish
-    if (sentiment < 0) return 'rgba(255, 128, 66, 0.8)'; // Reddish
-    return 'rgba(136, 132, 216, 0.6)'; // Neutral
+    if (sentiment > 0.1) return 'rgba(130, 202, 157, 0.8)'; // Greenish
+    if (sentiment < -0.1) return 'rgba(255, 128, 66, 0.8)'; // Reddish
+    return 'rgba(170, 170, 170, 0.6)'; // Neutral gray
   };
 
   const handleNodeClick = (node: NodeObject) => {
@@ -72,8 +69,11 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
   const nodeCanvasObject = (node: NodeObject, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const myNode = node as MyNodeObject;
     const label = myNode.id;
-    const radius = Math.sqrt(myNode.val) * 2.5;
+    const color = nodeColors[(myNode.index || 0) % nodeColors.length];
     
+    // Ensure radius is always a finite number
+    const radius = Math.sqrt(Math.abs(myNode.val)) * 2.5;
+
     const isFocused = focusedNode === myNode.id;
     const isNeighbor = focusedNode && graphData.links.some(link => (link.source === myNode.id && link.target === focusedNode) || (link.target === myNode.id && link.source === focusedNode));
     const isDimmed = focusedNode !== null && !isFocused && !isNeighbor;
@@ -83,7 +83,6 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
     ctx.arc(myNode.x!, myNode.y!, radius, 0, 2 * Math.PI, false);
     
     const opacity = isDimmed ? 0.1 : 1;
-    const color = myNode.color;
     
     // Create a radial gradient for a 3D/glowing effect
     const gradient = ctx.createRadialGradient(myNode.x!, myNode.y!, 0, myNode.x!, myNode.y!, radius);
@@ -149,16 +148,15 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
         <ForceGraph2D
           ref={fgRef}
           graphData={graphData}
-          nodeRelSize={2.5}
-          nodeVal={node => Math.sqrt(node.val)}
           // --- Node Styling ---
           nodeCanvasObject={nodeCanvasObject}
           // --- Link Styling ---
-          linkWidth={link => focusedNode && (link.source.id === focusedNode || link.target.id === focusedNode) ? 2 : 1}
+          linkWidth={link => focusedNode && (link.source.id === focusedNode || link.target.id === focusedNode) ? 2.5 : 1}
           linkColor={(link) => {
             const isFocused = focusedNode && (link.source.id === focusedNode || link.target.id === focusedNode);
             const sentimentColor = getSentimentColor((link as MyLinkObject).sentiment);
-            return isFocused ? sentimentColor.replace('0.8', '1').replace('0.6', '0.9') : sentimentColor;
+            const alpha = isFocused ? '1.0' : '0.6';
+            return sentimentColor.replace(/[\d\.]+\)$/, `${alpha})`);
           }}
           linkCurvature={0.1}
           linkDirectionalParticles={1}
@@ -171,6 +169,8 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
           onBackgroundClick={handleBackgroundClick}
           enableZoomInteraction={true}
           enablePanInteraction={true}
+          d3AlphaDecay={0.03}
+          d3VelocityDecay={0.3}
         />
     </div>
   );
