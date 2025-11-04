@@ -86,10 +86,7 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
     setIsPhysicsActive(prev => {
       const next = !prev;
       if (next) {
-        fgRef.current?.d3AlphaDecay(0.0228);
         fgRef.current?.d3ReheatSimulation();
-      } else {
-        fgRef.current?.d3AlphaDecay(1);
       }
       return next;
     });
@@ -236,8 +233,8 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
             linkDirectionalParticleSpeed={(link: LinkObject) => (Math.abs((link as MyLinkObject).sentiment) * 0.006) + 0.001}
             onNodeClick={handleNodeClick}
             onBackgroundClick={handleBackgroundClick}
-            cooldownTicks={hasLoaded && isPhysicsActive ? 100 : Infinity}
-            d3AlphaDecay={hasLoaded && isPhysicsActive ? 0.0228 : 1}
+            cooldownTicks={isPhysicsActive ? 100 : 0}
+            d3AlphaDecay={0.0228}
             d3VelocityDecay={0.3}
             warmupTicks={hasLoaded ? 0 : 100}
         />
