@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import type { Article, SuggestedArticleTitle } from '@/lib/types';
-import { Clock, FileText, Sparkles, Star } from 'lucide-react';
+import { Clock, FileText, Sparkles, Star, Heart } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface ArticleCardProps {

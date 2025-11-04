@@ -393,6 +393,7 @@ export type GenerateArticleContentInput = z.infer<typeof GenerateArticleContentI
 
 export const GenerateArticleContentOutputSchema = z.object({
   content: z.string(),
+  authorRole: z.string(),
 });
 export type GenerateArticleContentOutput = z.infer<typeof GenerateArticleContentOutputSchema>;
 
@@ -403,8 +404,9 @@ export type Article = {
   category: string;
   content: string;
   createdAt: Timestamp;
-  avgRating?: number;
-  ratingCount?: number;
+  authorRole?: string;
+  avgRating: number;
+  ratingCount: number;
 };
 
 export type SuggestedArticleTitle = {

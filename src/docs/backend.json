@@ -137,6 +137,7 @@
         "category": { "type": "string" },
         "content": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" },
+        "authorRole": { "type": "string", "description": "The AI specialist role that wrote the article." },
         "avgRating": { "type": "number", "description": "Average user rating from 1 to 5." },
         "ratingCount": { "type": "number", "description": "Total number of ratings submitted." }
       },

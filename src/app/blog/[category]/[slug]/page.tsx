@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import { generateArticleContent } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronLeft, LogIn, Sparkles, Wand2, Share2, Clock, Star } from 'lucide-react';
+import { ChevronLeft, LogIn, Sparkles, Wand2, Share2, Clock, Star, Heart, User, Edit } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import ReactMarkdown from 'react-markdown';
@@ -74,11 +74,10 @@ function ArticlePageContent() {
     setIsGenerating(true);
     setError(null);
     try {
-      // Use the new dispatcher flow
       const result = await generateArticleContent({ category, slug, title });
-      if (!result.content) throw new Error("La IA no pudo generar el contenido.");
+      if (!result.content || !result.authorRole) throw new Error("La IA no pudo generar el contenido completo.");
       
-      const newArticleData: Omit<Article, 'id'> = { title, slug, category, content: result.content, createdAt: serverTimestamp(), avgRating: 0, ratingCount: 0 };
+      const newArticleData: Omit<Article, 'id'> = { title, slug, category, content: result.content, authorRole: result.authorRole, createdAt: serverTimestamp(), avgRating: 0, ratingCount: 0 };
       
       await setDoc(doc(firestore, 'articles', slug), newArticleData);
       await updateDoc(userRef, { articleGenerationCredits: increment(-1) });
@@ -94,6 +93,31 @@ function ArticlePageContent() {
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href);
     toast({ title: "Enlace copiado", description: "Puedes compartir el enlace a este artículo." });
+  };
+  
+  const isFavorited = useMemo(() => {
+    if (!userData || !article) return false;
+    return !!userData.favoriteArticles?.[article.slug];
+  }, [userData, article]);
+
+  const toggleFavorite = async () => {
+    if (!userRef || !article) return;
+
+    const newFavoriteStatus = !isFavorited;
+    const favoriteKey = `favoriteArticles.${article.slug}`;
+
+    try {
+      if (newFavoriteStatus) {
+        await updateDoc(userRef, { [favoriteKey]: new Date().toISOString() });
+        toast({ title: "Guardado en Favoritos" });
+      } else {
+        await updateDoc(userRef, { [favoriteKey]: (window as any).firebase.firestore.FieldValue.delete() });
+        toast({ title: "Eliminado de Favoritos" });
+      }
+    } catch (error) {
+      console.error("Error updating favorite status:", error);
+      toast({ variant: "destructive", title: "Error", description: "No se pudo actualizar el estado de favorito." });
+    }
   };
 
   const renderContent = () => {
@@ -156,10 +180,20 @@ function ArticlePageContent() {
         </header>
         <h1 className="text-3xl font-bold !mb-4 tracking-tight">{title}</h1>
         {article && (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground mb-4">
+             {article.authorRole && (
+                <div className="flex items-center gap-1.5 font-semibold text-accent"><Edit className="w-4 h-4"/> Escrito por: {article.authorRole}</div>
+            )}
+          </div>
+        )}
+        {article && (
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground mb-8">
             <div className="flex items-center gap-1.5"><Clock className="w-4 h-4" /> Lectura de {estimatedTime} min</div>
             <Rating article={article} refetch={refetchArticle} />
             <Button variant="ghost" size="sm" onClick={handleShare} className="flex items-center gap-1.5"><Share2 className="w-4 h-4" />Compartir</Button>
+            <Button variant={isFavorited ? 'secondary': 'ghost'} size="sm" onClick={toggleFavorite} className="flex items-center gap-1.5">
+                <Heart className={`w-4 h-4 ${isFavorited ? 'text-red-500 fill-current' : ''}`}/>{isFavorited ? 'Favorito' : 'Añadir a favoritos'}
+            </Button>
           </div>
         )}
         {renderContent()}

@@ -67,9 +67,7 @@ export const dispatchArticleWriter = ai.defineFlow(
 // --- PROMPTS DE ESCRITORES ESPECIALISTAS ---
 
 const commonPromptStructure = `
-Eres un psicólogo experto y un comunicador excepcional, con la habilidad de hacer accesibles conceptos complejos. Tu tarea es escribir un artículo completo y de alta calidad en formato Markdown sobre el tema: "{{title}}".
-
-**ROL DEL ESPECIALISTA PARA ESTE ARTÍCULO: {{expert_role}}**
+Eres un psicólogo experto y un comunicador excepcional con el rol de **{{expert_role}}**. Tu tarea es escribir un artículo completo y de alta calidad en formato Markdown sobre el tema: "{{title}}".
 
 **ESTRUCTURA OBLIGATORIA DEL ARTÍCULO:**
 
@@ -91,37 +89,48 @@ Eres un psicólogo experto y un comunicador excepcional, con la habilidad de hac
 Ahora, escribe el artículo completo sobre: "{{title}}".
 `;
 
+// Helper para crear prompts de escritores
+const createWriterPrompt = (name: string, role: string) => {
+    const inputSchema = GenerateArticleContentInputSchema.extend({ expert_role: z.string().default(role) });
+    return ai.definePrompt({
+        name,
+        input: { schema: inputSchema },
+        output: { schema: GenerateArticleContentOutputSchema },
+        prompt: commonPromptStructure,
+        transform: (input, output) => {
+            return {
+                ...output,
+                authorRole: role, // Inyectamos el rol del autor en la salida
+            };
+        },
+    });
+};
+
+
 // 1. Escritor Generalista / Psicólogo Positivo
-const generalPsychologistPrompt = ai.definePrompt({
-  name: 'generalPsychologistWriter',
-  input: { schema: GenerateArticleContentInputSchema.extend({ expert_role: z.string().default('Psicólogo y Coach de Crecimiento Personal') }) },
-  output: { schema: GenerateArticleContentOutputSchema },
-  prompt: commonPromptStructure,
-});
+const generalPsychologistPrompt = createWriterPrompt(
+    'generalPsychologistWriter',
+    'Psicólogo y Coach de Crecimiento Personal'
+);
 
 // 2. Escritor Experto en TCC
-const tccWriterPrompt = ai.definePrompt({
-  name: 'tccWriterPrompt',
-  input: { schema: GenerateArticleContentInputSchema.extend({ expert_role: z.string().default('Experto en Terapia Cognitivo-Conductual (TCC)') }) },
-  output: { schema: GenerateArticleContentOutputSchema },
-  prompt: commonPromptStructure,
-});
+const tccWriterPrompt = createWriterPrompt(
+    'tccWriterPrompt',
+    'Experto en Terapia Cognitivo-Conductual (TCC)'
+);
 
 // 3. Escritor Guía de Mindfulness
-const mindfulnessWriterPrompt = ai.definePrompt({
-  name: 'mindfulnessWriterPrompt',
-  input: { schema: GenerateArticleContentInputSchema.extend({ expert_role: z.string().default('Guía de Mindfulness y Aceptación') }) },
-  output: { schema: GenerateArticleContentOutputSchema },
-  prompt: commonPromptStructure,
-});
+const mindfulnessWriterPrompt = createWriterPrompt(
+    'mindfulnessWriterPrompt',
+    'Guía de Mindfulness y Aceptación'
+);
 
 // 4. Escritor Coach de Relaciones
-const relationshipsWriterPrompt = ai.definePrompt({
-  name: 'relationshipsWriterPrompt',
-  input: { schema: GenerateArticleContentInputSchema.extend({ expert_role: z.string().default('Coach de Relaciones y Comunicación Asertiva') }) },
-  output: { schema: GenerateArticleContentOutputSchema },
-  prompt: commonPromptStructure,
-});
+const relationshipsWriterPrompt = createWriterPrompt(
+    'relationshipsWriterPrompt',
+    'Coach de Relaciones y Comunicación Asertiva'
+);
+
 
 
 // --- Flujo para generar Títulos de Artículos (sin cambios) ---
