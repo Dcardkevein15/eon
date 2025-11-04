@@ -442,28 +442,28 @@ export default function PsychologicalProfile() {
                                 <GitCommit className="w-6 h-6 -rotate-90" />
                             </div>
                             <h4 className="font-semibold">Disparador</h4>
-                            <p className="text-sm text-muted-foreground px-2">{profile.habitLoop.trigger}</p>
+                            <p className="text-sm text-muted-foreground px-2 break-words">{profile.habitLoop.trigger}</p>
                         </div>
                         <div className="flex flex-col items-center">
                             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 mb-2">
                                 <BrainCircuit className="w-6 h-6" />
                             </div>
                             <h4 className="font-semibold">Pensamiento</h4>
-                            <p className="text-sm text-muted-foreground px-2">{profile.habitLoop.thought}</p>
+                            <p className="text-sm text-muted-foreground px-2 break-words">{profile.habitLoop.thought}</p>
                         </div>
                         <div className="flex flex-col items-center">
                             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 mb-2">
                                 <ShieldQuestion className="w-6 h-6" />
                             </div>
                             <h4 className="font-semibold">Acción</h4>
-                            <p className="text-sm text-muted-foreground px-2">{profile.habitLoop.action}</p>
+                            <p className="text-sm text-muted-foreground px-2 break-words">{profile.habitLoop.action}</p>
                         </div>
                         <div className="flex flex-col items-center">
                             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 mb-2">
                                 <AlertTriangle className="w-6 h-6" />
                             </div>
                             <h4 className="font-semibold">Resultado</h4>
-                            <p className="text-sm text-muted-foreground px-2">{profile.habitLoop.result}</p>
+                            <p className="text-sm text-muted-foreground px-2 break-words">{profile.habitLoop.result}</p>
                         </div>
                     </div>
                     {profile.habitLoop.trigger && <BreakdownExerciseGenerator habitLoop={profile.habitLoop} />}
