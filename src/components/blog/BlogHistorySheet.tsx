@@ -6,9 +6,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Book, Bookmark, CheckCircle, FileText, Heart, Loader2, Star, TrendingUp } from 'lucide-react';
+import { Book, Heart, TrendingUp, FileText, Star } from 'lucide-react';
 import type { Article, User } from '@/lib/types';
-import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 
 interface BlogHistorySheetProps {
@@ -35,7 +34,8 @@ export default function BlogHistorySheet({ user, articles, userData }: BlogHisto
     const readSlugs = Object.keys(userData.readArticles);
     const read_articles = articles.filter(a => readSlugs.includes(a.slug));
     const categoryCounts = read_articles.reduce((acc, article) => {
-        acc[article.category] = (acc[article.category] || 0) + 1;
+        const categoryName = article.category.replace(/-/g, ' ');
+        acc[categoryName] = (acc[categoryName] || 0) + 1;
         return acc;
     }, {} as Record<string, number>);
     return Object.entries(categoryCounts).sort((a, b) => b[1] - a[1]).slice(0, 3);
@@ -59,24 +59,24 @@ export default function BlogHistorySheet({ user, articles, userData }: BlogHisto
             {/* Stats Section */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Tus Estadísticas</CardTitle>
+                <CardTitle className="text-base font-semibold">Estadísticas</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span>Progreso de Lectura</span>
+                  <div className="flex justify-between items-center text-sm mb-1">
+                    <span className="text-muted-foreground">Progreso de Lectura</span>
                     <span className="font-bold">{readArticlesCount} / {totalArticles}</span>
                   </div>
                   <Progress value={readPercentage} />
                 </div>
                 <div>
-                  <h4 className="font-semibold text-sm mb-2 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-accent"/>Tus Categorías Favoritas</h4>
+                  <h4 className="font-semibold text-sm mb-2 flex items-center gap-2 text-muted-foreground"><TrendingUp className="w-4 h-4 text-accent"/>Tus Categorías Favoritas</h4>
                   {topCategories.length > 0 ? (
-                      <ul className="space-y-1 text-sm text-muted-foreground">
+                      <ul className="space-y-1 text-sm text-foreground">
                         {topCategories.map(([category, count]) => (
-                            <li key={category} className="flex justify-between">
-                                <span className="capitalize">{category.replace(/-/g, ' ')}</span>
-                                <span>{count} artículos</span>
+                            <li key={category} className="flex justify-between capitalize">
+                                <span>{category}</span>
+                                <span className="font-medium text-muted-foreground">{count} art.</span>
                             </li>
                         ))}
                       </ul>
@@ -95,7 +95,7 @@ export default function BlogHistorySheet({ user, articles, userData }: BlogHisto
                 <div className="space-y-3">
                   {favoritedArticles.map(article => (
                     <Link key={article.id} href={`/blog/${article.category}/${article.slug}`} passHref>
-                        <div className="block border p-3 rounded-lg hover:bg-accent/10">
+                        <div className="block border p-3 rounded-lg hover:bg-accent/10 transition-colors">
                             <p className="font-semibold text-sm truncate">{article.title}</p>
                             <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
                                 <span className="flex items-center gap-1"><Star className="w-3 h-3 text-amber-500"/>{article.avgRating.toFixed(1)}</span>
@@ -106,7 +106,10 @@ export default function BlogHistorySheet({ user, articles, userData }: BlogHisto
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">No has guardado ningún artículo como favorito todavía.</p>
+                <div className="text-center py-6 border-dashed border-2 rounded-lg">
+                  <p className="text-sm text-muted-foreground">No has guardado ningún favorito.</p>
+                  <p className="text-xs text-muted-foreground/80">Haz clic en el ❤️ en un artículo para guardarlo.</p>
+                </div>
               )}
             </div>
           </div>
