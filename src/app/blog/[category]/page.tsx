@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
+import { useState, useEffect, useMemo, useCallback, Suspense, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -27,6 +27,7 @@ function ArticleListPageContent() {
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
   const firestore = useFirestore();
+  const initialFetchDone = useRef(false);
 
   const [filter, setFilter] = useState<FilterValue>('all');
   const [titles, setTitles] = useState<SuggestedArticleTitle[]>([]);
@@ -43,7 +44,6 @@ function ArticleListPageContent() {
     const setLoadingState = forceRefresh ? setIsRefreshing : setIsLoading;
     setLoadingState(true);
     try {
-      if (forceRefresh || titles.length === 0) {
         const result = await generateArticleTitles({ category: formattedCategory });
         const suggestedWithSlugs = result.titles.map(title => ({
             title,
@@ -53,18 +53,18 @@ function ArticleListPageContent() {
             createdAt: new Date().toISOString()
         }));
         setTitles(suggestedWithSlugs);
-      }
     } catch (error) {
       console.error('Failed to generate article titles:', error);
       toast({ variant: 'destructive', title: 'Error al cargar artículos', description: 'No se pudieron generar los títulos.' });
     } finally {
       setLoadingState(false);
     }
-  }, [formattedCategory, categorySlug, toast, titles.length]);
+  }, [formattedCategory, categorySlug, toast]);
 
   useEffect(() => {
-    if (!authLoading) {
-      fetchTitles();
+    if (!authLoading && !initialFetchDone.current) {
+        initialFetchDone.current = true;
+        fetchTitles();
     }
   }, [authLoading, fetchTitles]);
 
@@ -97,7 +97,7 @@ function ArticleListPageContent() {
         </Alert>
       );
     }
-    if (filteredItems.length === 0) {
+    if (filteredItems.length === 0 && !isLoading) {
       return (
         <div className="text-center py-8 col-span-full">
           <p className="text-muted-foreground">No se encontraron artículos para esta categoría.</p>
