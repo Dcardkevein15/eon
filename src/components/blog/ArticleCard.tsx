@@ -23,11 +23,16 @@ export default function ArticleCard({ item, categorySlug }: ArticleCardProps) {
   const avgRating = isGeneratedArticle ? item.avgRating ?? 0 : 0;
   const ratingCount = isGeneratedArticle ? item.ratingCount ?? 0 : 0;
 
+  const href = {
+    pathname: `/blog/${categorySlug}/${item.slug}`,
+    query: { title: item.title },
+  };
+
   return (
     <Card className="flex flex-col h-full bg-card/50 transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
       <CardHeader className="pb-4">
         <CardTitle className="text-base font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2">
-          <Link href={`/blog/${categorySlug}/${item.slug}`}>{item.title}</Link>
+          <Link href={href}>{item.title}</Link>
         </CardTitle>
       </CardHeader>
       <CardFooter className="mt-auto p-4 pt-0 flex-col items-start gap-4">
@@ -48,7 +53,7 @@ export default function ArticleCard({ item, categorySlug }: ArticleCardProps) {
         
         {/* Action Button */}
         <Button asChild variant="ghost" size="sm" className="w-full justify-start text-primary p-0 h-auto">
-            <Link href={`/blog/${categorySlug}/${item.slug}`}>
+            <Link href={href}>
                 {isGeneratedArticle ? 'Leer Artículo' : 'Generar Artículo'}
             </Link>
         </Button>

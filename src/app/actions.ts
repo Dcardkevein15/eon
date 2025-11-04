@@ -231,31 +231,17 @@ export async function analyzeDreamVoiceAction(input: AnalyzeVoiceInput): Promise
 
 // --- Blog Actions ---
 export async function generateArticleTitles(input: GenerateArticleTitlesInput): Promise<GenerateArticleTitlesOutput> {
-  const titlesCollection = collection(firestore, 'suggestedArticleTitles');
-  const categorySlug = slugify(input.category);
-  const q = query(titlesCollection, where('categorySlug', '==', categorySlug), limit(7));
-
+  // This now just generates titles and doesn't save them.
+  // The saving logic was causing race conditions.
   try {
-    const querySnapshot = await getDocs(q);
-    const existingTitles = querySnapshot.docs.map(doc => doc.data() as SuggestedArticleTitle);
-
-    if (existingTitles.length > 0) {
-      return { titles: existingTitles.map(t => t.title) };
-    }
-
     const result = await genTitlesFlow({ category: input.category });
-    const batch = writeBatch(firestore);
-    result.titles.forEach(title => {
-      const docRef = doc(collection(firestore, 'suggestedArticleTitles'));
-      batch.set(docRef, { title, category: input.category, categorySlug: categorySlug, slug: slugify(title), createdAt: serverTimestamp() });
-    });
-    await batch.commit();
     return result;
   } catch (error) {
-    console.error("Error in generateArticleTitles (hybrid):", error);
-    return genTitlesFlow(input);
+    console.error("Error in generateArticleTitles:", error);
+    throw new Error('No se pudieron generar nuevos títulos.');
   }
 }
+
 
 export async function generateArticleContent(input: GenerateArticleContentInput): Promise<GenerateArticleContentOutput> {
   return genContentFlow(input);

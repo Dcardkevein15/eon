@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { generateArticleContent } from '@/app/actions';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,7 @@ import Rating from '@/components/blog/Rating';
 function ArticlePageContent() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
   const firestore = useFirestore();
@@ -40,26 +41,26 @@ function ArticlePageContent() {
   const { data: userData, loading: userLoading } = useDocument<User>(userRef);
 
   useEffect(() => {
-    if (firestore && slug && !article && !articleLoading && !initialTitle) {
-      const fetchTitle = async () => {
+    // Read title directly from URL query param to avoid race conditions.
+    const titleFromQuery = searchParams.get('title');
+    if (titleFromQuery) {
+      setInitialTitle(decodeURIComponent(titleFromQuery));
+    } else if (firestore && slug && !article && !articleLoading && !initialTitle) {
+      // Fallback for bookmarked URLs or direct navigation
+      const fetchTitleFromDB = async () => {
         try {
           const q = query(collection(firestore, 'suggestedArticleTitles'), where('slug', '==', slug), limit(1));
           const querySnapshot = await getDocs(q);
           if (!querySnapshot.empty) {
             setInitialTitle(querySnapshot.docs[0].data().title);
-          } else {
-            setError("No se pudo encontrar el título para este artículo.");
-            setInitialTitle("Título no encontrado");
           }
         } catch (error) {
-          console.error("Error fetching initial title:", error);
-          setError("Error al cargar el título.");
-          setInitialTitle("Título no encontrado");
+          console.error("Error fetching initial title from DB:", error);
         }
       };
-      fetchTitle();
+      fetchTitleFromDB();
     }
-  }, [firestore, slug, article, articleLoading, initialTitle]);
+  }, [firestore, slug, article, articleLoading, initialTitle, searchParams]);
 
   useEffect(() => {
     if (article?.content) {
@@ -77,6 +78,10 @@ function ArticlePageContent() {
   const handleGenerateArticle = async () => {
     if (!user || !firestore || !slug || !userRef || credits <= 0) {
       toast({ variant: 'destructive', title: 'Error', description: 'No tienes créditos suficientes o no has iniciado sesión.' });
+      return;
+    }
+    if (!title) {
+      setError("No se pudo encontrar el título para este artículo.");
       return;
     }
     setIsGenerating(true);
@@ -127,6 +132,11 @@ function ArticlePageContent() {
       );
     }
     if (!article) {
+       if (!title) {
+        return (
+          <Alert variant="destructive" className="mt-8"><AlertTitle>Error</AlertTitle><AlertDescription>No se pudo encontrar el título para este artículo.</AlertDescription></Alert>
+        )
+      }
       return (
         <div className="text-center border rounded-lg p-8 bg-card/50 mt-8">
           <h2 className="text-2xl font-bold text-primary">Artículo no Generado</h2>
