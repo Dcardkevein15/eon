@@ -50,11 +50,11 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
 
   const nodeColors = useMemo(() => {
     return [
-      '190, 80%, 80%', // chart-1 Cian Celestial
-      '45, 90%, 75%',  // chart-2 Oro Pálido
-      '280, 80%, 80%', // chart-3 Amatista
-      '340, 80%, 80%', // chart-4 Rosa Cósmico
-      '210, 40%, 98%'  // chart-5 Blanco Estelar
+      '190 80% 80%', // chart-1 Cian Celestial
+      '45 90% 75%',  // chart-2 Oro Pálido
+      '280 80% 80%', // chart-3 Amatista
+      '340 80% 80%', // chart-4 Rosa Cósmico
+      '210 40% 98%'  // chart-5 Blanco Estelar
     ];
   }, []);
 
@@ -72,7 +72,10 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
         return [sourceId, targetId];
     }));
 
-    const filteredNodes = data.nodes.filter(node => visibleNodeIds.has(node.id));
+     const filteredNodes = data.nodes.filter(node => {
+      // Keep node if it's part of any visible link
+      return visibleNodeIds.has(node.id);
+    });
 
     return { nodes: filteredNodes, links: filteredLinks };
   }, [data, sentimentFilter]);
@@ -113,8 +116,8 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
   }, [focusedNode]);
 
   const getSentimentColor = (sentiment: number) => {
-    if (sentiment > 0.1) return 'rgba(102, 255, 179, 0.8)'; // Greenish
-    if (sentiment < -0.1) return 'rgba(255, 102, 102, 0.8)'; // Reddish
+    if (sentiment > 0.1) return 'hsla(150, 100%, 70%, 0.8)'; // Greenish
+    if (sentiment < -0.1) return 'hsla(0, 100%, 70%, 0.8)'; // Reddish
     return 'rgba(170, 170, 170, 0.6)'; // Neutral gray
   };
 
@@ -163,7 +166,7 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
       ctx.font = `bold ${fontSize}px Sans-Serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = `rgba(0, 0, 0, 0.8)`; // Changed to black for better contrast
+      ctx.fillStyle = `rgba(0, 0, 0, 0.8)`; 
 
       const words = label.split(/[\s/]+/);
       const lineHeight = fontSize * 1.1;
