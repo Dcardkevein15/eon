@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import ForceGraph2D, { ForceGraphMethods, LinkObject, NodeObject } from 'react-force-graph-2d';
 import { Button } from '@/components/ui/button';
-import { Orbit, Sparkles, ZapOff, Play, Plus, Minus, Search } from 'lucide-react';
+import { Play, ZapOff, Plus, Minus, Search } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 
@@ -46,11 +46,11 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
 
   const nodeColors = useMemo(() => {
     return [
-        'hsl(var(--chart-1))',
-        'hsl(var(--chart-2))',
-        'hsl(var(--chart-3))',
-        'hsl(var(--chart-4))',
-        'hsl(var(--chart-5))'
+      '190 80% 80%', // chart-1
+      '45 90% 75%',  // chart-2
+      '280 80% 80%', // chart-3
+      '340 80% 80%', // chart-4
+      '210 40% 98%'  // chart-5
     ];
   }, []);
 
@@ -62,18 +62,41 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
       sentimentFilter === 'positive' ? link.sentiment > 0.1 : link.sentiment < -0.1
     );
 
-    // FIX: Ensure all nodes involved in the filtered links are included.
     const visibleNodeIds = new Set(filteredLinks.flatMap(link => {
         const sourceId = typeof link.source === 'object' ? (link.source as MyNodeObject).id : link.source;
         const targetId = typeof link.target === 'object' ? (link.target as MyNodeObject).id : link.target;
         return [sourceId, targetId];
     }));
     
+    // Also include all nodes that don't have any links, they should be visible always
+    data.nodes.forEach(node => {
+      if (!data.links.some(link => {
+        const sourceId = typeof link.source === 'object' ? (link.source as MyNodeObject).id : link.source;
+        const targetId = typeof link.target === 'object' ? (link.target as MyNodeObject).id : link.target;
+        return sourceId === node.id || targetId === node.id;
+      })) {
+        visibleNodeIds.add(node.id);
+      }
+    });
+
     const filteredNodes = data.nodes.filter(node => visibleNodeIds.has(node.id));
 
     return { nodes: filteredNodes, links: filteredLinks };
   }, [data, sentimentFilter]);
 
+
+  const togglePhysics = () => {
+    setIsPhysicsActive(prev => {
+      const next = !prev;
+      if (next) {
+        fgRef.current?.d3ReheatSimulation();
+        fgRef.current?.d3AlphaDecay(0.0228);
+      } else {
+        fgRef.current?.d3AlphaDecay(1);
+      }
+      return next;
+    });
+  };
 
   const handleNodeClick = useCallback((node: NodeObject) => {
     const myNode = node as MyNodeObject;
@@ -95,19 +118,6 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
       fgRef.current?.zoomToFit(400);
     }
   }, [focusedNode]);
-
-  const togglePhysics = () => {
-    setIsPhysicsActive(prev => {
-      const next = !prev;
-      if (next) {
-        fgRef.current?.d3ReheatSimulation();
-        fgRef.current?.d3AlphaDecay(0.0228);
-      } else {
-        fgRef.current?.d3AlphaDecay(1);
-      }
-      return next;
-    });
-  };
 
   const getSentimentColor = (sentiment: number) => {
     if (sentiment > 0.1) return 'rgba(130, 202, 157, 0.8)'; // Greenish (chart-1)
@@ -141,27 +151,27 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
     
     // Create a radial gradient for a 3D/glowing effect
     const gradient = ctx.createRadialGradient(myNode.x, myNode.y, 0, myNode.x, myNode.y, radius);
-    gradient.addColorStop(0, `${color}ff`);
-    gradient.addColorStop(0.9, `${color}aa`);
-    gradient.addColorStop(1, `${color}00`);
+    gradient.addColorStop(0, `hsla(${color}, 1)`);
+    gradient.addColorStop(0.9, `hsla(${color}, 0.9)`);
+    gradient.addColorStop(1, `hsla(${color}, 0)`);
     ctx.fillStyle = gradient;
     ctx.fill();
 
     if(isFocused) {
-        ctx.strokeStyle = color;
+        ctx.strokeStyle = `hsl(${color})`;
         ctx.lineWidth = 2 / globalScale;
         ctx.stroke();
     }
     
     // --- Draw Text ---
     const fontSize = Math.min(14, radius / 2) / globalScale;
-    if (fontSize > 1.5 && !isDimmed) { // Only draw text if not dimmed
+    if (fontSize > 1.5 && !isDimmed) {
       ctx.font = `bold ${fontSize}px Sans-Serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = `rgba(255, 255, 255, 0.9)`;
-
-      const words = label.split('/');
+      
+      const words = label.split(/[\s/]+/);
       const lineHeight = fontSize * 1.1;
       const startY = myNode.y - (words.length - 1) * lineHeight / 2;
 
@@ -198,7 +208,7 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
         <div className="absolute top-2 right-2 z-10 flex flex-col items-end space-y-2">
             <Button variant="ghost" size="icon" className="h-7 w-7 bg-card/80 border" onClick={() => fgRef.current?.zoom(fgRef.current.zoom() * 1.2)}><Plus className="h-4 w-4" /></Button>
             <Button variant="ghost" size="icon" className="h-7 w-7 bg-card/80 border" onClick={() => fgRef.current?.zoom(fgRef.current.zoom() * 0.8)}><Minus className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7 bg-card/80 border" onClick={() => fgRef.current?.zoomToFit(400)}><Search className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7 bg-card/80 border" onClick={() => { setFocusedNode(null); fgRef.current?.zoomToFit(400); }}><Search className="h-4 w-4" /></Button>
         </div>
         
         <ForceGraph2D
@@ -219,13 +229,13 @@ const EmotionalConstellation: React.FC<EmotionalConstellationProps> = ({ data })
               return isFocused ? color.replace(/[\d\.]+\)$/, `1.0)`) : color;
             }}
             linkCurvature={0.1}
-            linkDirectionalParticles={1}
-            linkDirectionalParticleWidth={(link) => {
-                const sourceId = typeof link.source === 'object' ? (link.source as MyNodeObject).id : link.source;
-                const targetId = typeof link.target === 'object' ? (link.target as MyNodeObject).id : link.target;
-                return focusedNode && (sourceId === focusedNode || targetId === focusedNode) ? 3 : 0
+            linkDirectionalParticles={(link: LinkObject) => {
+                 const sourceId = typeof link.source === 'object' ? (link.source as MyNodeObject).id : link.source;
+                 const targetId = typeof link.target === 'object' ? (link.target as MyNodeObject).id : link.target;
+                 return focusedNode && (sourceId === focusedNode || targetId === focusedNode) ? 2 : 0
             }}
-            linkDirectionalParticleSpeed={() => 0.006}
+            linkDirectionalParticleWidth={2}
+            linkDirectionalParticleSpeed={(link: LinkObject) => (Math.abs((link as MyLinkObject).sentiment) * 0.006) + 0.001}
             onNodeClick={handleNodeClick}
             onBackgroundClick={handleBackgroundClick}
             cooldownTicks={isPhysicsActive ? 100 : Infinity}
