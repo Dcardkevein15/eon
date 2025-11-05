@@ -17,11 +17,15 @@ import {
   type User as FirebaseUser,
   getIdTokenResult,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp, Timestamp, type Firestore } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, Timestamp, type Firestore, type Query, onSnapshot, type DocumentReference } from 'firebase/firestore';
 import { type FirebaseStorage } from 'firebase/storage';
 import { type FirebaseApp } from 'firebase/app';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import type { User } from '@/lib/types';
+import { useMemoCompare } from './use-memo-compare';
+import { errorEmitter } from './error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from './errors';
+
 
 // Main Firebase Context
 interface FirebaseContextType {
@@ -77,7 +81,9 @@ export function AuthProvider({
             if (userSnap.exists()) {
                 // User exists, check for credit refresh
                 const userData = userSnap.data() as User;
-                const lastRefresh = userData.lastCreditRefresh?.toMillis() || 0;
+                const lastCredit = userData.lastCreditRefresh;
+                const lastRefresh = lastCredit && 'toDate' in lastCredit ? lastCredit.toDate().getTime() : 0;
+
                 if (Date.now() - lastRefresh > REFRESH_INTERVAL) {
                     await setDoc(userRef, { 
                         articleGenerationCredits: DAILY_CREDITS, 
@@ -172,7 +178,6 @@ export const useFirebase = createFirebaseHook(FirebaseContext);
 
 export const useFirebaseApp = (): FirebaseApp => useFirebase().app;
 export const useFirestore = (): Firestore => useFirebase().firestore;
-export const useStorage = (): FirebaseStorage => useFirebase().storage;
 
 
 // Combined Firebase Provider
@@ -196,4 +201,71 @@ export function FirebaseProvider({
             </AuthProvider>
         </FirebaseContext.Provider>
     );
+}
+
+// --- HOOKS ---
+
+// Re-exporting from provider
+export { useStorage } from '@/firebase/storage';
+export { useDocument } from '@/firebase/use-doc';
+
+// Collection Hook
+type DocumentWithId<T> = T & { id: string };
+
+export function useCollection<T>(query: Query | undefined) {
+  const [data, setData] = useState<DocumentWithId<T>[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  
+  const queryMemo = useMemoCompare(query, (prev, next) => {
+    return (
+      prev &&
+      next &&
+      // @ts-ignore internal property
+      prev._query.path.isEqual(next._query.path) &&
+      // @ts-ignore internal property
+      JSON.stringify(prev._query.explicitOrderBy) === JSON.stringify(next._query.explicitOrderBy) &&
+      // @ts-ignore internal property
+      JSON.stringify(prev._query.filters) === JSON.stringify(next._query.filters) &&
+      // @ts-ignore internal property
+      prev._query.limit === next._query.limit
+    );
+  });
+
+  useEffect(() => {
+    if (!queryMemo) {
+      setData([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    const unsubscribe = onSnapshot(
+      queryMemo,
+      (snapshot) => {
+        const docs = snapshot.docs.map(
+          (doc) => ({ ...doc.data(), id: doc.id } as DocumentWithId<T>)
+        );
+        setData(docs);
+        setLoading(false);
+      },
+      async (err) => {
+        setLoading(false);
+        setError(err);
+        if (err.code === 'permission-denied') {
+          const permissionError = new FirestorePermissionError({
+            // @ts-ignore internal property
+            path: queryMemo._query.path.toString(),
+            operation: 'list',
+          } satisfies SecurityRuleContext);
+          errorEmitter.emit('permission-error', permissionError);
+        }
+      }
+    );
+
+    return () => unsubscribe();
+  }, [queryMemo]);
+
+  return { data, loading, error };
 }
