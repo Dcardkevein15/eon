@@ -9,7 +9,7 @@ import ChatInput from './chat-input';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useAuth, useCollection, useFirestore } from '@/firebase';
-import { collection, query, orderBy, Timestamp, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, Timestamp, doc, getDoc, setDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { updatePsychologicalBlueprint } from '@/ai/flows/update-psychological-blueprint';
 import { v4 as uuidv4 } from 'uuid';
 import { errorEmitter } from '@/firebase/error-emitter';
