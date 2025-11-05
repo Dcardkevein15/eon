@@ -1,9 +1,10 @@
 
+import type { User as FirebaseUser } from 'firebase/auth';
 import { Timestamp } from 'firebase/firestore';
 import { z } from 'zod';
 
 
-export type User = import('firebase/auth').User & {
+export type User = FirebaseUser & {
   roles?: string[];
   therapistId?: string;
   articleGenerationCredits?: number;

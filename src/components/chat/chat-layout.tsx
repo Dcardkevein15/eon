@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useCallback, useMemo, memo, useState, useEffect } from 'react';
@@ -14,7 +15,7 @@ import {
   orderBy,
 } from 'firebase/firestore';
 
-import { useAuth, useCollection, useFirestore } from '@/firebase';
+import { useAuth, useCollection, useFirestore } from '@/firebase/provider';
 import type { Chat, Message } from '@/lib/types';
 import {
   Sidebar,

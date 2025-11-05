@@ -29,7 +29,7 @@
         "userId": { "type": "string" },
         "path": { "type": "string" },
         "latestMessageAt": { "type": "string", "format": "date-time" },
-        "anchorRole": { "type": "string" }
+        "anchorRole": { "type": "string", "description": "The dominant AI personality role for this conversation." }
       },
       "required": ["title", "createdAt", "userId", "path"]
     },
@@ -41,7 +41,8 @@
         "role": { "type": "string", "enum": ["user", "assistant"] },
         "content": { "type": "string" },
         "timestamp": { "$ref": "https://firebase.google.com/docs/reference/js/firebase.firestore.Timestamp" },
-        "imageUrl": { "type": "string", "format": "uri" }
+        "imageUrl": { "type": "string", "format": "uri" },
+        "anchorRole": { "type": "string", "description": "The AI role adopted for this specific message." }
       },
       "required": ["role", "content", "timestamp"]
     },
@@ -114,6 +115,23 @@
         "coreArchetype": { "type": "object", "properties": { "title": { "type": "string" }, "description": { "type": "string" }, "strengths": { "type": "string" }, "challenges": { "type": "string" } } },
         "coreConflict": { "type": "string" },
         "habitLoop": { "$ref": "#/entities/habitLoop" }
+      }
+    },
+    "chatbotState": {
+      "title": "Chatbot State",
+      "description": "The AI's internal state and evolving understanding of the user.",
+      "type": "object",
+      "properties": {
+        "blueprint": {
+          "type": "object",
+          "properties": {
+            "self_reflection": { "type": "string" },
+            "updated_understanding_of_user": { "type": "string" },
+            "strategy_adjustment": { "type": "string" },
+            "key_takeaways": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "updatedAt": { "type": "string", "format": "date-time" }
       }
     },
      "emotionalConstellation": {

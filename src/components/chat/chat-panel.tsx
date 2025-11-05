@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useCallback, memo, useEffect, useMemo, useRef } from 'react';
@@ -8,7 +9,7 @@ import ChatMessages from './chat-messages';
 import ChatInput from './chat-input';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { useAuth, useCollection, useFirestore } from '@/firebase';
+import { useAuth, useCollection, useFirestore } from '@/firebase/provider';
 import { collection, query, orderBy, Timestamp, doc, getDoc, setDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { updatePsychologicalBlueprint } from '@/ai/flows/update-psychological-blueprint';
 import { v4 as uuidv4 } from 'uuid';
