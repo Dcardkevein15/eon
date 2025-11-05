@@ -5,6 +5,7 @@ import { ai } from '@/ai/genkit';
 import { smartComposeMessage } from '@/ai/flows/smart-compose-message';
 import { getInitialPrompts } from '@/ai/flows/initial-prompt-suggestion';
 import { generateChatTitle as genTitle } from '@/ai/flows/generate-chat-title';
+import { summarizeChatHistory as genSummary } from '@/ai/flows/summarize-chat-history';
 import { collection, getDocs, query, orderBy, limit, Timestamp, doc, getDoc, setDoc, serverTimestamp, where, writeBatch, updateDoc, increment, runTransaction } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { SUGGESTIONS_FALLBACK } from '@/lib/suggestions-fallback';
@@ -65,11 +66,17 @@ Rol más adecuado:`;
 
 
 export async function getAIResponse(history: Message[], userId: string, currentAnchorRole: string | null, blueprint: any | null): Promise<{ response: string, newRole?: string }> {
-  const cleanHistory = history.map(m => {
-    const date = (m.timestamp instanceof Date) ? m.timestamp : (m.timestamp as Timestamp).toDate();
-    return `[${date.toISOString()}] ${m.role}: ${m.content}`;
-  }).join('\n');
-  
+  const HISTORY_THRESHOLD = 10;
+  let conversationContext = '';
+
+  if (history.length > HISTORY_THRESHOLD) {
+    const fullHistoryString = history.map(m => `[${(m.timestamp instanceof Date ? m.timestamp : (m.timestamp as Timestamp).toDate()).toISOString()}] ${m.role}: ${m.content}`).join('\n');
+    const { summary } = await genSummary({ chatHistory: fullHistoryString });
+    conversationContext = `Resumen de la conversación hasta ahora:\n${summary}\n\nMensajes más recientes:\n${history.slice(-4).map(m => `[${(m.timestamp instanceof Date ? m.timestamp : (m.timestamp as Timestamp).toDate()).toISOString()}] ${m.role}: ${m.content}`).join('\n')}`;
+  } else {
+    conversationContext = history.map(m => `[${(m.timestamp instanceof Date ? m.timestamp : (m.timestamp as Timestamp).toDate()).toISOString()}] ${m.role}: ${m.content}`).join('\n');
+  }
+
   let newRole: string | undefined = undefined;
   const lastUserMessage = history.filter(m => m.role === 'user').pop()?.content || '';
 
@@ -109,7 +116,7 @@ Tu objetivo es ayudar al usuario a explorar sus pensamientos y emociones. En lug
 ${stateContext}
 
 Historial de la conversación:
-${cleanHistory}
+${conversationContext}
 
 Asistente:`;
 
