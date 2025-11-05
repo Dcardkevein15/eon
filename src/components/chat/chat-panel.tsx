@@ -36,7 +36,7 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
   const isMobile = useIsMobile();
   const { user } = useAuth();
   const firestore = useFirestore();
-  const [cachedProfile, setCachedProfile] = useState<ProfileData | null>(null);
+  const [chatbotState, setChatbotState] = useState<any | null>(null);
 
   const messagesQuery = useMemo(
     () =>
@@ -53,29 +53,24 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
   
   useEffect(() => {
     if (user) {
-      const storageKey = `psych-profile-${user.uid}`;
-      const cachedItem = localStorage.getItem(storageKey);
-      if (cachedItem) {
-        try {
-          const data: CachedProfile = JSON.parse(cachedItem);
-          setCachedProfile(data.profile);
-        } catch (e) {
-          console.error("Failed to parse cached profile", e);
-          localStorage.removeItem(storageKey);
+      const stateDocRef = doc(firestore, `users/${user.uid}/chatbotState/main`);
+      const unsubscribe = onSnapshot(stateDocRef, (doc) => {
+        if (doc.exists()) {
+          setChatbotState(doc.data());
+        } else {
+          setChatbotState(null);
         }
-      }
+      });
+      return () => unsubscribe();
     }
-  }, [user]);
+  }, [user, firestore]);
 
   const triggerBlueprintUpdate = useCallback(async (currentMessages: Message[]) => {
       if (!user) return;
 
       const stateDocRef = doc(firestore, `users/${user.uid}/chatbotState/main`);
       try {
-        const previousStateSnap = await getDoc(stateDocRef);
-        const previousBlueprint = previousStateSnap.exists()
-            ? JSON.stringify(previousStateSnap.data().blueprint, null, 2)
-            : "No previous state. This is my first reflection.";
+        const previousBlueprint = chatbotState ? JSON.stringify(chatbotState.blueprint, null, 2) : "No previous state. This is my first reflection.";
 
         const fullChatHistory = currentMessages.map(msg => {
             const date = msg.timestamp && typeof (msg.timestamp as any).toDate === 'function' 
@@ -93,7 +88,7 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
             blueprint: newBlueprint,
             updatedAt: serverTimestamp(),
         };
-        await setDoc(stateDocRef, dataToSave);
+        await setDoc(stateDocRef, dataToSave, { merge: true });
 
       } catch (error: any) {
          if (error.code === 'permission-denied') {
@@ -107,7 +102,7 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
              console.error("Error updating blueprint:", error);
          }
       }
-  }, [user, firestore]);
+  }, [user, firestore, chatbotState]);
 
   const fetchSuggestions = useCallback(async () => {
     const currentMessages = messages || [];
@@ -143,7 +138,7 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
         historyForAI,
         user.uid,
         chat.anchorRole || null,
-        cachedProfile
+        chatbotState
       );
       
       if (newRole && newRole !== chat.anchorRole) {
@@ -195,7 +190,7 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
           description: "No se pudo obtener una respuesta de la IA. Por favor, inténtalo de nuevo.",
         });
     }
-  }, [user, firestore, chat, appendMessage, updateChat, toast, triggerBlueprintUpdate, cachedProfile]);
+  }, [user, firestore, chat, appendMessage, updateChat, toast, triggerBlueprintUpdate, chatbotState]);
 
 
  const handleSendMessage = useCallback(async (input: string, audioDataUri?: string) => {

@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "user": {
@@ -113,6 +114,23 @@
         "coreArchetype": { "type": "object", "properties": { "title": { "type": "string" }, "description": { "type": "string" }, "strengths": { "type": "string" }, "challenges": { "type": "string" } } },
         "coreConflict": { "type": "string" },
         "habitLoop": { "$ref": "#/entities/habitLoop" }
+      }
+    },
+    "chatbotState": {
+      "title": "Chatbot State",
+      "description": "The AI's internal state and evolving understanding of the user.",
+      "type": "object",
+      "properties": {
+        "blueprint": {
+          "type": "object",
+          "properties": {
+            "self_reflection": { "type": "string" },
+            "updated_understanding_of_user": { "type": "string" },
+            "strategy_adjustment": { "type": "string" },
+            "key_takeaways": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "updatedAt": { "type": "string", "format": "date-time" }
       }
     },
      "emotionalConstellation": {
