@@ -138,7 +138,7 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
         historyForAI,
         user.uid,
         chat.anchorRole || null,
-        chatbotState
+        chatbotState?.blueprint || null
       );
       
       if (newRole && newRole !== chat.anchorRole) {

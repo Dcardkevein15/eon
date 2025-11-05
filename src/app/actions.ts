@@ -64,7 +64,7 @@ Rol más adecuado:`;
 }
 
 
-export async function getAIResponse(history: Message[], userId: string, currentAnchorRole: string | null, chatbotState: any | null): Promise<{ response: string, newRole?: string }> {
+export async function getAIResponse(history: Message[], userId: string, currentAnchorRole: string | null, blueprint: any | null): Promise<{ response: string, newRole?: string }> {
   const cleanHistory = history.map(m => {
     const date = (m.timestamp instanceof Date) ? m.timestamp : (m.timestamp as Timestamp).toDate();
     return `[${date.toISOString()}] ${m.role}: ${m.content}`;
@@ -80,7 +80,7 @@ export async function getAIResponse(history: Message[], userId: string, currentA
 
   const roleToUse = newRole || currentAnchorRole || 'El Asistente General';
   const isFirstMessage = history.length <= 1;
-  const stateContext = (chatbotState && !isFirstMessage) ? JSON.stringify(chatbotState.blueprint, null, 2) : 'Aún no hay un cianotipo psicológico. Esta es nuestra primera interacción. Sé cálido y haz una pregunta abierta.';
+  const stateContext = (blueprint && !isFirstMessage) ? JSON.stringify(blueprint, null, 2) : 'Aún no hay un cianotipo psicológico. Esta es nuestra primera interacción. Sé cálido y haz una pregunta abierta.';
 
   const expertAgentSystemPrompt = `Eres un asistente de IA conversacional llamado Nimbus. Tu propósito es ser un confidente y psicólogo virtual, un espejo que revela profundidades. Respondes de manera empática, perspicaz y transformadora.
 Tu identidad principal para ESTA RESPUESTA es **${roleToUse}**. Debes adoptar su voz y perspectiva.
@@ -342,4 +342,10 @@ export async function rateArticle(articleId: string, userId: string, rating: num
         console.error("Transaction failure:", e);
         return { success: false, newAvgRating: 0, newRatingCount: 0 };
     }
+}
+
+export async function generateArticleContent(input: GenerateArticleContentInput): Promise<GenerateArticleContentOutput> {
+  // This is a dummy function now, the real logic is in dispatchArticleWriter
+  // It's kept for compatibility if any other part of the app calls it, but it should be deprecated.
+  return await dispatchArticleWriter(input);
 }
