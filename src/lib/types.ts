@@ -421,12 +421,27 @@ export type SuggestedArticleTitle = {
 };
 
 // --- Torah Code Types ---
+export const PastRevelationSchema = z.object({
+    title: z.string(),
+    analysis: z.string(),
+});
+export const PresentRevelationSchema = z.object({
+    title: z.string(),
+    analysis: z.string(),
+});
+export const FutureRevelationSchema = z.object({
+    title: z.string(),
+    analysis: z.string(),
+});
+
 export const TorahRevelationSchema = z.object({
-  title: z.string(),
+  overallTitle: z.string(),
   context: z.string(),
-  matrixAnalysis: z.string(),
   gematriaConnection: z.string(),
   reflection: z.string(),
+  past: PastRevelationSchema,
+  present: PresentRevelationSchema,
+  future: FutureRevelationSchema,
 });
 export type TorahRevelation = z.infer<typeof TorahRevelationSchema>;
 
@@ -447,5 +462,3 @@ export type TorahCodeRecord = Omit<TorahCodeAnalysis, 'matrix'> & {
   userId: string;
   matrix: { rows: string[] } | string[][]; // Support both for backward compatibility
 };
-
-    

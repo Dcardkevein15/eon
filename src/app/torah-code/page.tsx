@@ -5,7 +5,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, Wand2, BookOpen, ChevronLeft, Search, History } from 'lucide-react';
+import { Loader2, Wand2, BookOpen, ChevronLeft, Search, History, Clock, FileText, BarChart } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { runTorahCodeAnalysis } from '@/ai/flows/torah-code-flow';
@@ -14,7 +14,7 @@ import TorahCodeMatrix from '@/components/torah-code/TorahCodeMatrix';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { v4 as uuidv4 } from 'uuid';
@@ -165,7 +165,7 @@ export default function TorahCodePage() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 lg:p-6">
-                    <div className="max-w-4xl mx-auto">
+                    <div className="max-w-7xl mx-auto">
                         <header className="text-center mb-8">
                             <h2 className="text-3xl md:text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-chart-5 via-chart-1 to-chart-2">
                                 Descifra los Mensajes Ocultos
@@ -207,32 +207,54 @@ export default function TorahCodePage() {
                             ) : analysisResult ? (
                                 <motion.div key="result" initial={{opacity: 0, y: 20}} animate={{opacity: 1, y: 0}} exit={{opacity: 0, y: -20}} className="space-y-8">
                                      <header className="text-center">
-                                         <h2 className="text-2xl md:text-3xl font-bold text-primary">{analysisResult.revelation.title}</h2>
+                                         <h2 className="text-2xl md:text-3xl font-bold text-primary">{analysisResult.revelation.overallTitle}</h2>
+                                         <p className="text-muted-foreground mt-1 max-w-2xl mx-auto text-sm">
+                                            <ReactMarkdown>{analysisResult.revelation.context}</ReactMarkdown>
+                                         </p>
                                      </header>
 
-                                     <div className="grid md:grid-cols-2 gap-8 items-start">
-                                        <div className="md:col-span-1">
-                                            <h3 className="font-semibold text-lg mb-2 text-primary">Matriz de Revelación</h3>
+                                    <div className="grid lg:grid-cols-5 gap-8 items-start">
+                                        <div className="lg:col-span-2">
+                                            <h3 className="font-semibold text-lg mb-2 text-center text-primary">Matriz de Revelación</h3>
                                             <TorahCodeMatrix result={analysisResult} />
                                         </div>
-                                        <div className="md:col-span-1 prose dark:prose-invert max-w-none text-sm space-y-4">
-                                            <div>
-                                                <h4 className="font-semibold text-primary">Contexto del Hallazgo</h4>
-                                                <ReactMarkdown>{analysisResult.revelation.context}</ReactMarkdown>
-                                            </div>
-                                            <div>
-                                                <h4 className="font-semibold text-primary">Análisis de la Matriz</h4>
-                                                <ReactMarkdown>{analysisResult.revelation.matrixAnalysis}</ReactMarkdown>
-                                            </div>
-                                             <div>
-                                                <h4 className="font-semibold text-primary">Conexión con Gematria</h4>
-                                                <ReactMarkdown>{analysisResult.revelation.gematriaConnection}</ReactMarkdown>
-                                            </div>
+
+                                        <div className="lg:col-span-3 space-y-6">
+                                            <Card className='bg-card/50'>
+                                                <CardHeader>
+                                                    <CardTitle className="flex items-center gap-2 text-accent"><Clock className="w-5 h-5"/>{analysisResult.revelation.past.title}</CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground">
+                                                     <ReactMarkdown>{analysisResult.revelation.past.analysis}</ReactMarkdown>
+                                                </CardContent>
+                                            </Card>
+                                             <Card className='bg-card/50'>
+                                                <CardHeader>
+                                                    <CardTitle className="flex items-center gap-2 text-accent"><FileText className="w-5 h-5"/>{analysisResult.revelation.present.title}</CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground">
+                                                     <ReactMarkdown>{analysisResult.revelation.present.analysis}</ReactMarkdown>
+                                                </CardContent>
+                                            </Card>
+                                             <Card className='bg-card/50'>
+                                                <CardHeader>
+                                                    <CardTitle className="flex items-center gap-2 text-accent"><BarChart className="w-5 h-5"/>{analysisResult.revelation.future.title}</CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground">
+                                                     <ReactMarkdown>{analysisResult.revelation.future.analysis}</ReactMarkdown>
+                                                </CardContent>
+                                            </Card>
                                         </div>
                                     </div>
-                                    <div className="text-center p-6 border-t border-dashed border-border/50 mt-8">
-                                         <h4 className="font-semibold text-primary mb-2">Pregunta para tu Reflexión</h4>
-                                         <p className="text-lg italic text-foreground/80">"{analysisResult.revelation.reflection}"</p>
+                                    <div className="space-y-4 pt-8 border-t border-dashed border-border/50 mt-8">
+                                         <div className="prose dark:prose-invert max-w-none text-center">
+                                            <h4 className="font-semibold text-primary">Conexión con Gematria</h4>
+                                            <ReactMarkdown>{analysisResult.revelation.gematriaConnection}</ReactMarkdown>
+                                         </div>
+                                         <div className="text-center p-6 bg-card/30 rounded-lg">
+                                             <h4 className="font-semibold text-primary mb-2">Pregunta para tu Reflexión</h4>
+                                             <p className="text-lg italic text-foreground/80">"{analysisResult.revelation.reflection}"</p>
+                                         </div>
                                     </div>
                                 </motion.div>
                             ) : (
@@ -247,5 +269,3 @@ export default function TorahCodePage() {
         </div>
     );
 }
-
-    

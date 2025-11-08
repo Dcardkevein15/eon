@@ -9,7 +9,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { TORAH_TEXT } from '@/lib/torah-text';
-import type { TorahCodeAnalysis } from '@/lib/types';
+import type { TorahCodeAnalysis, TorahRevelation } from '@/lib/types';
 
 // --- SCHEMA DEFINITIONS ---
 
@@ -27,12 +27,31 @@ const CryptographicDesignOutputSchema = z.object({
   searchTerms: z.array(CryptographicTermSchema).describe('Una lista de términos hebreos conceptualmente relacionados para buscar, cada uno con su propia ecuación de salto.'),
 });
 
+
+const PastRevelationSchema = z.object({
+    title: z.string().describe("Un título para la sección, como 'El Eco del Pasado' o 'La Semilla Histórica'."),
+    analysis: z.string().describe("Un análisis que conecta el concepto encontrado con eventos históricos o pasajes bíblicos conocidos. Debe explicar el origen o la causa primera del concepto según los patrones de la matriz."),
+});
+
+const PresentRevelationSchema = z.object({
+    title: z.string().describe("Un título para la sección, como 'El Reflejo en el Ahora' o 'El Espejo del Presente'."),
+    analysis: z.string().describe("Una interpretación del significado y las implicaciones del concepto en el contexto actual. Debe analizar las fuerzas en juego, los conflictos y las energías que rodean al término hoy."),
+});
+
+const FutureRevelationSchema = z.object({
+    title: z.string().describe("Un título para la sección, como 'La Sombra del Porvenir' o 'El Sendero Futuro'."),
+    analysis: z.string().describe("Una extrapolación de una o varias posibles trayectorias futuras basadas en los patrones de la matriz. Debe ser presentada como una visión, advertencia o proyección, no como una certeza absoluta."),
+});
+
+
 const RevelationOutputSchema = z.object({
-    title: z.string().describe("Un título poético y evocador para la revelación encontrada."),
+    overallTitle: z.string().describe("Un título poético y evocador para la revelación completa."),
     context: z.string().describe("Una breve explicación del término de búsqueda, el término hebreo encontrado y la distancia de salto utilizada."),
-    matrixAnalysis: z.string().describe("El análisis principal de la matriz, explicando las palabras cruzadas y su significado contextual."),
     gematriaConnection: z.string().describe("Una explicación del valor de Gematria del término encontrado y su conexión con otros conceptos bíblicos."),
     reflection: z.string().describe("Una pregunta final, poderosa y abierta, para la reflexión del usuario."),
+    past: PastRevelationSchema,
+    present: PresentRevelationSchema,
+    future: FutureRevelationSchema,
 });
 
 const AnalysisResultSchema = z.object({
@@ -125,14 +144,32 @@ const revelationPrompt = ai.definePrompt({
     output: { schema: RevelationOutputSchema },
     prompt: `Eres un erudito cabalista y un maestro de la Gematria. Has descubierto una matriz de letras en la Torá alrededor de la palabra clave "{{hebrewTerm}}" (que se relaciona con el concepto de "{{searchTerm}}").
 
-Tu tarea es generar una revelación profunda y perspicaz en formato JSON, siguiendo esta estructura OBLIGATORIA.
+Tu tarea es generar una revelación profunda y multifacética, un tríptico que abarque pasado, presente y futuro.
 
-**ESTRUCTURA DE SALIDA:**
-1.  **title**: Genera un título poético y evocador para la revelación.
+**ESTRUCTURA DE SALIDA OBLIGATORIA (JSON):**
+
+1.  **overallTitle**: Genera un título poético y evocador para la revelación completa.
 2.  **context**: Explica claramente que la búsqueda de \`{{searchTerm}}\` llevó al término hebreo \`{{hebrewTerm}}\`, encontrado con una distancia de salto de \`{{skip}}\`.
-3.  **matrixAnalysis**: Proporciona un análisis profundo de la matriz. Busca palabras que se lean horizontalmente (de derecha a izquierda), verticalmente (de arriba a abajo) o diagonalmente. Explica sus significados y cómo podrían conectarse con el término de búsqueda original. Sé poético pero claro.
-4.  **gematriaConnection**: Calcula el valor numérico (Gematria) de \`{{hebrewTerm}}\`. Luego, encuentra al menos 1-2 otras palabras o conceptos hebreos significativos que compartan el mismo valor. Explica la conexión mística entre estos términos.
-5.  **reflection**: Concluye con una única pregunta final, poderosa y abierta, diseñada para que el usuario reflexione sobre el mensaje del hallazgo.
+
+3.  **past (El Historiador)**: Un objeto con:
+    *   \`title\`: "El Eco del Pasado" o similar.
+    *   \`analysis\`: Analiza cómo la matriz refleja eventos históricos o pasajes bíblicos. Busca el origen, la "semilla" del concepto en el pasado.
+
+4.  **present (El Analista)**: Un objeto con:
+    *   \`title\`: "El Reflejo en el Ahora" o similar.
+    *   \`analysis\`: Interpreta las palabras cruzadas en la matriz y su significado en el contexto actual. Analiza las fuerzas en juego y los conflictos del concepto hoy.
+
+5.  **future (El Profeta)**: Un objeto con:
+    *   \`title\`: "La Sombra del Porvenir" o similar.
+    *   \`analysis\`: Basándote en los patrones, extrapola una o varias posibles trayectorias futuras. Preséntalo como una visión, advertencia o proyección, no como una certeza absoluta.
+
+6.  **gematriaConnection**: Calcula el valor numérico (Gematria) de \`{{hebrewTerm}}\`. Encuentra al menos 1-2 otras palabras hebreas significativas con el mismo valor y explica la conexión mística.
+
+7.  **reflection**: Concluye con una única pregunta final, poderosa y abierta, para la reflexión del usuario.
+
+---
+**CRÍTICO:** Analiza la matriz a fondo. Busca palabras en horizontal (derecha a izquierda), vertical y diagonal. Sé poético pero claro.
+---
 
 **Matriz de Letras a Analizar:**
 {{{matrix}}}
@@ -227,5 +264,3 @@ export const runTorahCodeAnalysis = ai.defineFlow(
     };
   }
 );
-
-    
