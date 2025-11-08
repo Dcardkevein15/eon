@@ -430,3 +430,9 @@ export type TorahCodeAnalysis = {
     matrix: string[][];
     revelation: string;
 };
+
+export type TorahCodeRecord = TorahCodeAnalysis & {
+  id: string;
+  timestamp: string;
+  userId: string;
+};

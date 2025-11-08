@@ -183,6 +183,23 @@
             "createdAt": { "type": "string", "format": "date-time" }
         },
         "required": ["title", "category", "categorySlug", "slug", "createdAt"]
+    },
+    "torahCodeRecord": {
+      "title": "Torah Code Record",
+      "description": "A record of a single Torah Code analysis.",
+      "type": "object",
+      "properties": {
+        "searchTerm": { "type": "string" },
+        "hebrewTerm": { "type": "string" },
+        "foundTerm": { "type": "string" },
+        "skip": { "type": "number" },
+        "startIndex": { "type": "number" },
+        "matrix": { "type": "array", "items": { "type": "array", "items": { "type": "string" } } },
+        "revelation": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "userId": { "type": "string" }
+      },
+      "required": ["searchTerm", "foundTerm", "skip", "revelation", "timestamp", "userId"]
     }
   },
   "auth": {
@@ -197,6 +214,7 @@
     "/users/{userId}/gymSessions/{sessionId}": { "schema": { "$ref": "#/entities/simulationSession" }, "description": "Emotional Gym sessions." },
     "/users/{userId}/gymSessions/{sessionId}/messages/{messageId}": { "schema": { "$ref": "#/entities/message" }, "description": "Messages within a gym session." },
     "/users/{userId}/dreams/{dreamId}": { "schema": { "$ref": "#/entities/dreamInterpretation" }, "description": "Dream interpretations for a user." },
+    "/users/{userId}/torahCodeHistory/{recordId}": { "schema": { "$ref": "#/entities/torahCodeRecord" }, "description": "Torah Code analysis history for a user." },
     "/therapists/{therapistId}": { "schema": { "$ref": "#/entities/therapist" }, "description": "Public therapist profiles." },
     "/therapistApplications/{applicationId}": { "schema": { "$ref": "#/entities/therapistApplication" }, "description": "Applications from users to become therapists." },
     "/articles/{articleSlug}": { "schema": { "$ref": "#/entities/article" }, "description": "AI-generated blog articles." },

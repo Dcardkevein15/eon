@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -8,7 +9,7 @@ import { Loader2, Wand2, BookOpen, ChevronLeft, Search, History } from 'lucide-r
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { runTorahCodeAnalysis } from '@/ai/flows/torah-code-flow';
-import type { TorahCodeAnalysis } from '@/lib/types';
+import type { TorahCodeAnalysis, TorahCodeRecord } from '@/lib/types';
 import TorahCodeMatrix from '@/components/torah-code/TorahCodeMatrix';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -17,55 +18,36 @@ import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/ca
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { v4 as uuidv4 } from 'uuid';
-
-type AnalysisRecord = TorahCodeAnalysis & { id: string; timestamp: string };
-
-function useLocalStorage<T>(key: string, initialValue: T) {
-  const [storedValue, setStoredValue] = useState<T>(initialValue);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    try {
-      const item = window.localStorage.getItem(key);
-      if (item) {
-        setStoredValue(JSON.parse(item));
-      }
-    } catch (error) {
-      console.log(error);
-    } finally {
-        setLoading(false);
-    }
-  }, [key]);
-
-  const setValue = (value: T | ((val: T) => T)) => {
-    try {
-      const valueToStore = value instanceof Function ? value(storedValue) : value;
-      setStoredValue(valueToStore);
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(key, JSON.stringify(valueToStore));
-      }
-    } catch (error) {
-        console.log(error);
-    }
-  };
-
-  return [storedValue, setValue, loading] as const;
-}
+import { useAuth, useCollection, useFirestore } from '@/firebase';
+import { collection, query, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
 
 
 export default function TorahCodePage() {
+    const { user, loading: authLoading } = useAuth();
+    const firestore = useFirestore();
+
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [analysisResult, setAnalysisResult] = useState<TorahCodeAnalysis | null>(null);
     const [isViewingHistory, setIsViewingHistory] = useState(false);
-    const [analysisHistory, setAnalysisHistory, isHistoryLoading] = useLocalStorage<AnalysisRecord[]>('torah-code-history', []);
     
     const { toast } = useToast();
+
+    // Fetch history from Firestore
+    const historyQuery = useMemo(
+        () => (user?.uid && firestore ? query(collection(firestore, `users/${user.uid}/torahCodeHistory`), orderBy('timestamp', 'desc')) : undefined),
+        [user?.uid, firestore]
+    );
+    const { data: analysisHistory, loading: isHistoryLoading } = useCollection<TorahCodeRecord>(historyQuery);
 
     const handleAnalysis = async () => {
         if (!searchTerm.trim()) {
             toast({ variant: 'destructive', title: 'Término vacío', description: 'Por favor, introduce una palabra o concepto para analizar.' });
+            return;
+        }
+         if (!user) {
+            toast({ variant: 'destructive', title: 'Acceso denegado', description: 'Debes iniciar sesión para realizar un análisis.' });
             return;
         }
         setIsLoading(true);
@@ -77,12 +59,13 @@ export default function TorahCodePage() {
             const result = await runTorahCodeAnalysis({ searchTerm });
             setAnalysisResult(result);
             
-            const newRecord: AnalysisRecord = {
+            // Save to Firestore
+            const historyCollection = collection(firestore, `users/${user.uid}/torahCodeHistory`);
+            await addDoc(historyCollection, {
                 ...result,
-                id: uuidv4(),
-                timestamp: new Date().toISOString(),
-            };
-            setAnalysisHistory(prev => [newRecord, ...prev].slice(0, 50));
+                timestamp: serverTimestamp(),
+                userId: user.uid,
+            });
 
         } catch (e: any) {
             console.error("Error en el análisis del código de la Torá:", e);
@@ -93,10 +76,20 @@ export default function TorahCodePage() {
         }
     };
     
-    const loadHistoryRecord = (record: AnalysisRecord) => {
+    const loadHistoryRecord = (record: TorahCodeRecord) => {
         setIsViewingHistory(true);
         setAnalysisResult(record);
         setSearchTerm(record.searchTerm);
+    };
+    
+    const getFormattedDate = (timestamp: any) => {
+        if (!timestamp) return 'Fecha desconocida';
+        try {
+            const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+            return formatDistanceToNow(date, { addSuffix: true, locale: es });
+        } catch {
+            return 'Fecha inválida';
+        }
     };
 
     return (
@@ -117,7 +110,7 @@ export default function TorahCodePage() {
                         </div>
                         <Sheet>
                             <SheetTrigger asChild>
-                                 <Button variant="outline" disabled={isHistoryLoading}>
+                                 <Button variant="outline" disabled={isHistoryLoading || authLoading}>
                                     <History className="mr-2 h-4 w-4" />
                                     Historial
                                 </Button>
@@ -127,7 +120,13 @@ export default function TorahCodePage() {
                                     <SheetTitle>Historial de Búsquedas</SheetTitle>
                                 </SheetHeader>
                                 <ScrollArea className="h-[calc(100%-4rem)]">
-                                    {analysisHistory.length > 0 ? (
+                                    {!user ? (
+                                        <p className="text-center text-sm text-muted-foreground p-8">Inicia sesión para ver tu historial.</p>
+                                    ) : isHistoryLoading ? (
+                                        <div className="p-4 space-y-3">
+                                            {[...Array(3)].map((_, i) => <Card key={i} className="h-20 bg-muted/50 animate-pulse"/>)}
+                                        </div>
+                                    ) : analysisHistory && analysisHistory.length > 0 ? (
                                         <div className="p-4 space-y-3">
                                             {analysisHistory.map(record => (
                                                 <SheetTrigger asChild key={record.id}>
@@ -135,7 +134,7 @@ export default function TorahCodePage() {
                                                     <CardHeader>
                                                         <CardTitle className="text-sm">Búsqueda: "{record.searchTerm}"</CardTitle>
                                                         <CardDescription>
-                                                            {formatDistanceToNow(new Date(record.timestamp), { addSuffix: true, locale: es })}
+                                                            {getFormattedDate(record.timestamp)}
                                                         </CardDescription>
                                                     </CardHeader>
                                                 </Card>
@@ -172,7 +171,7 @@ export default function TorahCodePage() {
                                 onKeyDown={(e) => e.key === 'Enter' && !isLoading && handleAnalysis()}
                                 className="h-12 text-base"
                             />
-                            <Button type="button" onClick={handleAnalysis} disabled={isLoading} className="h-12 px-6">
+                            <Button type="button" onClick={handleAnalysis} disabled={isLoading || authLoading} className="h-12 px-6">
                                 {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5" />}
                                 <span className="sr-only">Analizar</span>
                             </Button>
