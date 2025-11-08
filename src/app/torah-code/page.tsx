@@ -59,13 +59,16 @@ export default function TorahCodePage() {
             const result = await runTorahCodeAnalysis({ searchTerm });
             setAnalysisResult(result);
             
-            // Save to Firestore
+            // --- FIX: Flatten the matrix for Firestore ---
+            const dataToSave = {
+              ...result,
+              matrix: { rows: result.matrix.map(row => row.join('')) }, // Flatten array
+              timestamp: serverTimestamp(),
+              userId: user.uid,
+            };
+
             const historyCollection = collection(firestore, `users/${user.uid}/torahCodeHistory`);
-            await addDoc(historyCollection, {
-                ...result,
-                timestamp: serverTimestamp(),
-                userId: user.uid,
-            });
+            await addDoc(historyCollection, dataToSave);
 
         } catch (e: any) {
             console.error("Error en el análisis del código de la Torá:", e);
@@ -78,7 +81,22 @@ export default function TorahCodePage() {
     
     const loadHistoryRecord = (record: TorahCodeRecord) => {
         setIsViewingHistory(true);
-        setAnalysisResult(record);
+        
+        // --- FIX: Rehydrate the matrix from the flattened structure ---
+        let matrix: string[][];
+        if (Array.isArray(record.matrix)) {
+            // It's already in the correct format (e.g. from a fresh analysis)
+            matrix = record.matrix;
+        } else if (record.matrix && Array.isArray((record.matrix as any).rows)) {
+            // It's the flattened object from Firestore, rehydrate it.
+            matrix = (record.matrix as any).rows.map((row: string) => row.split(''));
+        } else {
+            // Fallback for malformed data
+            console.error("Malformed matrix data in history record:", record);
+            matrix = Array(21).fill(Array(21).fill('?'));
+        }
+
+        setAnalysisResult({ ...record, matrix });
         setSearchTerm(record.searchTerm);
     };
     

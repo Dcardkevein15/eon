@@ -431,8 +431,10 @@ export type TorahCodeAnalysis = {
     revelation: string;
 };
 
-export type TorahCodeRecord = TorahCodeAnalysis & {
+// This is what is stored in Firestore. The matrix is flattened.
+export type TorahCodeRecord = Omit<TorahCodeAnalysis, 'matrix'> & {
   id: string;
-  timestamp: string;
+  timestamp: string; // This can be Timestamp from Firestore, but string is safer for client
   userId: string;
+  matrix: { rows: string[] } | string[][]; // Support both for backward compatibility
 };
