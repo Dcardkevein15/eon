@@ -433,6 +433,18 @@ export const FutureRevelationSchema = z.object({
     title: z.string(),
     analysis: z.string(),
 });
+export const ArchetypeRevelationSchema = z.object({
+    title: z.string(),
+    analysis: z.string(),
+});
+export const EsotericRevelationSchema = z.object({
+    title: z.string(),
+    analysis: z.string(),
+});
+export const TherapeuticRevelationSchema = z.object({
+    title: z.string(),
+    analysis: z.string(),
+});
 
 export const TorahRevelationSchema = z.object({
   overallTitle: z.string(),
@@ -442,6 +454,9 @@ export const TorahRevelationSchema = z.object({
   past: PastRevelationSchema,
   present: PresentRevelationSchema,
   future: FutureRevelationSchema,
+  archetype: ArchetypeRevelationSchema,
+  esoteric: EsotericRevelationSchema,
+  therapeutic: TherapeuticRevelationSchema,
 });
 export type TorahRevelation = z.infer<typeof TorahRevelationSchema>;
 
@@ -462,3 +477,5 @@ export type TorahCodeRecord = Omit<TorahCodeAnalysis, 'matrix'> & {
   userId: string;
   matrix: { rows: string[] } | string[][]; // Support both for backward compatibility
 };
+
+    

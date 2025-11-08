@@ -9,7 +9,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { TORAH_TEXT } from '@/lib/torah-text';
-import type { TorahCodeAnalysis, TorahRevelation } from '@/lib/types';
+import type { TorahCodeAnalysis } from '@/lib/types';
 
 // --- SCHEMA DEFINITIONS ---
 
@@ -29,18 +29,33 @@ const CryptographicDesignOutputSchema = z.object({
 
 
 const PastRevelationSchema = z.object({
-    title: z.string().describe("Un título para la sección, como 'El Eco del Pasado' o 'La Semilla Histórica'."),
-    analysis: z.string().describe("Un análisis que conecta el concepto encontrado con eventos históricos o pasajes bíblicos conocidos. Debe explicar el origen o la causa primera del concepto según los patrones de la matriz."),
+    title: z.string().describe("Título para la sección del Pasado. Ej: 'El Eco Histórico'."),
+    analysis: z.string().describe("Análisis que conecta el concepto con eventos o pasajes bíblicos conocidos, explicando el origen o la causa primera."),
 });
 
 const PresentRevelationSchema = z.object({
-    title: z.string().describe("Un título para la sección, como 'El Reflejo en el Ahora' o 'El Espejo del Presente'."),
-    analysis: z.string().describe("Una interpretación del significado y las implicaciones del concepto en el contexto actual. Debe analizar las fuerzas en juego, los conflictos y las energías que rodean al término hoy, desde una perspectiva simbólica y psicológica."),
+    title: z.string().describe("Título para la sección del Presente. Ej: 'El Reflejo Psicológico'."),
+    analysis: z.string().describe("Interpretación del significado en el contexto actual desde una perspectiva simbólica y psicológica, analizando arquetipos y conflictos."),
 });
 
 const FutureRevelationSchema = z.object({
-    title: z.string().describe("Un título para la sección, como 'La Sombra del Porvenir' o 'El Sendero Futuro'."),
-    analysis: z.string().describe("Una extrapolación de una o varias posibles trayectorias futuras basadas en los patrones de la matriz, presentada como una visión, advertencia o consejo espiritual."),
+    title: z.string().describe("Título para la sección del Futuro. Ej: 'La Proyección Espiritual'."),
+    analysis: z.string().describe("Una extrapolación de posibles trayectorias futuras, presentada como una visión, advertencia o consejo espiritual."),
+});
+
+const ArchetypeRevelationSchema = z.object({
+    title: z.string().describe("Título para la sección Arquetípica. Ej: 'La Carta del Tarot'."),
+    analysis: z.string().describe("Identifica el arquetipo junguiano dominante (El Héroe, El Sabio, La Sombra) y explica su significado en el contexto de la búsqueda."),
+});
+
+const EsotericRevelationSchema = z.object({
+    title: z.string().describe("Título para la sección Esotérica. Ej: 'La Lección Oculta'."),
+    analysis: z.string().describe("Una interpretación mística de la matriz, hablando de energías, vibraciones y las lecciones que el universo presenta."),
+});
+
+const TherapeuticRevelationSchema = z.object({
+    title: z.string().describe("Título para la sección Terapéutica. Ej: 'El Próximo Paso'."),
+    analysis: z.string().describe("Un consejo práctico y accionable basado en toda la revelación, para aplicar en la vida diaria."),
 });
 
 
@@ -52,6 +67,9 @@ const RevelationOutputSchema = z.object({
     past: PastRevelationSchema,
     present: PresentRevelationSchema,
     future: FutureRevelationSchema,
+    archetype: ArchetypeRevelationSchema,
+    esoteric: EsotericRevelationSchema,
+    therapeutic: TherapeuticRevelationSchema,
 });
 
 const AnalysisResultSchema = z.object({
@@ -59,7 +77,7 @@ const AnalysisResultSchema = z.object({
   skip: z.number().int().describe('El salto utilizado para encontrar el término.'),
   startIndex: z.number().int().describe('El índice de inicio donde se encontró la primera letra del término.'),
   matrix: z.array(z.array(z.string())).describe('Una matriz de 21x21 de letras hebreas centrada en el término encontrado.'),
-  revelation: RevelationOutputSchema.describe('Una interpretación perspicaz de la matriz, explicando las palabras cruzadas y su posible significado contextual, traducido al español.'),
+  revelation: RevelationOutputSchema.describe('Un mosaico de interpretaciones desde múltiples dimensiones: histórica, psicológica, espiritual, arquetípica, esotérica y terapéutica.'),
 });
 
 // --- HELPER FUNCTIONS ---
@@ -142,30 +160,44 @@ const revelationPrompt = ai.definePrompt({
         matrix: z.string(), // The matrix stringified
     })},
     output: { schema: RevelationOutputSchema },
-    prompt: `Eres un erudito cabalista, un psicólogo junguiano y un vidente. Has descubierto una matriz de letras en la Torá alrededor de la palabra clave "{{hebrewTerm}}" (que se relaciona con el concepto de "{{searchTerm}}").
+    prompt: `Eres un erudito multidimensional, una fusión de cabalista, psicólogo junguiano, vidente y coach. Has descubierto una matriz de letras en la Torá alrededor de la palabra clave "{{hebrewTerm}}" (relacionada con "{{searchTerm}}").
 
-Tu tarea es generar una revelación profunda y multifacética, un tríptico que abarque pasado, presente y futuro, tejiendo lo histórico con lo simbólico y lo espiritual.
+Tu tarea es generar un mosaico de revelaciones, analizando la matriz desde seis perspectivas distintas y profundas.
 
 **ESTRUCTURA DE SALIDA OBLIGATORIA (JSON):**
 
-1.  **overallTitle**: Genera un título poético y evocador para la revelación completa.
+1.  **overallTitle**: Un título poético y evocador para la revelación completa.
 2.  **context**: Explica claramente que la búsqueda de \`{{searchTerm}}\` llevó al término hebreo \`{{hebrewTerm}}\`, encontrado con una distancia de salto de \`{{skip}}\`.
+3.  **gematriaConnection**: Calcula el valor numérico (Gematria) de \`{{hebrewTerm}}\`. Encuentra al menos 1-2 otras palabras hebreas significativas con el mismo valor y explica la conexión mística entre ellas.
+4.  **reflection**: Concluye con una única pregunta final, poderosa y abierta, para la reflexión del usuario.
 
-3.  **past (El Historiador)**: Un objeto con:
-    *   \`title\`: "El Eco del Pasado" o un título evocador similar.
-    *   \`analysis\`: Realiza un análisis histórico-narrativo. Conecta la matriz con eventos o pasajes bíblicos conocidos. Busca el origen, la "semilla" del concepto en la historia sagrada.
+---
+**MOSAICO DE ANÁLISIS (SEIS TARJETAS):**
+---
 
-4.  **present (El Psicólogo Simbólico)**: Un objeto con:
-    *   \`title\`: "El Espejo del Presente" o similar.
-    *   \`analysis\`: Interpreta el significado para el "ahora". Analiza las palabras cruzadas en la matriz y su implicación simbólica y psicológica. ¿Qué arquetipos están en juego? ¿Qué conflicto interno revela?
+5.  **past (El Historiador)**: Un objeto con:
+    *   \`title\`: "El Eco Histórico".
+    *   \`analysis\`: Como historiador, conecta la matriz con eventos o pasajes bíblicos conocidos. Busca el origen, la "semilla" del concepto en la historia sagrada.
 
-5.  **future (El Profeta Espiritual)**: Un objeto con:
-    *   \`title\`: "La Sombra del Porvenir" o similar.
-    *   \`analysis\`: Ofrece una proyección y un consejo. Basándote en los patrones, extrapola una posible trayectoria futura. Preséntalo como una visión o advertencia. Luego, destila un consejo esotérico o espiritual basado en toda la revelación.
+6.  **present (El Psicólogo Simbólico)**: Un objeto con:
+    *   \`title\`: "El Reflejo Psicológico".
+    *   \`analysis\`: Como psicólogo, interpreta el significado para el "ahora". Analiza las palabras cruzadas en la matriz y su implicación simbólica y psicológica. ¿Qué conflicto interno revela?
 
-6.  **gematriaConnection**: Calcula el valor numérico (Gematria) de \`{{hebrewTerm}}\`. Encuentra al menos 1-2 otras palabras hebreas significativas con el mismo valor y explica la conexión mística entre ellas de forma elocuente.
+7.  **future (El Profeta Espiritual)**: Un objeto con:
+    *   \`title\`: "La Proyección Espiritual".
+    *   \`analysis\`: Como vidente, ofrece una proyección. Basándote en los patrones, extrapola una posible trayectoria futura. Preséntalo como una visión o advertencia.
 
-7.  **reflection**: Concluye con una única pregunta final, poderosa y abierta, para la reflexión del usuario.
+8.  **archetype (El Intérprete de Arquetipos)**: Un objeto con:
+    *   \`title\`: "La Carta del Tarot".
+    *   \`analysis\`: Como un maestro del tarot, identifica el arquetipo junguiano dominante (El Héroe, La Sombra, etc.) que la matriz revela para esta búsqueda y explica su significado.
+
+9.  **esoteric (El Místico)**: Un objeto con:
+    *   \`title\`: "La Lección Oculta".
+    *   \`analysis\`: Como un místico, interpreta la matriz desde un punto de vista esotérico. Habla de las energías, las vibraciones y las lecciones ocultas que el universo está presentando.
+
+10. **therapeutic (El Coach)**: Un objeto con:
+    *   \`title\`: "El Próximo Paso".
+    *   \`analysis\`: Como un coach de vida, destila toda la revelación en un consejo práctico y accionable que el usuario puede aplicar en su vida diaria.
 
 ---
 **CRÍTICO:** Analiza la matriz a fondo. Busca palabras en horizontal (derecha a izquierda), vertical y diagonal. Sé poético, profundo y claro.
@@ -174,7 +206,7 @@ Tu tarea es generar una revelación profunda y multifacética, un tríptico que 
 **Matriz de Letras a Analizar:**
 {{{matrix}}}
 
-Genera el objeto JSON completo con los campos solicitados.`,
+Genera el objeto JSON completo con los diez campos solicitados.`,
 });
 
 
@@ -198,7 +230,6 @@ export const runTorahCodeAnalysis = ai.defineFlow(
     let startIndex = -1;
     let foundSkip = -1;
     let foundTerm = '';
-    let foundExplanation = '';
 
     for (const term of searchTerms) {
         // First, try the AI's "prophesied" skip
@@ -206,7 +237,6 @@ export const runTorahCodeAnalysis = ai.defineFlow(
         if (startIndex !== -1) {
             foundTerm = term.hebrewTerm;
             foundSkip = term.skipEquation;
-            foundExplanation = term.explanation;
             break; // Found a match, exit the loop
         }
     }
@@ -226,7 +256,6 @@ export const runTorahCodeAnalysis = ai.defineFlow(
                     startIndex = index;
                     foundTerm = term.hebrewTerm;
                     foundSkip = skip;
-                    foundExplanation = `Búsqueda amplia. Original: ${term.explanation}`;
                     break; // Stop at the first find
                 }
             }
@@ -236,7 +265,6 @@ export const runTorahCodeAnalysis = ai.defineFlow(
         }
     }
 
-    // Use the originally requested term for the error message, but reference the tried Hebrew terms.
     if (startIndex === -1) {
       const triedTerms = searchTerms.map(t => t.hebrewTerm).join(', ');
       throw new Error(`No se encontraron conexiones para '${searchTerm}' en la Torá (se intentó con los conceptos: ${triedTerms}).`);

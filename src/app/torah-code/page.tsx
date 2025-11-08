@@ -5,7 +5,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, Wand2, BookOpen, ChevronLeft, Search, History, Clock, FileText, BarChart } from 'lucide-react';
+import { Loader2, Wand2, BookOpen, ChevronLeft, Search, History, Clock, FileText, BarChart, User, Bot, Brain, Star } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { runTorahCodeAnalysis } from '@/ai/flows/torah-code-flow';
@@ -105,6 +105,16 @@ export default function TorahCodePage() {
             return 'Fecha inválida';
         }
     };
+
+    const revelationCards = analysisResult ? [
+      { key: 'past', icon: Clock, data: analysisResult.revelation.past, color: "text-blue-400" },
+      { key: 'present', icon: Brain, data: analysisResult.revelation.present, color: "text-amber-400" },
+      { key: 'future', icon: Wand2, data: analysisResult.revelation.future, color: "text-purple-400" },
+      { key: 'archetype', icon: User, data: analysisResult.revelation.archetype, color: "text-green-400" },
+      { key: 'esoteric', icon: Star, data: analysisResult.revelation.esoteric, color: "text-teal-400" },
+      { key: 'therapeutic', icon: Bot, data: analysisResult.revelation.therapeutic, color: "text-pink-400" },
+    ] : [];
+
 
     return (
         <div className="flex h-screen bg-background text-foreground">
@@ -212,50 +222,43 @@ export default function TorahCodePage() {
                                             <ReactMarkdown>{analysisResult.revelation.context}</ReactMarkdown>
                                          </div>
                                      </header>
-
-                                    <div className="grid lg:grid-cols-5 gap-8 items-start">
+                                    
+                                     <div className="grid lg:grid-cols-5 gap-8 items-start">
                                         <div className="lg:col-span-2">
                                             <h3 className="font-semibold text-lg mb-2 text-center text-primary">Matriz de Revelación</h3>
                                             <TorahCodeMatrix result={analysisResult} />
+                                             <div className="prose dark:prose-invert max-w-none text-center mt-6">
+                                                <h4 className="font-semibold text-primary">Conexión con Gematria</h4>
+                                                <ReactMarkdown>{analysisResult.revelation.gematriaConnection}</ReactMarkdown>
+                                             </div>
                                         </div>
-
-                                        <div className="lg:col-span-3 space-y-6">
-                                            <Card className='bg-card/50'>
-                                                <CardHeader>
-                                                    <CardTitle className="flex items-center gap-2 text-accent"><Clock className="w-5 h-5"/>{analysisResult.revelation.past.title}</CardTitle>
-                                                </CardHeader>
-                                                <CardContent className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground">
-                                                     <ReactMarkdown>{analysisResult.revelation.past.analysis}</ReactMarkdown>
-                                                </CardContent>
-                                            </Card>
-                                             <Card className='bg-card/50'>
-                                                <CardHeader>
-                                                    <CardTitle className="flex items-center gap-2 text-accent"><FileText className="w-5 h-5"/>{analysisResult.revelation.present.title}</CardTitle>
-                                                </CardHeader>
-                                                <CardContent className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground">
-                                                     <ReactMarkdown>{analysisResult.revelation.present.analysis}</ReactMarkdown>
-                                                </CardContent>
-                                            </Card>
-                                             <Card className='bg-card/50'>
-                                                <CardHeader>
-                                                    <CardTitle className="flex items-center gap-2 text-accent"><BarChart className="w-5 h-5"/>{analysisResult.revelation.future.title}</CardTitle>
-                                                </CardHeader>
-                                                <CardContent className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground">
-                                                     <ReactMarkdown>{analysisResult.revelation.future.analysis}</ReactMarkdown>
-                                                </CardContent>
-                                            </Card>
+                                         <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {revelationCards.map((card, index) => (
+                                                <motion.div
+                                                    key={card.key}
+                                                    initial={{ opacity: 0, y: 20 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    transition={{ delay: 0.1 * index }}
+                                                >
+                                                    <Card className='bg-card/50 h-full'>
+                                                        <CardHeader>
+                                                            <CardTitle className={`flex items-center gap-2 ${card.color}`}>
+                                                                <card.icon className="w-5 h-5"/>
+                                                                {card.data.title}
+                                                            </CardTitle>
+                                                        </CardHeader>
+                                                        <CardContent className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground">
+                                                             <ReactMarkdown>{card.data.analysis}</ReactMarkdown>
+                                                        </CardContent>
+                                                    </Card>
+                                                </motion.div>
+                                            ))}
                                         </div>
-                                    </div>
-                                    <div className="space-y-4 pt-8 border-t border-dashed border-border/50 mt-8">
-                                         <div className="prose dark:prose-invert max-w-none text-center">
-                                            <h4 className="font-semibold text-primary">Conexión con Gematria</h4>
-                                            <ReactMarkdown>{analysisResult.revelation.gematriaConnection}</ReactMarkdown>
-                                         </div>
-                                         <div className="text-center p-6 bg-card/30 rounded-lg">
-                                             <h4 className="font-semibold text-primary mb-2">Pregunta para tu Reflexión</h4>
-                                             <p className="text-lg italic text-foreground/80">"{analysisResult.revelation.reflection}"</p>
-                                         </div>
-                                    </div>
+                                     </div>
+                                     <div className="text-center p-6 bg-card/30 rounded-lg mt-8 border-t border-dashed border-border/50">
+                                         <h4 className="font-semibold text-primary mb-2">Pregunta para tu Reflexión</h4>
+                                         <p className="text-lg italic text-foreground/80">"{analysisResult.revelation.reflection}"</p>
+                                     </div>
                                 </motion.div>
                             ) : (
                                  <motion.div key="initial" initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} className="text-center py-10 border-2 border-dashed border-border/50 rounded-lg">
@@ -269,3 +272,4 @@ export default function TorahCodePage() {
         </div>
     );
 }
+
