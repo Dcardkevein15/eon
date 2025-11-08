@@ -5,15 +5,17 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, Mic, Settings, WifiOff, Bot, ChevronLeft } from 'lucide-react';
+import { Loader2, Mic, Settings, WifiOff, Bot, ChevronLeft, Pause, Play, Square } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { aetherAction } from '@/ai/flows/aether-flows';
 import { generateSpeech } from '@/ai/flows/speech';
 import { AnimatePresence, motion } from 'framer-motion';
+import AudioVisualizer from '@/components/dreams/AudioVisualizer';
+import RecordingControls from '@/components/dreams/RecordingControls';
 
 // --- TYPES ---
-type AetherStatus = 'initializing' | 'idle' | 'listening' | 'processing' | 'speaking';
+type AetherStatus = 'initializing' | 'idle' | 'listening' | 'processing' | 'speaking' | 'paused';
 type TranscriptEntry = {
   id: string;
   speaker: 'user' | 'ai';
@@ -21,9 +23,15 @@ type TranscriptEntry = {
 };
 
 // --- CONSTANTS ---
-const VAD_THRESHOLD = 0.1; // Voice Activity Detection sensitivity
-const SILENCE_DURATION_MS = 1500; // Time of silence to trigger processing
-const FRAME_CAPTURE_INTERVAL_MS = 500; // How often to capture video frames
+const SILENCE_DURATION_MS = 2500; // Time of silence to trigger processing
+const FRAME_CAPTURE_INTERVAL_MS = 700; // How often to capture video frames
+const AUDIO_FORMAT_CANDIDATES = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/ogg;codecs=opus',
+    'audio/mp4',
+    'audio/aac',
+];
 
 // --- MAIN COMPONENT ---
 export default function AetherPage() {
@@ -35,11 +43,12 @@ export default function AetherPage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const vadIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const frameIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const supportedMimeTypeRef = useRef<string | null>(null);
 
   // --- State ---
   const [status, setStatus] = useState<AetherStatus>('initializing');
@@ -49,6 +58,11 @@ export default function AetherPage() {
 
   // --- Permission and Stream Handling ---
   useEffect(() => {
+    // Find a supported MIME type once
+    supportedMimeTypeRef.current = AUDIO_FORMAT_CANDIDATES.find(
+        (mimeType) => MediaRecorder.isTypeSupported(mimeType)
+    ) || null;
+
     const getPermissions = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -75,6 +89,8 @@ export default function AetherPage() {
     // Cleanup function to stop media tracks when the component unmounts
     return () => {
         streamRef.current?.getTracks().forEach(track => track.stop());
+        if(silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+        if(frameIntervalRef.current) clearInterval(frameIntervalRef.current);
     };
   }, [toast]);
 
@@ -83,6 +99,7 @@ export default function AetherPage() {
   const processAudioChunk = useCallback(async (audioBlob: Blob) => {
     if (!latestVideoFrame) {
       toast({ variant: 'destructive', title: 'Error de Captura', description: 'No se pudo capturar un fotograma de video.' });
+      setStatus('idle');
       return;
     }
     setStatus('processing');
@@ -94,7 +111,6 @@ export default function AetherPage() {
       const conversationHistory = transcript.map(t => `${t.speaker}: ${t.text}`).join('\n');
 
       try {
-        // 1. Get text response from Aether flow
         const { responseText } = await aetherAction({
           audioDataUri,
           videoFrameDataUri: latestVideoFrame,
@@ -103,16 +119,14 @@ export default function AetherPage() {
 
         addTranscriptEntry('ai', responseText);
         
-        // 2. Generate speech from the text
         setStatus('speaking');
         const { media } = await generateSpeech(responseText);
         
-        // 3. Play the speech
         if (audioPlayerRef.current) {
           audioPlayerRef.current.src = media;
           audioPlayerRef.current.play();
           audioPlayerRef.current.onended = () => {
-            setStatus('idle'); // Back to idle after speaking is finished
+            setStatus('idle');
           };
         }
 
@@ -123,63 +137,97 @@ export default function AetherPage() {
       }
     };
   }, [latestVideoFrame, toast, transcript]);
+  
+  const startSilenceDetection = useCallback(() => {
+    if (!streamRef.current || !analyserRef.current) return;
+
+    const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+
+    const checkSilence = () => {
+        analyserRef.current?.getByteFrequencyData(dataArray);
+        const volume = dataArray.reduce((acc, val) => acc + val, 0) / dataArray.length;
+        
+        if (volume < 5) { // Lower threshold for silence
+            if (!silenceTimerRef.current) {
+                silenceTimerRef.current = setTimeout(() => {
+                    if (mediaRecorderRef.current?.state === 'recording') {
+                        mediaRecorderRef.current.stop();
+                    }
+                }, SILENCE_DURATION_MS);
+            }
+        } else {
+            if (silenceTimerRef.current) {
+                clearTimeout(silenceTimerRef.current);
+                silenceTimerRef.current = null;
+            }
+        }
+
+        if (status === 'listening' || status === 'paused') {
+            requestAnimationFrame(checkSilence);
+        }
+    };
+    checkSilence();
+  }, [status]);
+
 
   // --- VAD and Recording Logic ---
   const startListening = useCallback(() => {
-    if (!streamRef.current || status !== 'idle') return;
+    if (!streamRef.current || (status !== 'idle' && status !== 'paused')) return;
     
-    mediaRecorderRef.current = new MediaRecorder(streamRef.current, { mimeType: 'audio/webm' });
-    const audioChunks: Blob[] = [];
+    if (!supportedMimeTypeRef.current) {
+        toast({ variant: "destructive", title: "Error de Grabación", description: "Tu navegador no soporta los formatos de audio necesarios." });
+        setStatus('idle');
+        return;
+    }
+
+    if (status === 'paused' && mediaRecorderRef.current) {
+        mediaRecorderRef.current.resume();
+        setStatus('listening');
+        return;
+    }
+
+    try {
+        mediaRecorderRef.current = new MediaRecorder(streamRef.current, { mimeType: supportedMimeTypeRef.current });
+    } catch (e) {
+        console.error("Failed to create MediaRecorder", e);
+        toast({ variant: "destructive", title: "Error de Grabación", description: "No se pudo iniciar el grabador de audio." });
+        setStatus('idle');
+        return;
+    }
+    
+    audioChunksRef.current = [];
 
     mediaRecorderRef.current.ondataavailable = (event) => {
-      if (event.data.size > 0) audioChunks.push(event.data);
+      if (event.data.size > 0) audioChunksRef.current.push(event.data);
     };
 
     mediaRecorderRef.current.onstop = () => {
-      if (audioChunks.length > 0) {
-        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+      if (audioChunksRef.current.length > 0) {
+        const audioBlob = new Blob(audioChunksRef.current, { type: supportedMimeTypeRef.current! });
         processAudioChunk(audioBlob);
       }
-      if(vadIntervalRef.current) clearInterval(vadIntervalRef.current);
       if(frameIntervalRef.current) clearInterval(frameIntervalRef.current);
     };
 
     try {
-        mediaRecorderRef.current.start();
+        mediaRecorderRef.current.start(250); // Slice recording for better real-time feel
         setStatus('listening');
     } catch(e) {
-        console.error("Failed to start MediaRecorder", e);
-        toast({ variant: "destructive", title: "Error de Grabación", description: "No se pudo iniciar la grabación. Intenta recargar la página." });
+        console.error("Failed to execute 'start' on 'MediaRecorder'", e);
+        toast({ variant: "destructive", title: "Error al Grabar", description: `Hubo un problema al iniciar la grabación. ${e}` });
         setStatus('idle');
         return;
     }
 
     // --- Voice Activity Detection (VAD) ---
-    audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const source = audioContextRef.current.createMediaStreamSource(streamRef.current);
-    analyserRef.current = audioContextRef.current.createAnalyser();
-    analyserRef.current.fftSize = 512;
-    source.connect(analyserRef.current);
-    
-    const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
-
-    vadIntervalRef.current = setInterval(() => {
-      analyserRef.current?.getByteFrequencyData(dataArray);
-      const volume = dataArray.reduce((acc, val) => acc + val, 0) / dataArray.length / 255;
-
-      if (volume > VAD_THRESHOLD) {
-        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-      } else {
-        if (mediaRecorderRef.current?.state === 'recording') {
-            if (!silenceTimerRef.current) {
-                silenceTimerRef.current = setTimeout(() => {
-                    mediaRecorderRef.current?.stop();
-                    silenceTimerRef.current = null;
-                }, SILENCE_DURATION_MS);
-            }
-        }
-      }
-    }, 100);
+    if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const source = audioContextRef.current.createMediaStreamSource(streamRef.current);
+        analyserRef.current = audioContextRef.current.createAnalyser();
+        analyserRef.current.fftSize = 256;
+        source.connect(analyserRef.current);
+    }
+    startSilenceDetection();
     
     // --- Video Frame Capturing ---
     frameIntervalRef.current = setInterval(() => {
@@ -193,13 +241,21 @@ export default function AetherPage() {
         }
     }, FRAME_CAPTURE_INTERVAL_MS);
 
-  }, [processAudioChunk, status, toast]);
+  }, [processAudioChunk, status, toast, startSilenceDetection]);
   
+  const pauseListening = useCallback(() => {
+    if(mediaRecorderRef.current?.state === 'recording') {
+        mediaRecorderRef.current.pause();
+        setStatus('paused');
+    }
+  }, []);
+
   const stopListening = useCallback(() => {
-    mediaRecorderRef.current?.stop();
-    if(vadIntervalRef.current) clearInterval(vadIntervalRef.current);
-    if(frameIntervalRef.current) clearInterval(frameIntervalRef.current);
-    if(silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    if (mediaRecorderRef.current && (mediaRecorderRef.current.state === 'recording' || mediaRecorderRef.current.state === 'paused')) {
+        mediaRecorderRef.current.stop();
+        // The onstop event handler will do the rest
+    }
+    // Set status to idle to allow a new recording to start
     setStatus('idle');
   }, []);
 
@@ -213,6 +269,7 @@ export default function AetherPage() {
       initializing: { text: 'Iniciando Aether...', color: 'bg-gray-500' },
       idle: { text: 'Toca para hablar', color: 'bg-blue-500' },
       listening: { text: 'Escuchando...', color: 'bg-green-500' },
+      paused: { text: 'Pausado', color: 'bg-yellow-500'},
       processing: { text: 'Pensando...', color: 'bg-yellow-500' },
       speaking: { text: 'Hablando...', color: 'bg-purple-500' },
     };
@@ -273,15 +330,23 @@ export default function AetherPage() {
                            ))}
                         </div>
 
+                         {/* Visualizer */}
+                        <div className="flex-shrink-0 flex justify-center h-20 -mt-8">
+                             {(status === 'listening' || status === 'paused' || status === 'speaking') && (
+                                <AudioVisualizer stream={streamRef.current} />
+                            )}
+                        </div>
+
                         {/* Control Button */}
                         <div className="flex-shrink-0 flex justify-center py-8">
-                            <button 
-                                onClick={status === 'idle' ? startListening : stopListening}
-                                className="w-20 h-20 bg-blue-500 rounded-full flex items-center justify-center shadow-lg transform transition-transform duration-200 hover:scale-110 disabled:opacity-50"
-                                disabled={status === 'processing' || status === 'speaking' || status === 'initializing'}
-                            >
-                                {status === 'listening' ? <Loader2 className="w-8 h-8 animate-spin"/> : <Mic className="w-8 h-8"/>}
-                            </button>
+                           <RecordingControls 
+                                status={status as any} 
+                                onStart={startListening} 
+                                onPause={pauseListening} 
+                                onResume={startListening} 
+                                onStop={stopListening} 
+                                onClear={() => {}}
+                            />
                         </div>
                     </motion.div>
                 )}
@@ -291,3 +356,4 @@ export default function AetherPage() {
     </div>
   );
 }
+

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Mic, Square, Pause, Play, Trash2, Loader2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-type RecordingStatus = 'idle' | 'recording' | 'paused' | 'transcribing' | 'done';
+type RecordingStatus = 'idle' | 'listening' | 'paused' | 'processing' | 'speaking' | 'done' | 'initializing';
 
 interface RecordingControlsProps {
     status: RecordingStatus;
@@ -28,8 +28,11 @@ const MotionButton = motion(Button);
 export default function RecordingControls({ status, onStart, onPause, onResume, onStop, onClear }: RecordingControlsProps) {
 
   const renderMainButton = () => {
+    const disabled = status === 'processing' || status === 'speaking' || status === 'initializing';
+
     switch (status) {
       case 'idle':
+      case 'done':
         return (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -38,17 +41,18 @@ export default function RecordingControls({ status, onStart, onPause, onResume, 
                     key="start"
                     variants={iconVariants}
                     initial="hidden" animate="visible" exit="exit"
-                    className="h-8 w-8 rounded-full bg-primary/20 text-primary hover:bg-primary/30"
+                    className="h-20 w-20 rounded-full bg-blue-500 text-white hover:bg-blue-600 shadow-lg transform transition-transform duration-200 hover:scale-110"
                     size="icon"
                     onClick={onStart}
+                    disabled={disabled}
                 >
-                    <Mic className="h-5 w-5" />
+                    <Mic className="h-8 w-8" />
                 </MotionButton>
             </TooltipTrigger>
-            <TooltipContent><p>Empezar a grabar</p></TooltipContent>
+            <TooltipContent><p>Empezar a hablar</p></TooltipContent>
           </Tooltip>
         );
-      case 'recording':
+      case 'listening':
         return (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -57,14 +61,15 @@ export default function RecordingControls({ status, onStart, onPause, onResume, 
                     key="pause"
                     variants={iconVariants}
                     initial="hidden" animate="visible" exit="exit"
-                    className="h-8 w-8 rounded-full bg-amber-500/20 text-amber-500 hover:bg-amber-500/30"
+                    className="h-20 w-20 rounded-full bg-amber-500 text-white hover:bg-amber-600 shadow-lg transform transition-transform duration-200 hover:scale-110"
                     size="icon"
                     onClick={onPause}
+                    disabled={disabled}
                 >
-                    <Pause className="h-5 w-5" />
+                    <Pause className="h-8 w-8" />
                 </MotionButton>
             </TooltipTrigger>
-             <TooltipContent><p>Pausar grabación</p></TooltipContent>
+             <TooltipContent><p>Pausar</p></TooltipContent>
           </Tooltip>
         );
       case 'paused':
@@ -76,57 +81,40 @@ export default function RecordingControls({ status, onStart, onPause, onResume, 
                     key="resume"
                     variants={iconVariants}
                     initial="hidden" animate="visible" exit="exit"
-                    className="h-8 w-8 rounded-full bg-primary/20 text-primary hover:bg-primary/30"
+                    className="h-20 w-20 rounded-full bg-blue-500 text-white hover:bg-blue-600 shadow-lg transform transition-transform duration-200 hover:scale-110"
                     size="icon"
                     onClick={onResume}
+                    disabled={disabled}
                 >
-                    <Play className="h-5 w-5" />
+                    <Play className="h-8 w-8" />
                 </MotionButton>
             </TooltipTrigger>
-            <TooltipContent><p>Reanudar grabación</p></TooltipContent>
+            <TooltipContent><p>Reanudar</p></TooltipContent>
           </Tooltip>
         );
-      case 'transcribing':
+       case 'processing':
+       case 'speaking':
+       case 'initializing':
         return (
             <MotionButton
                 disabled
                 type="button"
-                key="transcribing"
+                key="processing"
                 variants={iconVariants}
                 initial="hidden" animate="visible" exit="exit"
-                className="h-8 w-8 rounded-full"
+                className="h-20 w-20 rounded-full"
                 size="icon"
-                variant="ghost"
             >
-                <Loader2 className="h-5 w-5 animate-spin" />
+                <Loader2 className="h-8 w-8 animate-spin" />
             </MotionButton>
         );
-       case 'done':
-            return (
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                         <MotionButton
-                            type="button"
-                            key="clear"
-                            variants={iconVariants}
-                            initial="hidden" animate="visible" exit="exit"
-                            className="h-8 w-8 rounded-full bg-destructive/20 text-destructive hover:bg-destructive/30"
-                            size="icon"
-                            onClick={onClear}
-                        >
-                            <Trash2 className="h-5 w-5" />
-                        </MotionButton>
-                    </TooltipTrigger>
-                    <TooltipContent><p>Eliminar grabación</p></TooltipContent>
-                </Tooltip>
-            )
       default:
         return null;
     }
   };
 
   const renderStopButton = () => {
-    if(status === 'recording' || status === 'paused') {
+    if(status === 'listening' || status === 'paused') {
        return (
          <Tooltip>
             <TooltipTrigger asChild>
@@ -134,17 +122,17 @@ export default function RecordingControls({ status, onStart, onPause, onResume, 
                     type="button"
                     key="stop"
                     layout
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    className="h-8 w-8 rounded-full bg-red-500/20 text-red-500 hover:bg-red-500/30"
+                    initial={{ opacity: 0, scale: 0.8, x: 50 }}
+                    animate={{ opacity: 1, scale: 1, x: 0 }}
+                    exit={{ opacity: 0, scale: 0.8, x: 50 }}
+                    className="h-16 w-16 rounded-full bg-red-500 text-white hover:bg-red-600 shadow-md"
                     size="icon"
                     onClick={onStop}
                 >
-                    <Square className="h-5 w-5" />
+                    <Square className="h-7 w-7" />
                 </MotionButton>
             </TooltipTrigger>
-            <TooltipContent><p>Finalizar grabación</p></TooltipContent>
+            <TooltipContent><p>Finalizar conversación</p></TooltipContent>
          </Tooltip>
        )
     }
@@ -153,14 +141,15 @@ export default function RecordingControls({ status, onStart, onPause, onResume, 
 
   return (
     <TooltipProvider>
-      <div className="flex items-center gap-2">
-         <AnimatePresence mode="wait">
-            {renderMainButton()}
-        </AnimatePresence>
+      <div className="flex items-center gap-4">
          <AnimatePresence>
             {renderStopButton()}
+        </AnimatePresence>
+         <AnimatePresence mode="wait">
+            {renderMainButton()}
         </AnimatePresence>
       </div>
     </TooltipProvider>
   );
 }
+
