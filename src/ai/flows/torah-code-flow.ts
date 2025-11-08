@@ -35,12 +35,12 @@ const PastRevelationSchema = z.object({
 
 const PresentRevelationSchema = z.object({
     title: z.string().describe("Un título para la sección, como 'El Reflejo en el Ahora' o 'El Espejo del Presente'."),
-    analysis: z.string().describe("Una interpretación del significado y las implicaciones del concepto en el contexto actual. Debe analizar las fuerzas en juego, los conflictos y las energías que rodean al término hoy."),
+    analysis: z.string().describe("Una interpretación del significado y las implicaciones del concepto en el contexto actual. Debe analizar las fuerzas en juego, los conflictos y las energías que rodean al término hoy, desde una perspectiva simbólica y psicológica."),
 });
 
 const FutureRevelationSchema = z.object({
     title: z.string().describe("Un título para la sección, como 'La Sombra del Porvenir' o 'El Sendero Futuro'."),
-    analysis: z.string().describe("Una extrapolación de una o varias posibles trayectorias futuras basadas en los patrones de la matriz. Debe ser presentada como una visión, advertencia o proyección, no como una certeza absoluta."),
+    analysis: z.string().describe("Una extrapolación de una o varias posibles trayectorias futuras basadas en los patrones de la matriz, presentada como una visión, advertencia o consejo espiritual."),
 });
 
 
@@ -142,9 +142,9 @@ const revelationPrompt = ai.definePrompt({
         matrix: z.string(), // The matrix stringified
     })},
     output: { schema: RevelationOutputSchema },
-    prompt: `Eres un erudito cabalista y un maestro de la Gematria. Has descubierto una matriz de letras en la Torá alrededor de la palabra clave "{{hebrewTerm}}" (que se relaciona con el concepto de "{{searchTerm}}").
+    prompt: `Eres un erudito cabalista, un psicólogo junguiano y un vidente. Has descubierto una matriz de letras en la Torá alrededor de la palabra clave "{{hebrewTerm}}" (que se relaciona con el concepto de "{{searchTerm}}").
 
-Tu tarea es generar una revelación profunda y multifacética, un tríptico que abarque pasado, presente y futuro.
+Tu tarea es generar una revelación profunda y multifacética, un tríptico que abarque pasado, presente y futuro, tejiendo lo histórico con lo simbólico y lo espiritual.
 
 **ESTRUCTURA DE SALIDA OBLIGATORIA (JSON):**
 
@@ -152,23 +152,23 @@ Tu tarea es generar una revelación profunda y multifacética, un tríptico que 
 2.  **context**: Explica claramente que la búsqueda de \`{{searchTerm}}\` llevó al término hebreo \`{{hebrewTerm}}\`, encontrado con una distancia de salto de \`{{skip}}\`.
 
 3.  **past (El Historiador)**: Un objeto con:
-    *   \`title\`: "El Eco del Pasado" o similar.
-    *   \`analysis\`: Analiza cómo la matriz refleja eventos históricos o pasajes bíblicos. Busca el origen, la "semilla" del concepto en el pasado.
+    *   \`title\`: "El Eco del Pasado" o un título evocador similar.
+    *   \`analysis\`: Realiza un análisis histórico-narrativo. Conecta la matriz con eventos o pasajes bíblicos conocidos. Busca el origen, la "semilla" del concepto en la historia sagrada.
 
-4.  **present (El Analista)**: Un objeto con:
-    *   \`title\`: "El Reflejo en el Ahora" o similar.
-    *   \`analysis\`: Interpreta las palabras cruzadas en la matriz y su significado en el contexto actual. Analiza las fuerzas en juego y los conflictos del concepto hoy.
+4.  **present (El Psicólogo Simbólico)**: Un objeto con:
+    *   \`title\`: "El Espejo del Presente" o similar.
+    *   \`analysis\`: Interpreta el significado para el "ahora". Analiza las palabras cruzadas en la matriz y su implicación simbólica y psicológica. ¿Qué arquetipos están en juego? ¿Qué conflicto interno revela?
 
-5.  **future (El Profeta)**: Un objeto con:
+5.  **future (El Profeta Espiritual)**: Un objeto con:
     *   \`title\`: "La Sombra del Porvenir" o similar.
-    *   \`analysis\`: Basándote en los patrones, extrapola una o varias posibles trayectorias futuras. Preséntalo como una visión, advertencia o proyección, no como una certeza absoluta.
+    *   \`analysis\`: Ofrece una proyección y un consejo. Basándote en los patrones, extrapola una posible trayectoria futura. Preséntalo como una visión o advertencia. Luego, destila un consejo esotérico o espiritual basado en toda la revelación.
 
-6.  **gematriaConnection**: Calcula el valor numérico (Gematria) de \`{{hebrewTerm}}\`. Encuentra al menos 1-2 otras palabras hebreas significativas con el mismo valor y explica la conexión mística.
+6.  **gematriaConnection**: Calcula el valor numérico (Gematria) de \`{{hebrewTerm}}\`. Encuentra al menos 1-2 otras palabras hebreas significativas con el mismo valor y explica la conexión mística entre ellas de forma elocuente.
 
 7.  **reflection**: Concluye con una única pregunta final, poderosa y abierta, para la reflexión del usuario.
 
 ---
-**CRÍTICO:** Analiza la matriz a fondo. Busca palabras en horizontal (derecha a izquierda), vertical y diagonal. Sé poético pero claro.
+**CRÍTICO:** Analiza la matriz a fondo. Busca palabras en horizontal (derecha a izquierda), vertical y diagonal. Sé poético, profundo y claro.
 ---
 
 **Matriz de Letras a Analizar:**
