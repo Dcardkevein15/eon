@@ -60,10 +60,10 @@ export default function TorahCodePage() {
             const result = await runTorahCodeAnalysis({ searchTerm });
             setAnalysisResult(result);
             
-            const dataToSave = {
+            const dataToSave: Omit<TorahCodeRecord, 'id' | 'timestamp'> = {
               ...result,
               matrix: { rows: result.matrix.map(row => row.join('')) }, // Flatten array
-              timestamp: serverTimestamp(),
+              timestamp: serverTimestamp() as any, // Firestore will convert this
               userId: user.uid,
             };
 
@@ -272,4 +272,3 @@ export default function TorahCodePage() {
         </div>
     );
 }
-
