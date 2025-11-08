@@ -106,6 +106,31 @@ function findELS(text: string, word: string, skip: number): number {
 }
 
 /**
+ * Searches for any word of a given length at a specific skip.
+ */
+function findAnyWordOfLength(text: string, length: number, skip: number): { word: string; index: number } | null {
+  if (skip <= 0 || length <= 0) return null;
+  const textLen = text.length;
+  for (let i = 0; i < textLen - (length - 1) * skip; i++) {
+    let word = '';
+    let possible = true;
+    for (let j = 0; j < length; j++) {
+      const charIndex = i + j * skip;
+      if (charIndex >= textLen) {
+        possible = false;
+        break;
+      }
+      word += text[charIndex];
+    }
+    if (possible) {
+      return { word, index: i };
+    }
+  }
+  return null;
+}
+
+
+/**
  * Extracts a matrix of characters around a found ELS.
  */
 function extractMatrix(text: string, startIndex: number, skip: number, wordLength: number, size: number = 21): string[][] {
@@ -126,6 +151,17 @@ function extractMatrix(text: string, startIndex: number, skip: number, wordLengt
     }
     return matrix;
 }
+
+const gematriaValues: Record<string, number> = {
+    'א': 1, 'ב': 2, 'ג': 3, 'ד': 4, 'ה': 5, 'ו': 6, 'ז': 7, 'ח': 8, 'ט': 9,
+    'י': 10, 'כ': 20, 'ל': 30, 'מ': 40, 'נ': 50, 'ס': 60, 'ע': 70, 'פ': 80, 'צ': 90,
+    'ק': 100, 'ר': 200, 'ש': 300, 'ת': 400
+};
+
+function calculateGematria(hebrewWord: string): number {
+    return hebrewWord.split('').reduce((sum, char) => sum + (gematriaValues[char] || 0), 0);
+}
+
 
 // --- AI PROMPTS ---
 
@@ -167,7 +203,7 @@ Tu tarea es generar un mosaico de revelaciones, analizando la matriz desde seis 
 **ESTRUCTURA DE SALIDA OBLIGATORIA (JSON):**
 
 1.  **overallTitle**: Un título poético y evocador para la revelación completa.
-2.  **context**: Explica claramente que la búsqueda de \`{{searchTerm}}\` llevó al término hebreo \`{{hebrewTerm}}\`, encontrado con una distancia de salto de \`{{skip}}\`.
+2.  **context**: Explica claramente que la búsqueda de \`{{searchTerm}}\` llevó al término hebreo \`{{hebrewTerm}}\`, encontrado con una distancia de salto de \`{{skip}}\`. Si la búsqueda fue forzada por Gematria, explícalo como una "sincronicidad numérica".
 3.  **gematriaConnection**: Calcula el valor numérico (Gematria) de \`{{hebrewTerm}}\`. Encuentra al menos 1-2 otras palabras hebreas significativas con el mismo valor y explica la conexión mística entre ellas.
 4.  **reflection**: Concluye con una única pregunta final, poderosa y abierta, para la reflexión del usuario.
 
@@ -212,6 +248,14 @@ Genera el objeto JSON completo con los diez campos solicitados.`,
 
 // --- MAIN FLOW ---
 
+const translateToHebrewPhonetic = ai.definePrompt({
+    name: 'translateToHebrewPhoneticPrompt',
+    input: { schema: z.object({ text: z.string() }) },
+    output: { schema: z.object({ hebrew: z.string() }) },
+    prompt: 'Traduce fonéticamente el siguiente texto a letras hebreas (sin vocales). Solo devuelve las letras hebreas. Texto: "{{text}}"',
+});
+
+
 export const runTorahCodeAnalysis = ai.defineFlow(
   {
     name: 'runTorahCodeAnalysisFlow',
@@ -219,55 +263,68 @@ export const runTorahCodeAnalysis = ai.defineFlow(
     outputSchema: AnalysisResultSchema,
   },
   async ({ searchTerm }) => {
-    // 1. Get a list of cryptographic search terms and skip equations from the AI
+    // --- STAGE 1: Conceptual Search ---
     const { output: design } = await cryptographicDesignPrompt({ searchTerm });
-    if (!design || !design.searchTerms || design.searchTerms.length === 0) {
-      throw new Error("La IA no pudo diseñar una estrategia criptográfica para este término.");
-    }
-    const { searchTerms } = design;
-
-    // 2. Iterate through the AI's suggested terms and search for an ELS
     let startIndex = -1;
     let foundSkip = -1;
     let foundTerm = '';
-
-    for (const term of searchTerms) {
-        // First, try the AI's "prophesied" skip
-        startIndex = findELS(TORAH_TEXT, term.hebrewTerm, term.skipEquation);
-        if (startIndex !== -1) {
-            foundTerm = term.hebrewTerm;
-            foundSkip = term.skipEquation;
-            break; // Found a match, exit the loop
+    
+    if (design && design.searchTerms && design.searchTerms.length > 0) {
+        for (const term of design.searchTerms) {
+            startIndex = findELS(TORAH_TEXT, term.hebrewTerm, term.skipEquation);
+            if (startIndex !== -1) {
+                foundTerm = term.hebrewTerm;
+                foundSkip = term.skipEquation;
+                break;
+            }
+        }
+        
+        if (startIndex === -1) {
+            const MAX_SKIP = 50000;
+            for (const term of design.searchTerms) {
+                for (let skip = 1; skip <= MAX_SKIP; skip++) {
+                    if (skip === term.skipEquation) continue;
+                    const index = findELS(TORAH_TEXT, term.hebrewTerm, skip);
+                    if (index !== -1) {
+                        startIndex = index;
+                        foundTerm = term.hebrewTerm;
+                        foundSkip = skip;
+                        break;
+                    }
+                }
+                if (startIndex !== -1) break;
+            }
         }
     }
-    
-    // If no match was found with the AI's specific skips, do a broad search
+
+    // --- STAGE 2: Gematria-Forced Search (if Stage 1 failed) ---
     if (startIndex === -1) {
-        const MAX_SKIP = 50000;
-        // Iterate through each suggested term again for a broad search
-        for (const term of searchTerms) {
-            // Now, iterate through a wide range of skips for this term
-            for (let skip = 1; skip <= MAX_SKIP; skip++) {
-                 // Skip the one we already tried for this term
-                if (skip === term.skipEquation) continue;
-                
-                const index = findELS(TORAH_TEXT, term.hebrewTerm, skip);
-                if (index !== -1) {
-                    startIndex = index;
-                    foundTerm = term.hebrewTerm;
+        const { output: phonetic } = await translateToHebrewPhonetic({ text: searchTerm });
+        if (phonetic && phonetic.hebrew) {
+            const skip = calculateGematria(phonetic.hebrew);
+            if (skip > 0) {
+                // Search for any 4-letter or 3-letter word with this skip
+                const found4 = findAnyWordOfLength(TORAH_TEXT, 4, skip);
+                if (found4) {
+                    foundTerm = found4.word;
+                    startIndex = found4.index;
                     foundSkip = skip;
-                    break; // Stop at the first find
+                } else {
+                    const found3 = findAnyWordOfLength(TORAH_TEXT, 3, skip);
+                    if (found3) {
+                        foundTerm = found3.word;
+                        startIndex = found3.index;
+                        foundSkip = skip;
+                    }
                 }
             }
-            if (startIndex !== -1) {
-                break; // Found a match, exit the outer loop
-            }
         }
     }
 
+
     if (startIndex === -1) {
-      const triedTerms = searchTerms.map(t => t.hebrewTerm).join(', ');
-      throw new Error(`No se encontraron conexiones para '${searchTerm}' en la Torá (se intentó con los conceptos: ${triedTerms}).`);
+      const triedTerms = design?.searchTerms.map(t => t.hebrewTerm).join(', ') || 'ninguno';
+      throw new Error(`No se encontraron conexiones para '${searchTerm}' en la Torá (se intentó con los conceptos: ${triedTerms}). Incluso la búsqueda forzada por Gematria falló.`);
     }
 
     // 3. Extract the surrounding matrix
