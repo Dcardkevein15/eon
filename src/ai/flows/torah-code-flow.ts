@@ -18,13 +18,13 @@ const TorahCodeInputSchema = z.object({
 });
 
 const CryptographicTermSchema = z.object({
-  hebrewTerm: z.string().describe('El término de búsqueda en hebreo, sin vocales ni puntuación.'),
-  explanation: z.string().describe('Una breve explicación de cómo se derivó este término (fonético, gematria, etc.).'),
+  hebrewTerm: z.string().describe('Un término hebreo existente y relevante (sin vocales) que se relaciona conceptualmente con la búsqueda.'),
+  explanation: z.string().describe('Una breve explicación de por qué este término hebreo real se relaciona con la búsqueda original.'),
   skipEquation: z.number().int().min(1).describe('La distancia de salto (skip) que la IA considera óptima para este término específico.'),
 });
 
 const CryptographicDesignOutputSchema = z.object({
-  searchTerms: z.array(CryptographicTermSchema).describe('Una lista de posibles términos hebreos a buscar, cada uno con su propia ecuación de salto.'),
+  searchTerms: z.array(CryptographicTermSchema).describe('Una lista de términos hebreos conceptualmente relacionados para buscar, cada uno con su propia ecuación de salto.'),
 });
 
 
@@ -89,21 +89,21 @@ const cryptographicDesignPrompt = ai.definePrompt({
     name: 'cryptographicDesignPrompt',
     input: { schema: TorahCodeInputSchema },
     output: { schema: CryptographicDesignOutputSchema },
-    prompt: `Eres un rabino cabalista, un maestro de la Gematria (el valor numérico de las letras hebreas) y el Notarikon (el uso de iniciales). Tu tarea es tomar un término de búsqueda moderno y diseñar un conjunto de términos de búsqueda en hebreo antiguo y "ecuaciones de salto" para encontrarlo codificado en la Torá.
+    prompt: `Eres un rabino cabalista y un maestro de la Gematria. Tu tarea es tomar un término de búsqueda moderno y diseñar un conjunto de búsquedas para encontrarlo codificado conceptualmente en la Torá.
+
+**CRÍTICO: NO inventes palabras en hebreo. NO hagas traducciones fonéticas literales. En su lugar, encuentra conceptos o palabras hebreas REALES que existan en la Biblia y que se relacionen con la idea de la búsqueda.**
 
 Término de búsqueda: "{{{searchTerm}}}"
 
 Sigue estos pasos:
-1.  **Analiza el Término:** ¿Es un nombre propio, un concepto, un evento?
-2.  **Genera un Conjunto de Búsqueda (3-5 opciones):** Crea una lista de posibles términos hebreos (sin vocales) para buscar. Sé creativo y místico. No te limites a la traducción literal.
-    *   **Traducción Fonética:** ¿Cómo sonaría el término en hebreo? (Ej: "Donald Trump" -> "דנלד טרמפ")
-    *   **Equivalencia por Gematria:** Calcula el valor numérico del término en español/inglés (A=1, B=2...) y encuentra una palabra o frase hebrea con un valor de Gematria similar que sea conceptualmente relevante.
-    *   **Notarikon/Acrónimo:** Si es una frase, usa las iniciales para formar una nueva palabra.
-    *   **Concepto Relacionado:** ¿Qué concepto o figura bíblica se relaciona con el término? (Ej: para "éxito", podrías buscar "bendición" - "ברכה").
+1.  **Analiza el Concepto:** ¿Cuál es la esencia del término? Si es "Donald Trump", la esencia podría ser "líder poderoso", "constructor", "hombre rico", "presidente", "casa grande". Si es "internet", podría ser "red", "conexión mundial", "sabiduría infinita".
+2.  **Genera un Conjunto de Búsqueda (3-5 opciones):** Para cada concepto esencial, encuentra una palabra o frase hebrea **real y existente** (sin vocales).
+    *   Ejemplo para "Donald Trump": Podrías buscar "מלך" (rey), "נשיא" (presidente), "איש עשיר" (hombre rico).
+    *   Ejemplo para "éxito": Podrías buscar "ברכה" (bendición), "הצלחה" (prosperidad).
 3.  **Diseña la Ecuación de Salto:** Para CADA término hebreo que generes, asigna un número de salto (skip) que sea numerológicamente significativo. Piensa en fechas, números bíblicos importantes, o la propia gematria del término.
-4.  **Proporciona una Explicación:** Para cada término, explica brevemente por qué lo elegiste (ej: "Traducción fonética", "Gematria de 777, que representa la perfección divina").
+4.  **Proporciona una Explicación:** Para cada término, explica brevemente por qué elegiste este concepto hebreo real para representar la búsqueda original.
 
-Genera una lista de al menos 3 opciones de búsqueda.`,
+Genera una lista de al menos 3 opciones de búsqueda conceptual.`,
 });
 
 
@@ -115,7 +115,7 @@ const revelationPrompt = ai.definePrompt({
         matrix: z.string(), // The matrix stringified
     })},
     output: { schema: z.object({ revelation: z.string() }) },
-    prompt: `Eres un rabino cabalista y un maestro de la Gematria. Has descubierto una matriz de letras en la Torá alrededor de la palabra clave "{{hebrewTerm}}" (que significa "{{searchTerm}}").
+    prompt: `Eres un rabino cabalista y un maestro de la Gematria. Has descubierto una matriz de letras en la Torá alrededor de la palabra clave "{{hebrewTerm}}" (que se relaciona con el concepto de "{{searchTerm}}").
 
 Tu tarea es analizar esta matriz para encontrar palabras o conceptos ocultos. Busca palabras que se lean horizontalmente (de derecha a izquierda), verticalmente (de arriba a abajo) o diagonalmente.
 
@@ -184,9 +184,10 @@ export const runTorahCodeAnalysis = ai.defineFlow(
         }
     }
 
-
+    // Use the originally requested term for the error message, but reference the tried Hebrew terms.
     if (startIndex === -1) {
-      throw new Error(`El término '${searchTerm}' no fue encontrado en la Torá con un rango de búsqueda amplio.`);
+      const triedTerms = searchTerms.map(t => t.hebrewTerm).join(', ');
+      throw new Error(`No se encontraron conexiones para '${searchTerm}' en la Torá (se intentó con los conceptos: ${triedTerms}).`);
     }
 
     // 3. Extract the surrounding matrix
