@@ -457,13 +457,13 @@ export const TorahRevelationSchema = z.object({
   context: z.string(),
   gematriaConnection: z.string(),
   reflection: z.string(),
-  past: PastRevelationSchema,
-  present: PresentRevelationSchema,
-  future: FutureRevelationSchema,
-  archetype: ArchetypeRevelationSchema,
-  esoteric: EsotericRevelationSchema,
-  therapeutic: TherapeuticRevelationSchema,
-  prophetic: PropheticRevelationSchema,
+  past: PastRevelationSchema.optional(),
+  present: PresentRevelationSchema.optional(),
+  future: FutureRevelationSchema.optional(),
+  archetype: ArchetypeRevelationSchema.optional(),
+  esoteric: EsotericRevelationSchema.optional(),
+  therapeutic: TherapeuticRevelationSchema.optional(),
+  prophetic: PropheticRevelationSchema.optional(),
 });
 export type TorahRevelation = z.infer<typeof TorahRevelationSchema>;
 
@@ -475,14 +475,20 @@ export type TorahCodeAnalysis = {
     revelation: TorahRevelation;
 };
 
-// This is what is stored in Firestore. The matrix is flattened.
-export type TorahCodeRecord = Omit<TorahCodeAnalysis, 'matrix'> & {
+export type TemporalStrandAnalysis = {
+  title: string;
+  temporalStrand: string[];
+  interpretation: string;
+  date: string;
+}
+
+export type TorahCodeRecord = (TorahCodeAnalysis | TemporalStrandAnalysis) & {
   id: string;
-  timestamp: string; // This can be Timestamp from Firestore, but string is safer for client
+  timestamp: string;
   userId: string;
-  matrix: { rows: string[] } | string[][]; // Support both for backward compatibility
+  type: 'classic' | 'resonance' | 'temporal';
+  concept?: string;
+  conceptA?: string;
+  conceptB?: string;
+  date?: string;
 };
-
-    
-
-    
