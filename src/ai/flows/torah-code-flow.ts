@@ -17,10 +17,16 @@ const TorahCodeInputSchema = z.object({
   searchTerm: z.string().describe('El término o concepto que el usuario quiere buscar en la Torá, en español.'),
 });
 
-const HebrewTranslationOutputSchema = z.object({
-  hebrewTerm: z.string().describe('El término de búsqueda traducido al hebreo, sin vocales ni puntuación.'),
-  optimalSkip: z.number().int().min(1).describe('La distancia de salto (skip) que la IA considera óptima para buscar este término específico.'),
+const CryptographicTermSchema = z.object({
+  hebrewTerm: z.string().describe('El término de búsqueda en hebreo, sin vocales ni puntuación.'),
+  explanation: z.string().describe('Una breve explicación de cómo se derivó este término (fonético, gematria, etc.).'),
+  skipEquation: z.number().int().min(1).describe('La distancia de salto (skip) que la IA considera óptima para este término específico.'),
 });
+
+const CryptographicDesignOutputSchema = z.object({
+  searchTerms: z.array(CryptographicTermSchema).describe('Una lista de posibles términos hebreos a buscar, cada uno con su propia ecuación de salto.'),
+});
+
 
 const AnalysisResultSchema = z.object({
   foundTerm: z.string().describe('El término hebreo encontrado.'),
@@ -79,15 +85,25 @@ function extractMatrix(text: string, startIndex: number, skip: number, wordLengt
 
 // --- AI PROMPTS ---
 
-const translationPrompt = ai.definePrompt({
-    name: 'torahCodeTranslationPrompt',
+const cryptographicDesignPrompt = ai.definePrompt({
+    name: 'cryptographicDesignPrompt',
     input: { schema: TorahCodeInputSchema },
-    output: { schema: HebrewTranslationOutputSchema },
-    prompt: `Eres un experto en lingüística hebrea y criptografía bíblica. La tarea es doble:
-1.  Traduce el siguiente término en español a su forma raíz más probable en hebreo antiguo, sin vocales ni puntuación.
-2.  Basado en la naturaleza del término (si es un nombre, un concepto, una acción), diseña y devuelve una "ecuación de salto" óptima. Este es un número entero positivo que crees que es más probable que revele conexiones significativas para este término específico. Sé creativo y numerológico. Un número pequeño (2-50) es para búsquedas densas, mientras que un número grande (ej. 129, 333) puede ser para conceptos más esotéricos.
+    output: { schema: CryptographicDesignOutputSchema },
+    prompt: `Eres un rabino cabalista, un maestro de la Gematria (el valor numérico de las letras hebreas) y el Notarikon (el uso de iniciales). Tu tarea es tomar un término de búsqueda moderno y diseñar un conjunto de términos de búsqueda en hebreo antiguo y "ecuaciones de salto" para encontrarlo codificado en la Torá.
 
-Término en español: "{{{searchTerm}}}"`,
+Término de búsqueda: "{{{searchTerm}}}"
+
+Sigue estos pasos:
+1.  **Analiza el Término:** ¿Es un nombre propio, un concepto, un evento?
+2.  **Genera un Conjunto de Búsqueda (3-5 opciones):** Crea una lista de posibles términos hebreos (sin vocales) para buscar. Sé creativo y místico. No te limites a la traducción literal.
+    *   **Traducción Fonética:** ¿Cómo sonaría el término en hebreo? (Ej: "Donald Trump" -> "דנלד טרמפ")
+    *   **Equivalencia por Gematria:** Calcula el valor numérico del término en español/inglés (A=1, B=2...) y encuentra una palabra o frase hebrea con un valor de Gematria similar que sea conceptualmente relevante.
+    *   **Notarikon/Acrónimo:** Si es una frase, usa las iniciales para formar una nueva palabra.
+    *   **Concepto Relacionado:** ¿Qué concepto o figura bíblica se relaciona con el término? (Ej: para "éxito", podrías buscar "bendición" - "ברכה").
+3.  **Diseña la Ecuación de Salto:** Para CADA término hebreo que generes, asigna un número de salto (skip) que sea numerológicamente significativo. Piensa en fechas, números bíblicos importantes, o la propia gematria del término.
+4.  **Proporciona una Explicación:** Para cada término, explica brevemente por qué lo elegiste (ej: "Traducción fonética", "Gematria de 777, que representa la perfección divina").
+
+Genera una lista de al menos 3 opciones de búsqueda.`,
 });
 
 
@@ -119,47 +135,66 @@ export const runTorahCodeAnalysis = ai.defineFlow(
     outputSchema: AnalysisResultSchema,
   },
   async ({ searchTerm }) => {
-    // 1. Translate and get optimal skip from AI
-    const { output: translation } = await translationPrompt({ searchTerm });
-    if (!translation) {
-      throw new Error("La IA no pudo traducir el término o definir una ecuación de salto.");
+    // 1. Get a list of cryptographic search terms and skip equations from the AI
+    const { output: design } = await cryptographicDesignPrompt({ searchTerm });
+    if (!design || !design.searchTerms || design.searchTerms.length === 0) {
+      throw new Error("La IA no pudo diseñar una estrategia criptográfica para este término.");
     }
-    const { hebrewTerm, optimalSkip } = translation;
+    const { searchTerms } = design;
 
-    // 2. Search for the ELS in the Torah text, with a robust iterative approach
+    // 2. Iterate through the AI's suggested terms and search for an ELS
     let startIndex = -1;
     let foundSkip = -1;
-    
-    // First, try the AI's "prophesied" skip
-    startIndex = findELS(TORAH_TEXT, hebrewTerm, optimalSkip);
-    if (startIndex !== -1) {
-      foundSkip = optimalSkip;
-    } else {
-      // If not found, iterate through a range of skips
-      const MAX_SKIP = 50000;
-      for (let skip = 1; skip <= MAX_SKIP; skip++) {
-        // Skip the one we already tried
-        if (skip === optimalSkip) continue;
-        
-        const index = findELS(TORAH_TEXT, hebrewTerm, skip);
-        if (index !== -1) {
-          startIndex = index;
-          foundSkip = skip;
-          break; // Stop at the first find
+    let foundTerm = '';
+    let foundExplanation = '';
+
+    for (const term of searchTerms) {
+        // First, try the AI's "prophesied" skip
+        startIndex = findELS(TORAH_TEXT, term.hebrewTerm, term.skipEquation);
+        if (startIndex !== -1) {
+            foundTerm = term.hebrewTerm;
+            foundSkip = term.skipEquation;
+            foundExplanation = term.explanation;
+            break; // Found a match, exit the loop
         }
-      }
+    }
+    
+    // If no match was found with the AI's specific skips, do a broad search
+    if (startIndex === -1) {
+        const MAX_SKIP = 50000;
+        // Iterate through each suggested term again for a broad search
+        for (const term of searchTerms) {
+            // Now, iterate through a wide range of skips for this term
+            for (let skip = 1; skip <= MAX_SKIP; skip++) {
+                 // Skip the one we already tried for this term
+                if (skip === term.skipEquation) continue;
+                
+                const index = findELS(TORAH_TEXT, term.hebrewTerm, skip);
+                if (index !== -1) {
+                    startIndex = index;
+                    foundTerm = term.hebrewTerm;
+                    foundSkip = skip;
+                    foundExplanation = `Búsqueda amplia. Original: ${term.explanation}`;
+                    break; // Stop at the first find
+                }
+            }
+            if (startIndex !== -1) {
+                break; // Found a match, exit the outer loop
+            }
+        }
     }
 
+
     if (startIndex === -1) {
-      throw new Error(`El término '${hebrewTerm}' no fue encontrado en la Torá con un rango de búsqueda amplio.`);
+      throw new Error(`El término '${searchTerm}' no fue encontrado en la Torá con un rango de búsqueda amplio.`);
     }
 
     // 3. Extract the surrounding matrix
-    const matrix = extractMatrix(TORAH_TEXT, startIndex, foundSkip, hebrewTerm.length);
+    const matrix = extractMatrix(TORAH_TEXT, startIndex, foundSkip, foundTerm.length);
 
     // 4. Get the revelation from the AI
     const matrixString = matrix.map(row => row.join(' ')).join('\n');
-    const { output: revelation } = await revelationPrompt({ searchTerm, hebrewTerm, matrix: matrixString });
+    const { output: revelation } = await revelationPrompt({ searchTerm, hebrewTerm: foundTerm, matrix: matrixString });
     if (!revelation) {
         throw new Error("El Oráculo no pudo generar una revelación para la matriz encontrada.");
     }
@@ -167,8 +202,8 @@ export const runTorahCodeAnalysis = ai.defineFlow(
     // 5. Assemble and return the final result
     return {
       searchTerm,
-      hebrewTerm,
-      foundTerm: hebrewTerm,
+      hebrewTerm: foundTerm,
+      foundTerm: foundTerm,
       skip: foundSkip,
       startIndex,
       matrix,
