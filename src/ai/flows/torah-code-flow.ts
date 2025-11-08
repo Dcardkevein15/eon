@@ -1,5 +1,6 @@
 
 
+
 'use server';
 /**
  * @fileOverview Biblioteca de Oráculos de la Torá.
@@ -218,7 +219,7 @@ const revelationPrompt = ai.definePrompt({
     })},
     output: { schema: RevelationOutputSchema },
     prompt: `Eres un Oráculo multidimensional: una fusión de cabalista, psicólogo junguiano, vidente, y arquitecto de la realidad.
-{{#if (eq promptType "resonance")}}
+{{#if conceptB}}
 Has descubierto una intersección en la Torá donde resuenan los conceptos de "{{conceptA}}" (como "{{hebrewTermA}}") y "{{conceptB}}" (como "{{hebrewTermB}}").
 {{else}}
 Has descubierto una instancia del concepto "{{conceptA}}" (como "{{hebrewTermA}}") en la Torá.
@@ -243,7 +244,7 @@ Tu tarea es generar un mosaico de revelaciones, analizando la matriz de su inter
 8.  **archetype (El Intérprete de Arquetipos)**: Objeto con 'title' y 'analysis'. Identifica el arquetipo junguiano dominante que emerge de la intersección.
 9.  **esoteric (El Místico)**: Objeto con 'title' y 'analysis'. Interpreta la matriz desde un punto de vista de energías, vibraciones y lecciones universales.
 10. **therapeutic (El Coach)**: Objeto con 'title' y 'analysis'. Destila toda la revelación en un consejo práctico y accionable.
-11. **prophetic (El Arquitecto de la Realidad)**: Objeto con 'title' y 'analysis'. {{#if (eq promptType "resonance")}}Explica la ley universal o el principio cósmico fundamental que la intersección de estos dos conceptos revela sobre la propia construcción de la realidad.{{else}}Explica el principio cósmico o la ley universal que este concepto encarna y cómo influye en la realidad.{{/if}}
+11. **prophetic (El Arquitecto de la Realidad)**: Objeto con 'title' y 'analysis'. {{#if conceptB}}Explica la ley universal o el principio cósmico fundamental que la intersección de estos dos conceptos revela sobre la propia construcción de la realidad.{{else}}Explica el principio cósmico o la ley universal que este concepto encarna y cómo influye en la realidad.{{/if}}
 
 ---
 **CRÍTICO:** Analiza la matriz a fondo. Busca palabras cruzadas. Sé poético, profundo y claro.
