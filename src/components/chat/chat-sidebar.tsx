@@ -1,7 +1,8 @@
+
 'use client';
 
 import Link from 'next/link';
-import { Plus, Trash2, History, Briefcase, UserCircle, Dumbbell, Star, BarChartHorizontal, Book, Loader2 } from 'lucide-react';
+import { Plus, Trash2, History, Briefcase, UserCircle, Dumbbell, Star, BarChartHorizontal, Book, Loader2, Atom } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -92,6 +93,7 @@ function ChatSidebar({
   };
   
   const navItems = [
+    { href: "/aether", icon: Atom, label: "Aether", id: 'aether-nav' },
     { href: "/profile", icon: UserCircle, label: "Perfil Psicológico", id: 'profile-nav' },
     { href: "/gym", icon: Dumbbell, label: "Gimnasio Emocional", id: 'gym-nav' },
     { href: "/dreams", icon: Star, label: "Portal de Sueños", id: 'dreams-nav' },
