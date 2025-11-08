@@ -27,13 +27,20 @@ const CryptographicDesignOutputSchema = z.object({
   searchTerms: z.array(CryptographicTermSchema).describe('Una lista de términos hebreos conceptualmente relacionados para buscar, cada uno con su propia ecuación de salto.'),
 });
 
+const RevelationOutputSchema = z.object({
+    title: z.string().describe("Un título poético y evocador para la revelación encontrada."),
+    context: z.string().describe("Una breve explicación del término de búsqueda, el término hebreo encontrado y la distancia de salto utilizada."),
+    matrixAnalysis: z.string().describe("El análisis principal de la matriz, explicando las palabras cruzadas y su significado contextual."),
+    gematriaConnection: z.string().describe("Una explicación del valor de Gematria del término encontrado y su conexión con otros conceptos bíblicos."),
+    reflection: z.string().describe("Una pregunta final, poderosa y abierta, para la reflexión del usuario."),
+});
 
 const AnalysisResultSchema = z.object({
   foundTerm: z.string().describe('El término hebreo encontrado.'),
   skip: z.number().int().describe('El salto utilizado para encontrar el término.'),
   startIndex: z.number().int().describe('El índice de inicio donde se encontró la primera letra del término.'),
   matrix: z.array(z.array(z.string())).describe('Una matriz de 21x21 de letras hebreas centrada en el término encontrado.'),
-  revelation: z.string().describe('Una interpretación perspicaz de la matriz, explicando las palabras cruzadas y su posible significado contextual, traducido al español.'),
+  revelation: RevelationOutputSchema.describe('Una interpretación perspicaz de la matriz, explicando las palabras cruzadas y su posible significado contextual, traducido al español.'),
 });
 
 // --- HELPER FUNCTIONS ---
@@ -112,17 +119,25 @@ const revelationPrompt = ai.definePrompt({
     input: { schema: z.object({
         searchTerm: z.string(),
         hebrewTerm: z.string(),
+        skip: z.number(),
         matrix: z.string(), // The matrix stringified
     })},
-    output: { schema: z.object({ revelation: z.string() }) },
-    prompt: `Eres un rabino cabalista y un maestro de la Gematria. Has descubierto una matriz de letras en la Torá alrededor de la palabra clave "{{hebrewTerm}}" (que se relaciona con el concepto de "{{searchTerm}}").
+    output: { schema: RevelationOutputSchema },
+    prompt: `Eres un erudito cabalista y un maestro de la Gematria. Has descubierto una matriz de letras en la Torá alrededor de la palabra clave "{{hebrewTerm}}" (que se relaciona con el concepto de "{{searchTerm}}").
 
-Tu tarea es analizar esta matriz para encontrar palabras o conceptos ocultos. Busca palabras que se lean horizontalmente (de derecha a izquierda), verticalmente (de arriba a abajo) o diagonalmente.
+Tu tarea es generar una revelación profunda y perspicaz en formato JSON, siguiendo esta estructura OBLIGATORIA.
 
-Matriz de Letras:
+**ESTRUCTURA DE SALIDA:**
+1.  **title**: Genera un título poético y evocador para la revelación.
+2.  **context**: Explica claramente que la búsqueda de \`{{searchTerm}}\` llevó al término hebreo \`{{hebrewTerm}}\`, encontrado con una distancia de salto de \`{{skip}}\`.
+3.  **matrixAnalysis**: Proporciona un análisis profundo de la matriz. Busca palabras que se lean horizontalmente (de derecha a izquierda), verticalmente (de arriba a abajo) o diagonalmente. Explica sus significados y cómo podrían conectarse con el término de búsqueda original. Sé poético pero claro.
+4.  **gematriaConnection**: Calcula el valor numérico (Gematria) de \`{{hebrewTerm}}\`. Luego, encuentra al menos 1-2 otras palabras o conceptos hebreos significativos que compartan el mismo valor. Explica la conexión mística entre estos términos.
+5.  **reflection**: Concluye con una única pregunta final, poderosa y abierta, diseñada para que el usuario reflexione sobre el mensaje del hallazgo.
+
+**Matriz de Letras a Analizar:**
 {{{matrix}}}
 
-Analiza las palabras y conceptos que se cruzan con o están cerca de la palabra clave principal. Explica sus significados y cómo podrían conectarse con el término de búsqueda original. Presenta tu análisis como una revelación profunda y significativa en español. Sé poético pero claro.`,
+Genera el objeto JSON completo con los campos solicitados.`,
 });
 
 
@@ -195,7 +210,7 @@ export const runTorahCodeAnalysis = ai.defineFlow(
 
     // 4. Get the revelation from the AI
     const matrixString = matrix.map(row => row.join(' ')).join('\n');
-    const { output: revelation } = await revelationPrompt({ searchTerm, hebrewTerm: foundTerm, matrix: matrixString });
+    const { output: revelation } = await revelationPrompt({ searchTerm, hebrewTerm: foundTerm, skip: foundSkip, matrix: matrixString });
     if (!revelation) {
         throw new Error("El Oráculo no pudo generar una revelación para la matriz encontrada.");
     }
@@ -208,7 +223,9 @@ export const runTorahCodeAnalysis = ai.defineFlow(
       skip: foundSkip,
       startIndex,
       matrix,
-      revelation: revelation.revelation,
+      revelation,
     };
   }
 );
+
+    

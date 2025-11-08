@@ -421,6 +421,15 @@ export type SuggestedArticleTitle = {
 };
 
 // --- Torah Code Types ---
+export const TorahRevelationSchema = z.object({
+  title: z.string(),
+  context: z.string(),
+  matrixAnalysis: z.string(),
+  gematriaConnection: z.string(),
+  reflection: z.string(),
+});
+export type TorahRevelation = z.infer<typeof TorahRevelationSchema>;
+
 export type TorahCodeAnalysis = {
     searchTerm: string;
     hebrewTerm: string;
@@ -428,7 +437,7 @@ export type TorahCodeAnalysis = {
     skip: number;
     startIndex: number;
     matrix: string[][];
-    revelation: string;
+    revelation: TorahRevelation;
 };
 
 // This is what is stored in Firestore. The matrix is flattened.
@@ -438,3 +447,5 @@ export type TorahCodeRecord = Omit<TorahCodeAnalysis, 'matrix'> & {
   userId: string;
   matrix: { rows: string[] } | string[][]; // Support both for backward compatibility
 };
+
+    

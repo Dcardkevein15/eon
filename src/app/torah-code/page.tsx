@@ -20,6 +20,7 @@ import { es } from 'date-fns/locale';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth, useCollection, useFirestore } from '@/firebase';
 import { collection, query, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
+import ReactMarkdown from 'react-markdown';
 
 
 export default function TorahCodePage() {
@@ -59,7 +60,6 @@ export default function TorahCodePage() {
             const result = await runTorahCodeAnalysis({ searchTerm });
             setAnalysisResult(result);
             
-            // --- FIX: Flatten the matrix for Firestore ---
             const dataToSave = {
               ...result,
               matrix: { rows: result.matrix.map(row => row.join('')) }, // Flatten array
@@ -82,16 +82,12 @@ export default function TorahCodePage() {
     const loadHistoryRecord = (record: TorahCodeRecord) => {
         setIsViewingHistory(true);
         
-        // --- FIX: Rehydrate the matrix from the flattened structure ---
         let matrix: string[][];
         if (Array.isArray(record.matrix)) {
-            // It's already in the correct format (e.g. from a fresh analysis)
             matrix = record.matrix;
         } else if (record.matrix && Array.isArray((record.matrix as any).rows)) {
-            // It's the flattened object from Firestore, rehydrate it.
             matrix = (record.matrix as any).rows.map((row: string) => row.split(''));
         } else {
-            // Fallback for malformed data
             console.error("Malformed matrix data in history record:", record);
             matrix = Array(21).fill(Array(21).fill('?'));
         }
@@ -209,17 +205,34 @@ export default function TorahCodePage() {
                                     </Alert>
                                 </motion.div>
                             ) : analysisResult ? (
-                                <motion.div key="result" initial={{opacity: 0, y: 20}} animate={{opacity: 1, y: 0}} exit={{opacity: 0, y: -20}} className="grid md:grid-cols-2 gap-8">
-                                    <div className="md:col-span-1">
-                                        <h3 className="font-semibold text-lg mb-2 text-primary">Matriz de Revelación</h3>
-                                        <TorahCodeMatrix result={analysisResult} />
-                                    </div>
-                                    <div className="md:col-span-1">
-                                         <h3 className="font-semibold text-lg mb-2 text-primary">Interpretación del Oráculo</h3>
-                                        <div className="prose dark:prose-invert max-w-none text-sm">
-                                            <p>La búsqueda de <strong>"{analysisResult.searchTerm}"</strong> (concepto hebreo: {analysisResult.hebrewTerm}) con un salto de <strong>{analysisResult.skip}</strong> letras reveló lo siguiente:</p>
-                                            <p>{analysisResult.revelation}</p>
+                                <motion.div key="result" initial={{opacity: 0, y: 20}} animate={{opacity: 1, y: 0}} exit={{opacity: 0, y: -20}} className="space-y-8">
+                                     <header className="text-center">
+                                         <h2 className="text-2xl md:text-3xl font-bold text-primary">{analysisResult.revelation.title}</h2>
+                                     </header>
+
+                                     <div className="grid md:grid-cols-2 gap-8 items-start">
+                                        <div className="md:col-span-1">
+                                            <h3 className="font-semibold text-lg mb-2 text-primary">Matriz de Revelación</h3>
+                                            <TorahCodeMatrix result={analysisResult} />
                                         </div>
+                                        <div className="md:col-span-1 prose dark:prose-invert max-w-none text-sm space-y-4">
+                                            <div>
+                                                <h4 className="font-semibold text-primary">Contexto del Hallazgo</h4>
+                                                <ReactMarkdown>{analysisResult.revelation.context}</ReactMarkdown>
+                                            </div>
+                                            <div>
+                                                <h4 className="font-semibold text-primary">Análisis de la Matriz</h4>
+                                                <ReactMarkdown>{analysisResult.revelation.matrixAnalysis}</ReactMarkdown>
+                                            </div>
+                                             <div>
+                                                <h4 className="font-semibold text-primary">Conexión con Gematria</h4>
+                                                <ReactMarkdown>{analysisResult.revelation.gematriaConnection}</ReactMarkdown>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="text-center p-6 border-t border-dashed border-border/50 mt-8">
+                                         <h4 className="font-semibold text-primary mb-2">Pregunta para tu Reflexión</h4>
+                                         <p className="text-lg italic text-foreground/80">"{analysisResult.revelation.reflection}"</p>
                                     </div>
                                 </motion.div>
                             ) : (
@@ -234,3 +247,5 @@ export default function TorahCodePage() {
         </div>
     );
 }
+
+    
