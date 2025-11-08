@@ -208,9 +208,9 @@ export default function TorahCodePage() {
                                 <motion.div key="result" initial={{opacity: 0, y: 20}} animate={{opacity: 1, y: 0}} exit={{opacity: 0, y: -20}} className="space-y-8">
                                      <header className="text-center">
                                          <h2 className="text-2xl md:text-3xl font-bold text-primary">{analysisResult.revelation.overallTitle}</h2>
-                                         <p className="text-muted-foreground mt-1 max-w-2xl mx-auto text-sm">
+                                         <div className="text-muted-foreground mt-1 max-w-2xl mx-auto text-sm">
                                             <ReactMarkdown>{analysisResult.revelation.context}</ReactMarkdown>
-                                         </p>
+                                         </div>
                                      </header>
 
                                     <div className="grid lg:grid-cols-5 gap-8 items-start">
