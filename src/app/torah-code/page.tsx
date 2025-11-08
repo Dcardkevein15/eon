@@ -27,10 +27,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarIcon } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 type OracleMode = 'resonance' | 'classic' | 'temporal' | 'harmonic' | 'destiny';
 type AnalysisResult = TorahCodeAnalysis | TemporalStrandAnalysis | HarmonicAnalysis | CrossMatrixAnalysis | null;
+
+const oracles = [
+    { id: 'resonance', name: 'Resonancia', icon: GitMerge },
+    { id: 'classic', name: 'Clásico', icon: BookOpen },
+    { id: 'temporal', name: 'Temporal', icon: Calendar },
+    { id: 'harmonic', name: 'Armonía', icon: AreaChart },
+    { id: 'destiny', name: 'Destino', icon: GitMerge },
+];
 
 export default function TorahCodePage() {
     const { user, loading: authLoading } = useAuth();
@@ -212,6 +221,12 @@ export default function TorahCodePage() {
             </div>
         );
     };
+    
+    const handleTabChange = (v: string) => { 
+        setAnalysisResult(null); 
+        setError(null); 
+        setActiveTab(v as OracleMode) 
+    }
 
     return (
         <div className="flex h-screen bg-background text-foreground">
@@ -278,14 +293,33 @@ export default function TorahCodePage() {
 
                 <ScrollArea className="flex-1">
                     <div className="p-4 lg:p-6 max-w-7xl mx-auto">
-                        <Tabs value={activeTab} onValueChange={(v) => { setAnalysisResult(null); setError(null); setActiveTab(v as OracleMode) }} className="w-full">
-                            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 max-w-4xl mx-auto">
-                                <TabsTrigger value="resonance">Resonancia</TabsTrigger>
-                                <TabsTrigger value="classic">Clásico</TabsTrigger>
-                                <TabsTrigger value="temporal">Temporal</TabsTrigger>
-                                <TabsTrigger value="harmonic">Armonía</TabsTrigger>
-                                <TabsTrigger value="destiny">Destino</TabsTrigger>
+                        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+                            {/* Mobile Select */}
+                            <div className="md:hidden mb-6">
+                                 <Select value={activeTab} onValueChange={v => handleTabChange(v)}>
+                                    <SelectTrigger className="w-full h-12 text-base">
+                                        <SelectValue placeholder="Seleccionar Oráculo" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {oracles.map(oracle => (
+                                            <SelectItem key={oracle.id} value={oracle.id}>
+                                                <div className="flex items-center gap-2">
+                                                    <oracle.icon className="w-4 h-4" />
+                                                    <span>{oracle.name}</span>
+                                                </div>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            
+                            {/* Desktop Tabs */}
+                            <TabsList className="hidden md:grid w-full grid-cols-5 max-w-4xl mx-auto">
+                                {oracles.map(oracle => (
+                                    <TabsTrigger key={oracle.id} value={oracle.id}>{oracle.name}</TabsTrigger>
+                                ))}
                             </TabsList>
+                            
                             <TabsContent value="resonance" className="text-center">
                                 <header className="text-center my-8">
                                     <h2 className="text-3xl md:text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-chart-5 via-chart-1 to-chart-2">
@@ -295,11 +329,11 @@ export default function TorahCodePage() {
                                         Introduce dos conceptos para encontrar su punto de colisión en la Torá y revelar la ley universal que los conecta.
                                     </p>
                                 </header>
-                                <div className="flex w-full max-w-2xl mx-auto items-center space-x-2 mb-12">
+                                <div className="flex flex-col sm:flex-row w-full max-w-2xl mx-auto items-center space-y-2 sm:space-y-0 sm:space-x-2 mb-12">
                                     <Input value={conceptA} onChange={(e) => setConceptA(e.target.value)} placeholder="Concepto A (Ej: Amor)" disabled={isLoading} className="h-12 text-base" />
-                                    <Plus className="text-muted-foreground" />
+                                    <Plus className="text-muted-foreground hidden sm:block" />
                                     <Input value={conceptB} onChange={(e) => setConceptB(e.target.value)} placeholder="Concepto B (Ej: Guerra)" disabled={isLoading} className="h-12 text-base" />
-                                    <Button type="button" onClick={handleAnalysis} disabled={isLoading || authLoading} className="h-12 px-6">
+                                    <Button type="button" onClick={handleAnalysis} disabled={isLoading || authLoading} className="h-12 w-full sm:w-auto px-6">
                                         {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5" />}
                                     </Button>
                                 </div>
@@ -380,11 +414,11 @@ export default function TorahCodePage() {
                                        Explora la causa y efecto cósmico analizando la trayectoria que sigue a la intersección de dos conceptos.
                                     </p>
                                 </header>
-                                <div className="flex w-full max-w-2xl mx-auto items-center space-x-2 mb-12">
+                                <div className="flex flex-col sm:flex-row w-full max-w-2xl mx-auto items-center space-y-2 sm:space-y-0 sm:space-x-2 mb-12">
                                     <Input value={destinyConceptA} onChange={(e) => setDestinyConceptA(e.target.value)} placeholder="Concepto Causa (Ej: Poder)" disabled={isLoading} className="h-12 text-base" />
-                                    <GitMerge className="text-muted-foreground" />
+                                    <GitMerge className="text-muted-foreground hidden sm:block" />
                                     <Input value={destinyConceptB} onChange={(e) => setDestinyConceptB(e.target.value)} placeholder="Concepto Efecto (Ej: Corrupción)" disabled={isLoading} className="h-12 text-base" />
-                                    <Button type="button" onClick={handleAnalysis} disabled={isLoading || authLoading} className="h-12 px-6">
+                                    <Button type="button" onClick={handleAnalysis} disabled={isLoading || authLoading} className="h-12 w-full sm:w-auto px-6">
                                         {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5" />}
                                     </Button>
                                 </div>
