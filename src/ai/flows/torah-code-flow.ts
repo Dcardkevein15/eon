@@ -1,4 +1,5 @@
 
+
 'use server';
 /**
  * @fileOverview Biblioteca de Oráculos de la Torá.
@@ -317,8 +318,27 @@ export const runResonanceAnalysis = ai.defineFlow(
       throw new Error("La IA no pudo diseñar términos de búsqueda para los conceptos dados.");
     }
     
-    const resultsA = design.searchTermsA.map(term => ({ term: term.hebrewTerm, skip: term.skipEquation, indices: findELS(TORAH_TEXT, term.hebrewTerm, term.skipEquation) })).filter(r => r.indices.length > 0);
-    const resultsB = design.searchTermsB.map(term => ({ term: term.hebrewTerm, skip: term.skipEquation, indices: findELS(TORAH_TEXT, term.hebrewTerm, term.skipEquation) })).filter(r => r.indices.length > 0);
+    // Perform an exhaustive search for each term in both concepts
+    const findExhaustiveELS = (term: z.infer<typeof CryptographicTermSchema>): ELSResult[] => {
+        const results: ELSResult[] = [];
+        // First, try the AI-suggested skip
+        let indices = findELS(TORAH_TEXT, term.hebrewTerm, term.skipEquation);
+        if (indices.length > 0) {
+            results.push({ term: term.hebrewTerm, skip: term.skipEquation, indices });
+        }
+        // Then, perform a broader search if needed (or always, for more options)
+        for (let skip = 1; skip <= 50000; skip += 1) { // A reasonable but large range
+             if (skip === term.skipEquation) continue; // Don't repeat
+             indices = findELS(TORAH_TEXT, term.hebrewTerm, skip);
+             if (indices.length > 0) {
+                 results.push({ term: term.hebrewTerm, skip, indices });
+             }
+        }
+        return results;
+    };
+    
+    const resultsA = design.searchTermsA.flatMap(findExhaustiveELS);
+    const resultsB = design.searchTermsB.flatMap(findExhaustiveELS);
     
     if (resultsA.length === 0 || resultsB.length === 0) {
       throw new Error(`No se encontraron secuencias en la Torá para uno o ambos conceptos. Concepto A: ${resultsA.length > 0}, Concepto B: ${resultsB.length > 0}`);
@@ -363,6 +383,7 @@ export const runClassicAnalysis = ai.defineFlow(
     outputSchema: AnalysisResultSchema,
   },
   async ({ concept }) => {
+    // STAGE 1: Deep conceptual search
     const { output: design } = await classicCryptographicDesignPrompt({ concept });
     if (!design || !design.searchTerms.length) {
         throw new Error("La IA no pudo diseñar términos de búsqueda para el concepto.");
@@ -373,6 +394,7 @@ export const runClassicAnalysis = ai.defineFlow(
         for (let skip = 1; skip <= 50000; skip++) {
             const indices = findELS(TORAH_TEXT, term.hebrewTerm, skip);
             if (indices.length > 0) {
+                // Found the first occurrence, let's use it
                 foundResult = { term: term.hebrewTerm, skip: skip, indices };
                 break;
             }
@@ -380,12 +402,15 @@ export const runClassicAnalysis = ai.defineFlow(
         if (foundResult) break;
     }
 
+    // STAGE 2: Forced Gematria search (if stage 1 failed)
     if (!foundResult) {
-        const searchTermHebrew = concept;
+        const searchTermHebrew = concept; // A simple transliteration might not be accurate, but it's a fallback
         const gematriaSkip = Gematria(searchTermHebrew);
         if (gematriaSkip > 0) {
-            const forcedWords = findWordsAtELS(TORAH_TEXT, gematriaSkip, 3, 4);
+            // Find ANY word at this skip distance
+            const forcedWords = findWordsAtELS(TORAH_TEXT, gematriaSkip, 3, 4); // Find words of 3-4 letters
             if (forcedWords.length > 0) {
+                // Use the first found word as the new term
                 foundResult = {
                     term: forcedWords[0].word,
                     skip: gematriaSkip,
