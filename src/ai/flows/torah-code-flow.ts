@@ -36,6 +36,7 @@ const AnalysisResultSchema = z.object({
  * Searches for an ELS (Equidistant Letter Sequence) in the Torah text.
  */
 function findELS(text: string, word: string, skip: number): number {
+  if (skip === 0) return -1;
   const wordLen = word.length;
   const textLen = text.length;
   for (let i = 0; i < textLen; i++) {
@@ -125,15 +126,36 @@ export const runTorahCodeAnalysis = ai.defineFlow(
     }
     const { hebrewTerm, optimalSkip } = translation;
 
-    // 2. Search for the ELS in the Torah text
-    const startIndex = findELS(TORAH_TEXT, hebrewTerm, optimalSkip);
+    // 2. Search for the ELS in the Torah text, with a robust iterative approach
+    let startIndex = -1;
+    let foundSkip = -1;
+    
+    // First, try the AI's "prophesied" skip
+    startIndex = findELS(TORAH_TEXT, hebrewTerm, optimalSkip);
+    if (startIndex !== -1) {
+      foundSkip = optimalSkip;
+    } else {
+      // If not found, iterate through a range of skips
+      const MAX_SKIP = 50000;
+      for (let skip = 1; skip <= MAX_SKIP; skip++) {
+        // Skip the one we already tried
+        if (skip === optimalSkip) continue;
+        
+        const index = findELS(TORAH_TEXT, hebrewTerm, skip);
+        if (index !== -1) {
+          startIndex = index;
+          foundSkip = skip;
+          break; // Stop at the first find
+        }
+      }
+    }
+
     if (startIndex === -1) {
-      // Optional: Could add a retry loop with different skips here
-      throw new Error(`El término '${hebrewTerm}' no fue encontrado con el salto profetizado de ${optimalSkip}.`);
+      throw new Error(`El término '${hebrewTerm}' no fue encontrado en la Torá con un rango de búsqueda amplio.`);
     }
 
     // 3. Extract the surrounding matrix
-    const matrix = extractMatrix(TORAH_TEXT, startIndex, optimalSkip, hebrewTerm.length);
+    const matrix = extractMatrix(TORAH_TEXT, startIndex, foundSkip, hebrewTerm.length);
 
     // 4. Get the revelation from the AI
     const matrixString = matrix.map(row => row.join(' ')).join('\n');
@@ -147,7 +169,7 @@ export const runTorahCodeAnalysis = ai.defineFlow(
       searchTerm,
       hebrewTerm,
       foundTerm: hebrewTerm,
-      skip: optimalSkip,
+      skip: foundSkip,
       startIndex,
       matrix,
       revelation: revelation.revelation,
