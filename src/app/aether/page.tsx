@@ -39,18 +39,20 @@ export default function AetherPage() {
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const frameIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   // --- State ---
-  const [hasPermissions, setHasPermissions] = useState(false);
   const [status, setStatus] = useState<AetherStatus>('initializing');
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [latestVideoFrame, setLatestVideoFrame] = useState<string | null>(null);
+  const [hasPermissions, setHasPermissions] = useState(false);
 
-  // --- Permission Handling ---
+  // --- Permission and Stream Handling ---
   useEffect(() => {
-    async function getPermissions() {
+    const getPermissions = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        streamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
@@ -66,9 +68,16 @@ export default function AetherPage() {
           description: 'Por favor, habilita los permisos de cámara y micrófono en tu navegador.',
         });
       }
-    }
+    };
+
     getPermissions();
+
+    // Cleanup function to stop media tracks when the component unmounts
+    return () => {
+        streamRef.current?.getTracks().forEach(track => track.stop());
+    };
   }, [toast]);
+
 
   // --- Core Processing Logic ---
   const processAudioChunk = useCallback(async (audioBlob: Blob) => {
@@ -117,10 +126,9 @@ export default function AetherPage() {
 
   // --- VAD and Recording Logic ---
   const startListening = useCallback(() => {
-    if (!videoRef.current?.srcObject || status !== 'idle') return;
+    if (!streamRef.current || status !== 'idle') return;
     
-    const stream = videoRef.current.srcObject as MediaStream;
-    mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+    mediaRecorderRef.current = new MediaRecorder(streamRef.current, { mimeType: 'audio/webm' });
     const audioChunks: Blob[] = [];
 
     mediaRecorderRef.current.ondataavailable = (event) => {
@@ -136,9 +144,19 @@ export default function AetherPage() {
       if(frameIntervalRef.current) clearInterval(frameIntervalRef.current);
     };
 
+    try {
+        mediaRecorderRef.current.start();
+        setStatus('listening');
+    } catch(e) {
+        console.error("Failed to start MediaRecorder", e);
+        toast({ variant: "destructive", title: "Error de Grabación", description: "No se pudo iniciar la grabación. Intenta recargar la página." });
+        setStatus('idle');
+        return;
+    }
+
     // --- Voice Activity Detection (VAD) ---
     audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const source = audioContextRef.current.createMediaStreamSource(stream);
+    const source = audioContextRef.current.createMediaStreamSource(streamRef.current);
     analyserRef.current = audioContextRef.current.createAnalyser();
     analyserRef.current.fftSize = 512;
     source.connect(analyserRef.current);
@@ -151,7 +169,6 @@ export default function AetherPage() {
 
       if (volume > VAD_THRESHOLD) {
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-        if (mediaRecorderRef.current?.state === 'inactive') mediaRecorderRef.current.start();
       } else {
         if (mediaRecorderRef.current?.state === 'recording') {
             if (!silenceTimerRef.current) {
@@ -176,17 +193,13 @@ export default function AetherPage() {
         }
     }, FRAME_CAPTURE_INTERVAL_MS);
 
-
-    setStatus('listening');
-  }, [processAudioChunk, status]);
+  }, [processAudioChunk, status, toast]);
   
   const stopListening = useCallback(() => {
     mediaRecorderRef.current?.stop();
     if(vadIntervalRef.current) clearInterval(vadIntervalRef.current);
     if(frameIntervalRef.current) clearInterval(frameIntervalRef.current);
     if(silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-    videoRef.current?.srcObject?.getTracks().forEach(track => track.stop());
-    setHasPermissions(false); // To force re-requesting on next visit
     setStatus('idle');
   }, []);
 
@@ -265,7 +278,7 @@ export default function AetherPage() {
                             <button 
                                 onClick={status === 'idle' ? startListening : stopListening}
                                 className="w-20 h-20 bg-blue-500 rounded-full flex items-center justify-center shadow-lg transform transition-transform duration-200 hover:scale-110 disabled:opacity-50"
-                                disabled={status === 'processing' || status === 'speaking'}
+                                disabled={status === 'processing' || status === 'speaking' || status === 'initializing'}
                             >
                                 {status === 'listening' ? <Loader2 className="w-8 h-8 animate-spin"/> : <Mic className="w-8 h-8"/>}
                             </button>
