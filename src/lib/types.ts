@@ -1,4 +1,5 @@
 
+
 import type { User as FirebaseUser } from 'firebase/auth';
 import { Timestamp } from 'firebase/firestore';
 import { z } from 'zod';
@@ -445,6 +446,11 @@ export const TherapeuticRevelationSchema = z.object({
     title: z.string(),
     analysis: z.string(),
 });
+export const PropheticRevelationSchema = z.object({
+    title: z.string(),
+    analysis: z.string(),
+});
+
 
 export const TorahRevelationSchema = z.object({
   overallTitle: z.string(),
@@ -457,12 +463,11 @@ export const TorahRevelationSchema = z.object({
   archetype: ArchetypeRevelationSchema,
   esoteric: EsotericRevelationSchema,
   therapeutic: TherapeuticRevelationSchema,
+  prophetic: PropheticRevelationSchema,
 });
 export type TorahRevelation = z.infer<typeof TorahRevelationSchema>;
 
 export type TorahCodeAnalysis = {
-    searchTerm: string;
-    hebrewTerm: string;
     foundTerm: string;
     skip: number;
     startIndex: number;
@@ -477,5 +482,7 @@ export type TorahCodeRecord = Omit<TorahCodeAnalysis, 'matrix'> & {
   userId: string;
   matrix: { rows: string[] } | string[][]; // Support both for backward compatibility
 };
+
+    
 
     

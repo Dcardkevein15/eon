@@ -1,11 +1,11 @@
 
 'use client';
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, Wand2, BookOpen, ChevronLeft, Search, History, Clock, FileText, BarChart, User, Bot, Brain, Star } from 'lucide-react';
+import { Loader2, Wand2, BookOpen, ChevronLeft, Search, History, Brain, Star, Clock, FileText, User, Bot, Atom, Link as LinkIcon, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { runTorahCodeAnalysis } from '@/ai/flows/torah-code-flow';
@@ -27,7 +27,8 @@ export default function TorahCodePage() {
     const { user, loading: authLoading } = useAuth();
     const firestore = useFirestore();
 
-    const [searchTerm, setSearchTerm] = useState('');
+    const [conceptA, setConceptA] = useState('');
+    const [conceptB, setConceptB] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [analysisResult, setAnalysisResult] = useState<TorahCodeAnalysis | null>(null);
@@ -43,8 +44,8 @@ export default function TorahCodePage() {
     const { data: analysisHistory, loading: isHistoryLoading } = useCollection<TorahCodeRecord>(historyQuery);
 
     const handleAnalysis = async () => {
-        if (!searchTerm.trim()) {
-            toast({ variant: 'destructive', title: 'Término vacío', description: 'Por favor, introduce una palabra o concepto para analizar.' });
+        if (!conceptA.trim() || !conceptB.trim()) {
+            toast({ variant: 'destructive', title: 'Conceptos vacíos', description: 'Por favor, introduce dos palabras o conceptos para analizar.' });
             return;
         }
          if (!user) {
@@ -57,13 +58,15 @@ export default function TorahCodePage() {
         setIsViewingHistory(false);
 
         try {
-            const result = await runTorahCodeAnalysis({ searchTerm });
+            const result = await runTorahCodeAnalysis({ conceptA, conceptB });
             setAnalysisResult(result);
             
-            const dataToSave: Omit<TorahCodeRecord, 'id' | 'timestamp'> = {
+            const dataToSave = {
               ...result,
-              matrix: { rows: result.matrix.map(row => row.join('')) }, // Flatten array
-              timestamp: serverTimestamp() as any, // Firestore will convert this
+              conceptA,
+              conceptB,
+              matrix: { rows: result.matrix.map(row => row.join('')) },
+              timestamp: serverTimestamp(),
               userId: user.uid,
             };
 
@@ -93,7 +96,8 @@ export default function TorahCodePage() {
         }
 
         setAnalysisResult({ ...record, matrix });
-        setSearchTerm(record.searchTerm);
+        setConceptA((record as any).conceptA || '');
+        setConceptB((record as any).conceptB || '');
     };
     
     const getFormattedDate = (timestamp: any) => {
@@ -107,6 +111,7 @@ export default function TorahCodePage() {
     };
 
     const revelationCards = analysisResult ? [
+      { key: 'prophetic', icon: Atom, data: analysisResult.revelation.prophetic, color: "text-primary", main: true },
       { key: 'past', icon: Clock, data: analysisResult.revelation.past, color: "text-blue-400" },
       { key: 'present', icon: Brain, data: analysisResult.revelation.present, color: "text-amber-400" },
       { key: 'future', icon: Wand2, data: analysisResult.revelation.future, color: "text-purple-400" },
@@ -128,8 +133,8 @@ export default function TorahCodePage() {
                                 </Link>
                             </Button>
                             <div className="flex items-center gap-3">
-                                <BookOpen className="w-6 h-6 text-primary" />
-                                <h1 className="text-xl font-bold tracking-tight">Oráculo de la Torá</h1>
+                                <LinkIcon className="w-6 h-6 text-primary" />
+                                <h1 className="text-xl font-bold tracking-tight">Oráculo de Resonancia</h1>
                             </div>
                         </div>
                         <Sheet>
@@ -156,7 +161,7 @@ export default function TorahCodePage() {
                                                 <SheetTrigger asChild key={record.id}>
                                                 <Card className="cursor-pointer hover:border-primary" onClick={() => loadHistoryRecord(record)}>
                                                     <CardHeader>
-                                                        <CardTitle className="text-sm">Búsqueda: "{record.searchTerm}"</CardTitle>
+                                                        <CardTitle className="text-sm">{(record as any).conceptA} ∩ {(record as any).conceptB}</CardTitle>
                                                         <CardDescription>
                                                             {getFormattedDate(record.timestamp)}
                                                         </CardDescription>
@@ -178,19 +183,28 @@ export default function TorahCodePage() {
                     <div className="max-w-7xl mx-auto">
                         <header className="text-center mb-8">
                             <h2 className="text-3xl md:text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-chart-5 via-chart-1 to-chart-2">
-                                Descifra los Mensajes Ocultos
+                                Descifra la Arquitectura de la Realidad
                             </h2>
-                            <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
-                                Introduce un concepto clave. La IA diseñará una ecuación, buscará secuencias equidistantes en el texto sagrado y revelará las conexiones ocultas.
+                            <p className="text-muted-foreground mt-2 max-w-3xl mx-auto">
+                                Introduce dos conceptos para encontrar su punto de resonancia en la Torá y revelar la ley universal que los conecta.
                             </p>
                         </header>
 
-                        <div className="flex w-full max-w-lg mx-auto items-center space-x-2 mb-12">
+                        <div className="flex w-full max-w-2xl mx-auto items-center space-x-2 mb-12">
                             <Input
                                 type="text"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                placeholder="Ej: amor, futuro, éxito..."
+                                value={conceptA}
+                                onChange={(e) => setConceptA(e.target.value)}
+                                placeholder="Concepto A (Ej: Amor)"
+                                disabled={isLoading}
+                                className="h-12 text-base"
+                            />
+                            <Plus className="text-muted-foreground" />
+                             <Input
+                                type="text"
+                                value={conceptB}
+                                onChange={(e) => setConceptB(e.target.value)}
+                                placeholder="Concepto B (Ej: Guerra)"
                                 disabled={isLoading}
                                 onKeyDown={(e) => e.key === 'Enter' && !isLoading && handleAnalysis()}
                                 className="h-12 text-base"
@@ -205,7 +219,7 @@ export default function TorahCodePage() {
                             {isLoading ? (
                                 <motion.div key="loader" initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} className="text-center">
                                     <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-                                    <p className="mt-2 text-muted-foreground">Analizando las escrituras...</p>
+                                    <p className="mt-2 text-muted-foreground">Buscando el punto de resonancia...</p>
                                 </motion.div>
                             ) : error ? (
                                 <motion.div key="error" initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}}>
@@ -218,14 +232,14 @@ export default function TorahCodePage() {
                                 <motion.div key="result" initial={{opacity: 0, y: 20}} animate={{opacity: 1, y: 0}} exit={{opacity: 0, y: -20}} className="space-y-8">
                                      <header className="text-center">
                                          <h2 className="text-2xl md:text-3xl font-bold text-primary">{analysisResult.revelation.overallTitle}</h2>
-                                         <div className="text-muted-foreground mt-1 max-w-2xl mx-auto text-sm">
+                                         <div className="text-muted-foreground mt-1 max-w-3xl mx-auto text-sm">
                                             <ReactMarkdown>{analysisResult.revelation.context}</ReactMarkdown>
                                          </div>
                                      </header>
                                     
                                      <div className="grid lg:grid-cols-5 gap-8 items-start">
                                         <div className="lg:col-span-2">
-                                            <h3 className="font-semibold text-lg mb-2 text-center text-primary">Matriz de Revelación</h3>
+                                            <h3 className="font-semibold text-lg mb-2 text-center text-primary">Matriz de Resonancia</h3>
                                             <TorahCodeMatrix result={analysisResult} />
                                              <div className="prose dark:prose-invert max-w-none text-center mt-6">
                                                 <h4 className="font-semibold text-primary">Conexión con Gematria</h4>
@@ -239,8 +253,9 @@ export default function TorahCodePage() {
                                                     initial={{ opacity: 0, y: 20 }}
                                                     animate={{ opacity: 1, y: 0 }}
                                                     transition={{ delay: 0.1 * index }}
+                                                    className={card.main ? 'md:col-span-2' : ''}
                                                 >
-                                                    <Card className='bg-card/50 h-full'>
+                                                    <Card className={`h-full ${card.main ? 'bg-primary/5 border-primary/20' : 'bg-card/50'}`}>
                                                         <CardHeader>
                                                             <CardTitle className={`flex items-center gap-2 ${card.color}`}>
                                                                 <card.icon className="w-5 h-5"/>
@@ -262,7 +277,7 @@ export default function TorahCodePage() {
                                 </motion.div>
                             ) : (
                                  <motion.div key="initial" initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} className="text-center py-10 border-2 border-dashed border-border/50 rounded-lg">
-                                    <p className="text-muted-foreground">Los resultados de tu búsqueda aparecerán aquí.</p>
+                                    <p className="text-muted-foreground">La revelación de la intersección aparecerá aquí.</p>
                                 </motion.div>
                             )}
                         </AnimatePresence>
@@ -272,3 +287,5 @@ export default function TorahCodePage() {
         </div>
     );
 }
+
+    
