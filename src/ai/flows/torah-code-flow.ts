@@ -268,9 +268,10 @@ export const runTorahCodeAnalysis = ai.defineFlow(
     let startIndex = -1;
     let foundSkip = -1;
     let foundTerm = '';
+    const searchTerms = design?.searchTerms || [];
     
-    if (design && design.searchTerms && design.searchTerms.length > 0) {
-        for (const term of design.searchTerms) {
+    if (searchTerms.length > 0) {
+        for (const term of searchTerms) {
             startIndex = findELS(TORAH_TEXT, term.hebrewTerm, term.skipEquation);
             if (startIndex !== -1) {
                 foundTerm = term.hebrewTerm;
@@ -281,7 +282,7 @@ export const runTorahCodeAnalysis = ai.defineFlow(
         
         if (startIndex === -1) {
             const MAX_SKIP = 50000;
-            for (const term of design.searchTerms) {
+            for (const term of searchTerms) {
                 for (let skip = 1; skip <= MAX_SKIP; skip++) {
                     if (skip === term.skipEquation) continue;
                     const index = findELS(TORAH_TEXT, term.hebrewTerm, skip);
@@ -323,7 +324,7 @@ export const runTorahCodeAnalysis = ai.defineFlow(
 
 
     if (startIndex === -1) {
-      const triedTerms = design?.searchTerms.map(t => t.hebrewTerm).join(', ') || 'ninguno';
+      const triedTerms = searchTerms.map(t => t.hebrewTerm).join(', ') || 'ninguno';
       throw new Error(`No se encontraron conexiones para '${searchTerm}' en la Torá (se intentó con los conceptos: ${triedTerms}). Incluso la búsqueda forzada por Gematria falló.`);
     }
 
