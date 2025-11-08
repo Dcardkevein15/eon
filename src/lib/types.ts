@@ -419,3 +419,14 @@ export type SuggestedArticleTitle = {
   categorySlug: string;
   createdAt: string;
 };
+
+// --- Torah Code Types ---
+export type TorahCodeAnalysis = {
+    searchTerm: string;
+    hebrewTerm: string;
+    foundTerm: string;
+    skip: number;
+    startIndex: number;
+    matrix: string[][];
+    revelation: string;
+};

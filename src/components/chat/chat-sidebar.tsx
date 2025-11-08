@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Plus, Trash2, History, Briefcase, UserCircle, Dumbbell, Star, BarChartHorizontal, Book, Loader2, Atom } from 'lucide-react';
+import { Plus, Trash2, History, Briefcase, UserCircle, Dumbbell, Star, BarChartHorizontal, Book, Loader2, Atom, BookOpen as TorahIcon } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -100,6 +100,7 @@ function ChatSidebar({
     { href: "/blog", icon: Book, label: "Blog", id: 'blog-nav' },
     { href: "/marketplace", icon: Briefcase, label: "Marketplace", id: 'marketplace-nav' },
     { href: "/trading", icon: BarChartHorizontal, label: "Análisis Pro", id: 'trading-nav' },
+    { href: "/torah-code", icon: TorahIcon, label: "Oráculo de la Torá", id: 'torah-code-nav' },
   ];
 
   return (
