@@ -5,12 +5,13 @@ import { useState, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, Wand2, BookOpen, ChevronLeft, Search, History, Brain, Star, Clock, FileText, User, Bot, Atom, Link as LinkIcon, Plus, Calendar } from 'lucide-react';
+import { Loader2, Wand2, BookOpen, ChevronLeft, Search, History, Brain, Star, Clock, FileText, User, Bot, Atom, Link as LinkIcon, Plus, Calendar, AreaChart, GitMerge } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import { runResonanceAnalysis, runClassicAnalysis, runTemporalStrandAnalysis } from '@/ai/flows/torah-code-flow';
-import type { TorahCodeAnalysis, TorahCodeRecord, TemporalStrandAnalysis } from '@/lib/types';
+import { runResonanceAnalysis, runClassicAnalysis, runTemporalStrandAnalysis, runHarmonicAnalysis, runCrossMatrixAnalysis } from '@/ai/flows/torah-code-flow';
+import type { TorahCodeAnalysis, TorahCodeRecord, TemporalStrandAnalysis, HarmonicAnalysis, CrossMatrixAnalysis } from '@/lib/types';
 import TorahCodeMatrix from '@/components/torah-code/TorahCodeMatrix';
+import HarmonicChart from '@/components/torah-code/HarmonicChart';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -27,8 +28,8 @@ import { Calendar as CalendarIcon } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 
 
-type OracleMode = 'resonance' | 'classic' | 'temporal';
-type AnalysisResult = TorahCodeAnalysis | TemporalStrandAnalysis | null;
+type OracleMode = 'resonance' | 'classic' | 'temporal' | 'harmonic' | 'destiny';
+type AnalysisResult = TorahCodeAnalysis | TemporalStrandAnalysis | HarmonicAnalysis | CrossMatrixAnalysis | null;
 
 export default function TorahCodePage() {
     const { user, loading: authLoading } = useAuth();
@@ -39,6 +40,9 @@ export default function TorahCodePage() {
     const [conceptA, setConceptA] = useState('');
     const [conceptB, setConceptB] = useState('');
     const [classicConcept, setClassicConcept] = useState('');
+    const [harmonicConcept, setHarmonicConcept] = useState('');
+    const [destinyConceptA, setDestinyConceptA] = useState('');
+    const [destinyConceptB, setDestinyConceptB] = useState('');
     const [date, setDate] = useState<Date | undefined>(new Date());
 
     // Generic state for results and loading
@@ -67,22 +71,43 @@ export default function TorahCodePage() {
             let result: AnalysisResult;
             let dataToSave: any;
 
-            if (activeTab === 'resonance') {
-                if (!conceptA.trim() || !conceptB.trim()) throw new Error('Ambos conceptos son requeridos.');
-                result = await runResonanceAnalysis({ conceptA, conceptB });
-                dataToSave = { ...result, conceptA, conceptB, matrix: { rows: result.matrix.map(row => row.join('')) } };
-            } else if (activeTab === 'classic') {
-                if (!classicConcept.trim()) throw new Error('El concepto es requerido.');
-                result = await runClassicAnalysis({ concept: classicConcept });
-                dataToSave = { ...result, concept: classicConcept, matrix: { rows: result.matrix.map(row => row.join('')) } };
-            } else { // temporal
-                if (!date) throw new Error('La fecha es requerida.');
-                 result = await runTemporalStrandAnalysis({ date: date.toISOString() });
-                 dataToSave = { ...result, date: date.toISOString() };
+            switch (activeTab) {
+                case 'resonance':
+                    if (!conceptA.trim() || !conceptB.trim()) throw new Error('Ambos conceptos son requeridos.');
+                    result = await runResonanceAnalysis({ conceptA, conceptB });
+                    dataToSave = { ...result, conceptA, conceptB };
+                    break;
+                case 'classic':
+                    if (!classicConcept.trim()) throw new Error('El concepto es requerido.');
+                    result = await runClassicAnalysis({ concept: classicConcept });
+                    dataToSave = { ...result, concept: classicConcept };
+                    break;
+                case 'temporal':
+                    if (!date) throw new Error('La fecha es requerida.');
+                    result = await runTemporalStrandAnalysis({ date: date.toISOString() });
+                    dataToSave = { ...result, date: date.toISOString() };
+                    break;
+                case 'harmonic':
+                    if (!harmonicConcept.trim()) throw new Error('El concepto es requerido.');
+                    result = await runHarmonicAnalysis({ concept: harmonicConcept });
+                    dataToSave = { ...result, concept: harmonicConcept };
+                    break;
+                case 'destiny':
+                    if (!destinyConceptA.trim() || !destinyConceptB.trim()) throw new Error('Ambos conceptos son requeridos.');
+                    result = await runCrossMatrixAnalysis({ conceptA: destinyConceptA, conceptB: destinyConceptB });
+                    dataToSave = { ...result, conceptA: destinyConceptA, conceptB: destinyConceptB };
+                    break;
+                default:
+                    throw new Error('Modo de oráculo no válido.');
             }
             
             setAnalysisResult(result);
             
+            // Normalize matrix for saving if it exists
+            if ('matrix' in dataToSave && Array.isArray(dataToSave.matrix)) {
+                dataToSave.matrix = { rows: dataToSave.matrix.map((row: string[]) => row.join('')) };
+            }
+
             await addDoc(collection(firestore, `users/${user.uid}/torahCodeHistory`), {
                 ...dataToSave,
                 type: activeTab,
@@ -100,14 +125,22 @@ export default function TorahCodePage() {
     };
     
     const loadHistoryRecord = (record: TorahCodeRecord) => {
-        const recordType = (record as any).type || 'classic'; // Default to classic for old records
+        const recordType = (record as any).type as OracleMode;
         setActiveTab(recordType);
         
-        let result: AnalysisResult;
+        let result: AnalysisResult = null;
+
         if (recordType === 'temporal') {
             result = record as unknown as TemporalStrandAnalysis;
             setDate(new Date((record as any).date));
-        } else {
+        } else if(recordType === 'harmonic') {
+            result = record as unknown as HarmonicAnalysis;
+            setHarmonicConcept((record as any).concept || '');
+        } else if (recordType === 'destiny') {
+            result = record as unknown as CrossMatrixAnalysis;
+            setDestinyConceptA((record as any).conceptA || '');
+            setDestinyConceptB((record as any).conceptB || '');
+        } else if (record.matrix) { // Classic or Resonance
              let matrix: string[][];
             if (Array.isArray(record.matrix)) {
                 matrix = record.matrix;
@@ -121,7 +154,7 @@ export default function TorahCodePage() {
             if (recordType === 'resonance') {
                 setConceptA((record as any).conceptA || '');
                 setConceptB((record as any).conceptB || '');
-            } else {
+            } else { // Classic
                 setClassicConcept((record as any).concept || '');
             }
         }
@@ -136,13 +169,10 @@ export default function TorahCodePage() {
         } catch { return 'Fecha inválida'; }
     };
     
-    const isTorahCodeAnalysis = (res: AnalysisResult): res is TorahCodeAnalysis => {
-      return res !== null && 'matrix' in res;
-    }
-    
-    const isTemporalAnalysis = (res: AnalysisResult): res is TemporalStrandAnalysis => {
-      return res !== null && 'temporalStrand' in res;
-    }
+    const isTorahCodeAnalysis = (res: AnalysisResult): res is TorahCodeAnalysis => res !== null && 'matrix' in res && 'revelation' in res;
+    const isTemporalAnalysis = (res: AnalysisResult): res is TemporalStrandAnalysis => res !== null && 'temporalStrand' in res;
+    const isHarmonicAnalysis = (res: AnalysisResult): res is HarmonicAnalysis => res !== null && 'resonanceData' in res;
+    const isDestinyAnalysis = (res: AnalysisResult): res is CrossMatrixAnalysis => res !== null && 'catalystEvent' in res;
 
     const renderRevelationCards = (revelation: any) => {
         const cards = [
@@ -223,10 +253,13 @@ export default function TorahCodePage() {
                                                 <Card className="cursor-pointer hover:border-primary" onClick={() => loadHistoryRecord(record)}>
                                                     <CardHeader>
                                                         <CardTitle className="text-sm">
-                                                            {record.type === 'resonance' ? `${record.conceptA} ∩ ${record.conceptB}` : record.type === 'temporal' ? `Fecha: ${format(new Date(record.date), 'dd/MM/yyyy')}` : record.concept}
+                                                             {record.type === 'resonance' ? `${record.conceptA} ∩ ${record.conceptB}` :
+                                                              record.type === 'temporal' ? `Fecha: ${format(new Date(record.date as string), 'dd/MM/yyyy')}` :
+                                                              record.type === 'destiny' ? `${record.conceptA} ⤧ ${record.conceptB}` :
+                                                              record.concept}
                                                         </CardTitle>
                                                         <CardDescription>
-                                                            {getFormattedDate(record.timestamp)}
+                                                            {getFormattedDate(record.timestamp)} - {record.type}
                                                         </CardDescription>
                                                     </CardHeader>
                                                 </Card>
@@ -245,10 +278,12 @@ export default function TorahCodePage() {
                 <ScrollArea className="flex-1">
                     <div className="p-4 lg:p-6 max-w-7xl mx-auto">
                         <Tabs value={activeTab} onValueChange={(v) => { setAnalysisResult(null); setError(null); setActiveTab(v as OracleMode) }} className="w-full">
-                            <TabsList className="grid w-full grid-cols-3 max-w-2xl mx-auto">
+                            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 max-w-4xl mx-auto">
                                 <TabsTrigger value="resonance">Resonancia</TabsTrigger>
                                 <TabsTrigger value="classic">Clásico</TabsTrigger>
                                 <TabsTrigger value="temporal">Temporal</TabsTrigger>
+                                <TabsTrigger value="harmonic">Armonía</TabsTrigger>
+                                <TabsTrigger value="destiny">Destino</TabsTrigger>
                             </TabsList>
                             <TabsContent value="resonance" className="text-center">
                                 <header className="text-center my-8">
@@ -319,6 +354,40 @@ export default function TorahCodePage() {
                                     </Button>
                                 </div>
                             </TabsContent>
+                             <TabsContent value="harmonic" className="text-center">
+                                <header className="text-center my-8">
+                                    <h2 className="text-3xl md:text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-chart-5 via-chart-1 to-chart-2">
+                                        Análisis de Resonancia Armónica
+                                    </h2>
+                                    <p className="text-muted-foreground mt-2 max-w-3xl mx-auto">
+                                        Visualiza la "vibración" o frecuencia de un concepto a lo largo de los cinco libros de la Torá.
+                                    </p>
+                                </header>
+                                <div className="flex w-full max-w-lg mx-auto items-center space-x-2 mb-12">
+                                    <Input value={harmonicConcept} onChange={(e) => setHarmonicConcept(e.target.value)} placeholder="Concepto (Ej: Justicia)" disabled={isLoading} className="h-12 text-base" />
+                                    <Button type="button" onClick={handleAnalysis} disabled={isLoading || authLoading} className="h-12 px-6">
+                                        {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <AreaChart className="h-5 w-5" />}
+                                    </Button>
+                                </div>
+                            </TabsContent>
+                            <TabsContent value="destiny" className="text-center">
+                                <header className="text-center my-8">
+                                    <h2 className="text-3xl md:text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-chart-5 via-chart-1 to-chart-2">
+                                        Oráculo del Destino
+                                    </h2>
+                                    <p className="text-muted-foreground mt-2 max-w-3xl mx-auto">
+                                       Explora la causa y efecto cósmico analizando la trayectoria que sigue a la intersección de dos conceptos.
+                                    </p>
+                                </header>
+                                <div className="flex w-full max-w-2xl mx-auto items-center space-x-2 mb-12">
+                                    <Input value={destinyConceptA} onChange={(e) => setDestinyConceptA(e.target.value)} placeholder="Concepto Causa (Ej: Poder)" disabled={isLoading} className="h-12 text-base" />
+                                    <GitMerge className="text-muted-foreground" />
+                                    <Input value={destinyConceptB} onChange={(e) => setDestinyConceptB(e.target.value)} placeholder="Concepto Efecto (Ej: Corrupción)" disabled={isLoading} className="h-12 text-base" />
+                                    <Button type="button" onClick={handleAnalysis} disabled={isLoading || authLoading} className="h-12 px-6">
+                                        {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5" />}
+                                    </Button>
+                                </div>
+                            </TabsContent>
                         </Tabs>
 
                         <AnimatePresence mode="wait">
@@ -374,6 +443,47 @@ export default function TorahCodePage() {
                                                  <ReactMarkdown>{analysisResult.interpretation}</ReactMarkdown>
                                             </CardContent>
                                         </Card>
+                                     )}
+                                     {isHarmonicAnalysis(analysisResult) && (
+                                        <Card className="max-w-5xl mx-auto bg-card/50">
+                                             <CardHeader>
+                                                <CardTitle className="text-2xl md:text-3xl font-bold text-primary">{analysisResult.title}</CardTitle>
+                                                <CardDescription>{analysisResult.description}</CardDescription>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <HarmonicChart data={analysisResult.resonanceData} />
+                                                <div className="mt-6 prose dark:prose-invert max-w-none">
+                                                   <ReactMarkdown>{analysisResult.peakAnalysis}</ReactMarkdown>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                     )}
+                                     {isDestinyAnalysis(analysisResult) && (
+                                         <Card className="max-w-4xl mx-auto bg-card/50">
+                                            <CardHeader className="text-center">
+                                                <CardTitle className="text-2xl md:text-3xl font-bold text-primary">{analysisResult.title}</CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="space-y-6">
+                                                <div className="text-center p-4 rounded-lg bg-background">
+                                                    <p className="text-sm text-muted-foreground">Evento Catalizador en la Intersección</p>
+                                                    <p className="text-xl font-bold font-hebrew">{analysisResult.catalystEvent}</p>
+                                                </div>
+                                                <div className="grid md:grid-cols-2 gap-6">
+                                                    <div className="prose prose-sm dark:prose-invert max-w-none p-4 rounded-lg border border-border/50">
+                                                        <h4 className="text-primary">Trayectoria A: {analysisResult.trajectoryA.concept}</h4>
+                                                         <ReactMarkdown>{analysisResult.trajectoryA.analysis}</ReactMarkdown>
+                                                    </div>
+                                                     <div className="prose prose-sm dark:prose-invert max-w-none p-4 rounded-lg border border-border/50">
+                                                        <h4 className="text-primary">Trayectoria B: {analysisResult.trajectoryB.concept}</h4>
+                                                         <ReactMarkdown>{analysisResult.trajectoryB.analysis}</ReactMarkdown>
+                                                    </div>
+                                                </div>
+                                                 <div className="prose dark:prose-invert max-w-none p-6 rounded-lg bg-primary/5 border border-primary/20 text-center">
+                                                    <h3 className="text-primary">Punto de Destino</h3>
+                                                     <ReactMarkdown>{analysisResult.destinyPoint}</ReactMarkdown>
+                                                </div>
+                                            </CardContent>
+                                         </Card>
                                      )}
                                 </motion.div>
                             ) : (

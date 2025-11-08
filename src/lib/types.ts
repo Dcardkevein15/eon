@@ -1,5 +1,6 @@
 
 
+
 import type { User as FirebaseUser } from 'firebase/auth';
 import { Timestamp } from 'firebase/firestore';
 import { z } from 'zod';
@@ -482,11 +483,30 @@ export type TemporalStrandAnalysis = {
   date: string;
 }
 
-export type TorahCodeRecord = (TorahCodeAnalysis | TemporalStrandAnalysis) & {
+export type HarmonicAnalysis = {
+    title: string;
+    description: string;
+    resonanceData: {
+        segment: number;
+        score: number;
+        book: 'Génesis' | 'Éxodo' | 'Levítico' | 'Números' | 'Deuteronomio';
+    }[];
+    peakAnalysis: string;
+};
+
+export type CrossMatrixAnalysis = {
+    title: string;
+    catalystEvent: string;
+    trajectoryA: { concept: string; analysis: string; };
+    trajectoryB: { concept: string; analysis: string; };
+    destinyPoint: string;
+}
+
+export type TorahCodeRecord = (TorahCodeAnalysis | TemporalStrandAnalysis | HarmonicAnalysis | CrossMatrixAnalysis) & {
   id: string;
-  timestamp: string;
+  timestamp: any;
   userId: string;
-  type: 'classic' | 'resonance' | 'temporal';
+  type: 'classic' | 'resonance' | 'temporal' | 'harmonic' | 'destiny';
   concept?: string;
   conceptA?: string;
   conceptB?: string;
