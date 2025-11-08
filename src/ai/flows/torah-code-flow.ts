@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview An AI flow for finding and interpreting "Bible Codes" in the Torah.
@@ -18,7 +19,7 @@ const TorahCodeInputSchema = z.object({
 
 const HebrewTranslationOutputSchema = z.object({
   hebrewTerm: z.string().describe('El término de búsqueda traducido al hebreo, sin vocales ni puntuación.'),
-  optimalSkip: z.number().int().positive().describe('La distancia de salto (skip) que la IA considera óptima para buscar este término específico.'),
+  optimalSkip: z.number().int().min(1).describe('La distancia de salto (skip) que la IA considera óptima para buscar este término específico.'),
 });
 
 const AnalysisResultSchema = z.object({
