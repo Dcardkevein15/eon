@@ -419,11 +419,3 @@ export type SuggestedArticleTitle = {
   categorySlug: string;
   createdAt: string;
 };
-
-// --- Aether Types ---
-export type AetherConversationEntry = {
-    id: string;
-    speaker: 'user' | 'ai';
-    text: string;
-    audioUrl?: string;
-};

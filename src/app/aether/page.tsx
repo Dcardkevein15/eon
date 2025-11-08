@@ -5,7 +5,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, Mic, Settings, WifiOff, Bot, ChevronLeft, Pause, Play, Square } from 'lucide-react';
+import { Loader2, Mic, Bot, ChevronLeft, Pause, Play, Square } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { aetherAction } from '@/ai/flows/aether-flows';
@@ -356,4 +356,3 @@ export default function AetherPage() {
     </div>
   );
 }
-
