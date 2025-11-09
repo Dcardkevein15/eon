@@ -19,6 +19,7 @@ import { analyzeVoiceMessage as analyzeVoiceMessageFlow } from '@/ai/flows/analy
 import { analyzeDreamVoice as analyzeDreamVoiceFlow } from '@/ai/flows/analyze-dream-voice';
 import { generateArticleTitles as genTitlesFlow, dispatchArticleWriter } from '@/ai/flows/blog-flows';
 import { getRecommendedCategory as getRecommendedCategoryFlow } from '@/ai/flows/get-recommended-category';
+import { runProfileAnalysis as runProfileAnalysisFlow } from '@/ai/flows/torah-code-flow';
 
 
 const expertRoles = [
@@ -364,4 +365,10 @@ export async function generateArticleContent(input: GenerateArticleContentInput)
   // This is a dummy function now, the real logic is in dispatchArticleWriter
   // It's kept for compatibility if any other part of the app calls it, but it should be deprecated.
   return await dispatchArticleWriter(input);
+}
+
+
+// --- Torah Code Actions ---
+export async function runProfileAnalysis(userProfile: string) {
+    return runProfileAnalysisFlow({ userProfile });
 }

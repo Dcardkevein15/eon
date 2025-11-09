@@ -1,16 +1,17 @@
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth, useCollection, useFirestore } from '@/firebase';
 import { collection, getDocs, query, orderBy, limit, Timestamp } from 'firebase/firestore';
-import type { Chat, Message, ProfileData, CachedProfile } from '@/lib/types';
+import type { Chat, Message, ProfileData, CachedProfile, TorahCodeAnalysis } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BrainCircuit, UserCheck, ShieldCheck, ListChecks, ChevronLeft, Sparkles, Filter, ShieldQuestion, Info, RefreshCcw, LineChart, Target, Repeat, Star, Shield, AlertTriangle, GitCommit, LayoutDashboard, BarChart3, Search, Cog } from 'lucide-react';
+import { BrainCircuit, UserCheck, ShieldCheck, ListChecks, ChevronLeft, Sparkles, Filter, ShieldQuestion, Info, RefreshCcw, LineChart, Target, Repeat, Star, Shield, AlertTriangle, GitCommit, LayoutDashboard, BarChart3, Search, Cog, BookOpen } from 'lucide-react';
 import Link from 'next/link';
 import { Progress } from '@/components/ui/progress';
 import { format } from 'date-fns';
@@ -25,6 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { motion } from 'framer-motion';
 import TextSizeControl from '@/components/profile/TextSizeControl';
 import { cn } from '@/lib/utils';
+import ProfileCryptoAnalysis from '@/components/profile/ProfileCryptoAnalysis';
 
 const EmotionalConstellation = dynamic(() => import('@/components/profile/EmotionalConstellation'), {
   ssr: false,
@@ -355,7 +357,7 @@ export default function PsychologicalProfile() {
         </header>
         
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 md:inline-flex md:w-auto mb-6 bg-card/50">
+          <TabsList className="grid w-full grid-cols-4 md:inline-flex md:w-auto mb-6 bg-card/50">
             <TabsTrigger value="overview" className="gap-2">
                 <LayoutDashboard className="h-4 w-4" />
                 <span className="hidden md:inline">Resumen</span>
@@ -370,6 +372,11 @@ export default function PsychologicalProfile() {
                 <Search className="h-4 w-4" />
                 <span className="hidden md:inline">Análisis Profundo</span>
                 <span className="md:hidden">Análisis</span>
+            </TabsTrigger>
+             <TabsTrigger value="oracle" className="gap-2" data-tour-id="profile-oracle">
+                <BookOpen className="h-4 w-4" />
+                <span className="hidden md:inline">Oráculo</span>
+                <span className="md:hidden">Oráculo</span>
             </TabsTrigger>
           </TabsList>
 
@@ -643,6 +650,9 @@ export default function PsychologicalProfile() {
                 </AccordionItem>
             </Accordion>
           </TabsContent>
+           <TabsContent value="oracle" className="mt-6">
+                <ProfileCryptoAnalysis profile={profile} />
+           </TabsContent>
         </Tabs>
     </div>
   );

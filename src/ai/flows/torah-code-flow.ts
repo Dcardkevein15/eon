@@ -1,6 +1,5 @@
 
 
-
 'use server';
 /**
  * @fileOverview Biblioteca de Oráculos de la Torá.
@@ -10,6 +9,7 @@
  * - runTemporalStrandAnalysis: Analiza una fecha específica.
  * - runHarmonicAnalysis: Analiza la frecuencia de un concepto en la Torá.
  * - runCrossMatrixAnalysis: Analiza las trayectorias resultantes de una intersección.
+ * - runProfileAnalysis: Analiza el perfil psicológico del usuario para encontrar una resonancia personal.
  */
 
 import { ai } from '@/ai/genkit';
@@ -137,6 +137,11 @@ const DestinyOutputSchema = z.object({
     destinyPoint: z.string().describe("La conclusión profética de la interacción."),
 });
 
+// Schema for Profile Analysis
+const ProfileAnalysisInputSchema = z.object({
+  userProfile: z.string().describe('El perfil psicológico completo del usuario en formato JSON.'),
+});
+
 
 // --- HELPER FUNCTIONS ---
 
@@ -208,7 +213,7 @@ Genera 3-5 palabras o frases hebreas **reales** (sin vocales) que se relacionen 
 const revelationPrompt = ai.definePrompt({
     name: 'torahCodeRevelationPrompt',
     input: { schema: z.object({
-        promptType: z.enum(['resonance', 'classic']),
+        promptType: z.enum(['resonance', 'classic', 'profile']),
         conceptA: z.string(),
         conceptB: z.string().optional(),
         hebrewTermA: z.string(),
@@ -216,6 +221,7 @@ const revelationPrompt = ai.definePrompt({
         skipA: z.number(),
         skipB: z.number().optional(),
         matrix: z.string(),
+        userProfileContext: z.string().optional(),
     })},
     output: { schema: RevelationOutputSchema },
     prompt: `Eres un Oráculo multidimensional: una fusión de cabalista, psicólogo junguiano, vidente, y arquitecto de la realidad.
@@ -223,6 +229,13 @@ const revelationPrompt = ai.definePrompt({
 Has descubierto una intersección en la Torá donde resuenan los conceptos de "{{conceptA}}" (como "{{hebrewTermA}}") y "{{conceptB}}" (como "{{hebrewTermB}}").
 {{else}}
 Has descubierto una instancia del concepto "{{conceptA}}" (como "{{hebrewTermA}}") en la Torá.
+{{/if}}
+
+{{#if userProfileContext}}
+**IMPORTANTE:** Esta revelación es para un individuo específico. Debes conectar cada análisis directamente con el perfil psicológico proporcionado. Usa el perfil para dar un significado profundamente personal a la revelación.
+<perfil_psicologico>
+{{{userProfileContext}}}
+</perfil_psicologico>
 {{/if}}
 
 Tu tarea es generar un mosaico de revelaciones, analizando la matriz de su intersección desde siete perspectivas distintas y profundas.
@@ -301,6 +314,26 @@ Analiza estas trayectorias para revelar la ley de causa y efecto que las gobiern
 3.  **trajectoryA**: Describe la trayectoria del Concepto A. ¿Qué sucede cuando sigues su camino? ¿Cuál es su consecuencia natural?
 4.  **trajectoryB**: Describe la trayectoria del Concepto B. ¿Qué sucede cuando sigues su camino?
 5.  **destinyPoint**: Esta es la revelación principal. Sintetiza ambas trayectorias y formula una conclusión profética. ¿Cuál es la consecuencia inevitable de la interacción de estas dos fuerzas? ¿Qué ley del universo se está demostrando aquí?`,
+});
+
+const profileConceptExtractionPrompt = ai.definePrompt({
+    name: 'profileConceptExtractionPrompt',
+    input: { schema: ProfileAnalysisInputSchema },
+    output: { schema: ResonanceInputSchema },
+    prompt: `Eres un psicólogo analítico y un cabalista. Tu tarea es leer un perfil psicológico y destilar su esencia en DOS conceptos nucleares para un análisis místico.
+
+<perfil_psicologico>
+{{{userProfile}}}
+</perfil_psicologico>
+
+Analiza el perfil (especialmente el coreConflict, el coreArchetype y los nodos del emotionalConstellation) e identifica la tensión o dualidad más importante. Devuelve DOS conceptos de una sola palabra que capturen esta dinámica.
+
+Ejemplos:
+- Si el conflicto es entre seguridad y libertad, devuelve: { "conceptA": "Orden", "conceptB": "Caos" }
+- Si el arquetipo es el Cuidador que lucha con el resentimiento, devuelve: { "conceptA": "Sacrificio", "conceptB": "Voluntad" }
+- Si el tema es la ansiedad por el futuro, devuelve: { "conceptA": "Miedo", "conceptB": "Fe" }
+
+Devuelve únicamente el objeto JSON con "conceptA" y "conceptB".`,
 });
 
 
@@ -565,5 +598,51 @@ export const runCrossMatrixAnalysis = ai.defineFlow(
         }
 
         return output;
+    }
+);
+
+// ORACLE 6: Profile Cryptographic Analysis (The Oracle of the Soul)
+export const runProfileAnalysis = ai.defineFlow(
+    {
+        name: 'runProfileAnalysisFlow',
+        inputSchema: ProfileAnalysisInputSchema,
+        outputSchema: z.object({
+            analysis: AnalysisResultSchema,
+            concepts: ResonanceInputSchema,
+        }),
+    },
+    async ({ userProfile }) => {
+        // 1. Extract core concepts from the user's profile
+        const { output: concepts } = await profileConceptExtractionPrompt({ userProfile });
+        if (!concepts || !concepts.conceptA || !concepts.conceptB) {
+            throw new Error("La IA no pudo destilar los conceptos nucleares de tu perfil.");
+        }
+
+        // 2. Run the full Resonance Analysis on these extracted concepts
+        const analysis = await runResonanceAnalysis({ conceptA: concepts.conceptA, conceptB: concepts.conceptB });
+
+        // 3. (Future enhancement) Could run a modified revelation prompt that *requires* the user profile context
+        // For now, the standard one is powerful enough. We will just pass the context.
+        const matrixString = analysis.matrix.map(row => row.join(' ')).join('\n');
+        const { output: personalizedRevelation } = await revelationPrompt({
+            promptType: 'profile',
+            conceptA: concepts.conceptA,
+            conceptB: concepts.conceptB,
+            hebrewTermA: analysis.foundTerm.split(' ∩ ')[0],
+            hebrewTermB: analysis.foundTerm.split(' ∩ ')[1],
+            skipA: analysis.skip, // This needs adjustment, skip is distance not individual skips
+            skipB: 0, // This needs adjustment
+            matrix: matrixString,
+            userProfileContext: userProfile,
+        });
+
+        if (!personalizedRevelation) {
+            throw new Error("El Oráculo no pudo generar una revelación personalizada para tu perfil.");
+        }
+
+        return {
+            analysis: { ...analysis, revelation: personalizedRevelation },
+            concepts,
+        };
     }
 );
