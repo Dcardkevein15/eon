@@ -10,9 +10,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuGroup,
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
-import { LogIn, LogOut, User, Camera, Loader2, Moon, Sun, Briefcase, Route } from 'lucide-react';
+import { LogIn, LogOut, User, Camera, Loader2, Moon, Sun, Briefcase, Route, UserCircle, Dumbbell, Star, BookOpen, Atom, BarChartHorizontal, BookOpen as TorahIcon } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { useStorage } from '@/firebase/storage';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -20,6 +21,18 @@ import { updateProfile } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useTheme } from 'next-themes';
 import Link from 'next/link';
+
+const navItems = [
+    { href: "/aether", icon: Atom, label: "Aether" },
+    { href: "/profile", icon: UserCircle, label: "Perfil Psicológico" },
+    { href: "/gym", icon: Dumbbell, label: "Gimnasio Emocional" },
+    { href: "/dreams", icon: Star, label: "Portal de Sueños" },
+    { href: "/blog", icon: BookOpen, label: "Blog" },
+    { href: "/marketplace", icon: Briefcase, label: "Marketplace" },
+    { href: "/trading", icon: BarChartHorizontal, label: "Análisis Pro" },
+    { href: "/torah-code", icon: TorahIcon, label: "Oráculo de la Torá" },
+];
+
 
 export default function UserButton() {
   const { user, loading, signInWithGoogle, signOut, auth, userRoles } = useAuth();
@@ -90,19 +103,15 @@ export default function UserButton() {
     return (
       <div className="flex items-center gap-2 p-2">
         <Skeleton className="h-10 w-10 rounded-full" />
-        <div className="flex-1 space-y-1">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-3 w-32" />
-        </div>
       </div>
     );
   }
 
   if (!user) {
     return (
-      <Button onClick={signInWithGoogle} className="w-full">
+      <Button onClick={signInWithGoogle} variant="outline">
         <LogIn className="mr-2 h-4 w-4" />
-        Iniciar sesión con Google
+        Iniciar sesión
       </Button>
     );
   }
@@ -119,22 +128,16 @@ export default function UserButton() {
       />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="w-full justify-start text-left h-auto py-2 px-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={photoURL ?? ''} alt={user?.displayName ?? ''} />
-                <AvatarFallback>
-                  <User />
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col min-w-0">
-                <span className="font-medium truncate">{user?.displayName ?? 'Usuario'}</span>
-                <span className="text-xs text-muted-foreground truncate">{user?.email ?? 'Invitado'}</span>
-              </div>
-            </div>
+          <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+            <Avatar className="h-10 w-10">
+              <AvatarImage src={photoURL ?? ''} alt={user?.displayName ?? ''} />
+              <AvatarFallback>
+                <User />
+              </AvatarFallback>
+            </Avatar>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-56" align="end" forceMount>
+        <DropdownMenuContent className="w-64" align="end" forceMount>
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
               <p className="text-sm font-medium leading-none">{user?.displayName}</p>
@@ -142,30 +145,45 @@ export default function UserButton() {
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-            {theme === 'dark' ? (
-              <Sun className="mr-2 h-4 w-4" />
-            ) : (
-              <Moon className="mr-2 h-4 w-4" />
+           <DropdownMenuGroup>
+             <DropdownMenuLabel className="text-xs">Navegación</DropdownMenuLabel>
+             {navItems.map((item) => (
+                <DropdownMenuItem key={item.href} asChild>
+                    <Link href={item.href}>
+                        <item.icon className="mr-2 h-4 w-4"/>
+                        <span>{item.label}</span>
+                    </Link>
+                </DropdownMenuItem>
+             ))}
+           </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuLabel className="text-xs">Ajustes</DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+              {theme === 'dark' ? (
+                <Sun className="mr-2 h-4 w-4" />
+              ) : (
+                <Moon className="mr-2 h-4 w-4" />
+              )}
+              <span>Cambiar a modo {theme === 'dark' ? 'claro' : 'oscuro'}</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleUploadClick} disabled={isUploading}>
+              {isUploading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Camera className="mr-2 h-4 w-4" />
+              )}
+              <span>{isUploading ? 'Subiendo...' : 'Cambiar foto'}</span>
+            </DropdownMenuItem>
+            {!isProfessional && !isAdmin && (
+               <DropdownMenuItem asChild>
+                  <Link href="/apply">
+                    <Briefcase className="mr-2 h-4 w-4" />
+                    <span>Conviértete en Profesional</span>
+                  </Link>
+                </DropdownMenuItem>
             )}
-            <span>Cambiar a modo {theme === 'dark' ? 'claro' : 'oscuro'}</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleUploadClick} disabled={isUploading}>
-            {isUploading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Camera className="mr-2 h-4 w-4" />
-            )}
-            <span>{isUploading ? 'Subiendo...' : 'Cambiar foto'}</span>
-          </DropdownMenuItem>
-          {!isProfessional && !isAdmin && (
-             <DropdownMenuItem asChild>
-                <Link href="/apply">
-                  <Briefcase className="mr-2 h-4 w-4" />
-                  <span>Conviértete en Profesional</span>
-                </Link>
-              </DropdownMenuItem>
-          )}
+          </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={signOut}>
             <LogOut className="mr-2 h-4 w-4" />
