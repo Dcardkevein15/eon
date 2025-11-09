@@ -25,6 +25,7 @@ import { Gematria, findELS, findWordsAtELS, extractMatrixFromIndex } from '@/lib
 const ResonanceInputSchema = z.object({
   conceptA: z.string().describe('El primer concepto para el análisis de resonancia.'),
   conceptB: z.string().describe('El segundo concepto para el análisis de resonancia.'),
+  userProfileContext: z.string().optional(),
 });
 const ClassicInputSchema = z.object({
   concept: z.string().describe('El concepto para el análisis clásico.'),
@@ -182,7 +183,7 @@ function findClosestIntersection(resultsA: ELSResult[], resultsB: ELSResult[]): 
 
 const resonanceCryptographicDesignPrompt = ai.definePrompt({
     name: 'resonanceCryptographicDesignPrompt',
-    input: { schema: ResonanceInputSchema },
+    input: { schema: ResonanceInputSchema.pick({ conceptA: true, conceptB: true }) },
     output: { schema: DualCryptographicDesignOutputSchema },
     prompt: `Eres un rabino cabalista experto y un criptógrafo místico. Tu tarea es tomar dos conceptos y diseñar conjuntos de búsqueda para encontrar su resonancia en la Torá.
 
@@ -319,7 +320,7 @@ Analiza estas trayectorias para revelar la ley de causa y efecto que las gobiern
 const profileConceptExtractionPrompt = ai.definePrompt({
     name: 'profileConceptExtractionPrompt',
     input: { schema: ProfileAnalysisInputSchema },
-    output: { schema: ResonanceInputSchema },
+    output: { schema: ResonanceInputSchema.pick({ conceptA: true, conceptB: true }) },
     prompt: `Eres un psicólogo analítico y un cabalista. Tu tarea es leer un perfil psicológico y destilar su esencia en DOS conceptos nucleares para un análisis místico.
 
 <perfil_psicologico>
@@ -346,33 +347,24 @@ export const runResonanceAnalysis = ai.defineFlow(
     inputSchema: ResonanceInputSchema,
     outputSchema: AnalysisResultSchema,
   },
-  async ({ conceptA, conceptB }) => {
+  async ({ conceptA, conceptB, userProfileContext }) => {
     const { output: design } = await resonanceCryptographicDesignPrompt({ conceptA, conceptB });
     if (!design || !design.searchTermsA.length || !design.searchTermsB.length) {
       throw new Error("La IA no pudo diseñar términos de búsqueda para los conceptos dados.");
     }
     
-    // Perform an exhaustive search for each term in both concepts
-    const findExhaustiveELS = (term: z.infer<typeof CryptographicTermSchema>): ELSResult[] => {
-        const results: ELSResult[] = [];
-        // First, try the AI-suggested skip
-        let indices = findELS(TORAH_TEXT, term.hebrewTerm, term.skipEquation);
-        if (indices.length > 0) {
-            results.push({ term: term.hebrewTerm, skip: term.skipEquation, indices });
-        }
-        // Then, perform a broader search if needed (or always, for more options)
-        for (let skip = 1; skip <= 50000; skip += 1) { // A reasonable but large range
-             if (skip === term.skipEquation) continue; // Don't repeat
-             indices = findELS(TORAH_TEXT, term.hebrewTerm, skip);
+    const findExhaustiveELS = (term: z.infer<typeof CryptographicTermSchema>): ELSResult | null => {
+        for (let skip = 1; skip <= 50000; skip++) {
+             const indices = findELS(TORAH_TEXT, term.hebrewTerm, skip);
              if (indices.length > 0) {
-                 results.push({ term: term.hebrewTerm, skip, indices });
+                 return { term: term.hebrewTerm, skip, indices };
              }
         }
-        return results;
+        return null;
     };
     
-    const resultsA = design.searchTermsA.flatMap(findExhaustiveELS);
-    const resultsB = design.searchTermsB.flatMap(findExhaustiveELS);
+    const resultsA = design.searchTermsA.map(findExhaustiveELS).filter((r): r is ELSResult => r !== null);
+    const resultsB = design.searchTermsB.map(findExhaustiveELS).filter((r): r is ELSResult => r !== null);
     
     if (resultsA.length === 0 || resultsB.length === 0) {
       throw new Error(`No se encontraron secuencias en la Torá para uno o ambos conceptos. Concepto A: ${resultsA.length > 0}, Concepto B: ${resultsB.length > 0}`);
@@ -395,6 +387,7 @@ export const runResonanceAnalysis = ai.defineFlow(
         skipA: intersection.a.skip,
         skipB: intersection.b.skip,
         matrix: matrixString,
+        userProfileContext,
     });
     if (!revelation) throw new Error("El Oráculo no pudo generar una revelación.");
     
@@ -429,7 +422,7 @@ export const runClassicAnalysis = ai.defineFlow(
             const indices = findELS(TORAH_TEXT, term.hebrewTerm, skip);
             if (indices.length > 0) {
                 // Found the first occurrence, let's use it
-                foundResult = { term: term.hebrewTerm, skip: skip, indices };
+                foundResult = { term: term.hebrewTerm, skip: skip, indices: indices };
                 break;
             }
         }
@@ -603,46 +596,32 @@ export const runCrossMatrixAnalysis = ai.defineFlow(
 
 // ORACLE 6: Profile Cryptographic Analysis (The Oracle of the Soul)
 export const runProfileAnalysis = ai.defineFlow(
-    {
-        name: 'runProfileAnalysisFlow',
-        inputSchema: ProfileAnalysisInputSchema,
-        outputSchema: z.object({
-            analysis: AnalysisResultSchema,
-            concepts: ResonanceInputSchema,
-        }),
-    },
-    async ({ userProfile }) => {
-        // 1. Extract core concepts from the user's profile
-        const { output: concepts } = await profileConceptExtractionPrompt({ userProfile });
-        if (!concepts || !concepts.conceptA || !concepts.conceptB) {
-            throw new Error("La IA no pudo destilar los conceptos nucleares de tu perfil.");
-        }
-
-        // 2. Run the full Resonance Analysis on these extracted concepts
-        const analysis = await runResonanceAnalysis({ conceptA: concepts.conceptA, conceptB: concepts.conceptB });
-
-        // 3. (Future enhancement) Could run a modified revelation prompt that *requires* the user profile context
-        // For now, the standard one is powerful enough. We will just pass the context.
-        const matrixString = analysis.matrix.map(row => row.join(' ')).join('\n');
-        const { output: personalizedRevelation } = await revelationPrompt({
-            promptType: 'profile',
-            conceptA: concepts.conceptA,
-            conceptB: concepts.conceptB,
-            hebrewTermA: analysis.foundTerm.split(' ∩ ')[0],
-            hebrewTermB: analysis.foundTerm.split(' ∩ ')[1],
-            skipA: analysis.skip, // This needs adjustment, skip is distance not individual skips
-            skipB: 0, // This needs adjustment
-            matrix: matrixString,
-            userProfileContext: userProfile,
-        });
-
-        if (!personalizedRevelation) {
-            throw new Error("El Oráculo no pudo generar una revelación personalizada para tu perfil.");
-        }
-
-        return {
-            analysis: { ...analysis, revelation: personalizedRevelation },
-            concepts,
-        };
+  {
+    name: 'runProfileAnalysisFlow',
+    inputSchema: ProfileAnalysisInputSchema,
+    outputSchema: z.object({
+      analysis: AnalysisResultSchema,
+      concepts: ResonanceInputSchema.pick({ conceptA: true, conceptB: true }),
+    }),
+  },
+  async ({ userProfile }) => {
+    // 1. Extract core concepts from the user's profile
+    const { output: concepts } = await profileConceptExtractionPrompt({ userProfile });
+    if (!concepts || !concepts.conceptA || !concepts.conceptB) {
+      throw new Error("La IA no pudo destilar los conceptos nucleares de tu perfil.");
     }
+
+    // 2. Run the full Resonance Analysis on these extracted concepts, passing the profile context.
+    const analysis = await runResonanceAnalysis({
+      conceptA: concepts.conceptA,
+      conceptB: concepts.conceptB,
+      userProfileContext: userProfile,
+    });
+    
+    // 3. Return the complete, personalized analysis along with the concepts that were used.
+    return {
+      analysis,
+      concepts,
+    };
+  }
 );
