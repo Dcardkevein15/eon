@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { AppLogo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, CheckCircle, BrainCircuit, Dumbbell, Star, BookOpen as TorahIcon, Briefcase } from 'lucide-react';
+import { ArrowRight, MessageCircle, BrainCircuit, Dumbbell, Star, BookOpen as TorahIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { HeroSection } from '@/components/landing/HeroSection';
 import { FeatureCard } from '@/components/landing/FeatureCard';
@@ -15,15 +15,22 @@ import { Header } from '@/components/landing/Header';
 
 const features = [
   {
+    icon: MessageCircle,
+    title: 'Inicia la Conversación',
+    description: 'El corazón de todo. Tu viaje hacia el autoconocimiento comienza con un simple hola. Estamos aquí para escucharte, 24/7.',
+    href: '/c',
+    isFeatured: true,
+  },
+  {
     icon: BrainCircuit,
     title: 'Cianotipo Psicológico',
-    description: 'Obtén un perfil de personalidad profundo y evolutivo generado por IA, revelando tus patrones, arquetipos y conflictos nucleares.',
+    description: 'Obtén un perfil de personalidad profundo y evolutivo, revelando tus patrones y arquetipos.',
     href: '/profile',
   },
   {
     icon: Dumbbell,
     title: 'Gimnasio Emocional',
-    description: 'Practica conversaciones difíciles en un entorno de simulación seguro para fortalecer tu asertividad y comunicación.',
+    description: 'Practica conversaciones difíciles en un entorno seguro para fortalecer tu asertividad.',
     href: '/gym',
   },
   {
@@ -35,7 +42,7 @@ const features = [
    {
     icon: TorahIcon,
     title: 'Oráculos de la Torá',
-    description: 'Explora las profundidades de la sabiduría cabalística a través de análisis criptográficos de tu perfil en el texto sagrado.',
+    description: 'Explora las profundidades de la sabiduría cabalística a través de análisis criptográficos.',
     href: '/torah-code',
   },
 ];
@@ -70,7 +77,7 @@ export default function LandingPage() {
               </motion.p>
             </div>
 
-            <div className="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {features.map((feature, i) => (
                 <FeatureCard key={feature.title} index={i} {...feature} />
               ))}

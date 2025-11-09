@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { motion } from 'framer-motion';
 import type { LucideIcon } from "lucide-react";
 import Link from 'next/link';
+import { cn } from "@/lib/utils";
 
 interface FeatureCardProps {
     icon: LucideIcon;
@@ -11,29 +12,48 @@ interface FeatureCardProps {
     description: string;
     href: string;
     index: number;
+    isFeatured?: boolean;
 }
 
-export const FeatureCard = ({ icon: Icon, title, description, href, index }: FeatureCardProps) => {
+export const FeatureCard = ({ icon: Icon, title, description, href, index, isFeatured = false }: FeatureCardProps) => {
+    
+    const cardContent = (
+        <Card className={cn(
+            "h-full bg-card/50 transition-all duration-300 transform hover:-translate-y-1 relative",
+            isFeatured 
+                ? "bg-gradient-to-br from-primary/10 via-background to-background border-2 border-transparent"
+                : "hover:border-primary/50 hover:bg-card/80"
+        )}>
+            {isFeatured && <div className="animated-border rounded-lg" style={{ animationDuration: '6s', padding: '2px' }}></div>}
+            <div className={cn("relative h-full flex flex-col", isFeatured && "bg-background rounded-md")}>
+                <CardHeader>
+                    <div className={cn(
+                        "p-3 rounded-lg w-fit border mb-3",
+                        isFeatured 
+                            ? "bg-primary/20 border-primary/30"
+                            : "bg-primary/10 border-primary/20"
+                    )}>
+                        <Icon className={cn("w-6 h-6", isFeatured ? "text-primary/90" : "text-primary")} />
+                    </div>
+                    <CardTitle className={isFeatured ? "text-primary" : ""}>{title}</CardTitle>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                    <CardDescription>{description}</CardDescription>
+                </CardContent>
+            </div>
+        </Card>
+    );
+    
     return (
         <motion.div
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.5 }}
             transition={{ duration: 0.5, delay: 0.1 * index }}
-            className="h-full"
+            className={cn("h-full", isFeatured ? "md:col-span-2 lg:col-span-1 lg:row-span-2" : "lg:col-span-1")}
         >
             <Link href={href} className="h-full block">
-                <Card className="h-full bg-card/50 hover:border-primary/50 hover:bg-card/80 transition-all duration-300 transform hover:-translate-y-1">
-                    <CardHeader>
-                        <div className="p-3 bg-primary/10 rounded-lg w-fit border border-primary/20 mb-3">
-                            <Icon className="w-6 h-6 text-primary" />
-                        </div>
-                        <CardTitle>{title}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <CardDescription>{description}</CardDescription>
-                    </CardContent>
-                </Card>
+                {cardContent}
             </Link>
         </motion.div>
     );

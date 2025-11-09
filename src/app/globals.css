@@ -92,9 +92,9 @@
   .animated-border {
     position: absolute;
     inset: 0;
-    border-radius: 0; 
+    border-radius: inherit; 
     padding: 3px; 
-    background: conic-gradient(from var(--angle, 0deg), hsl(var(--chart-3)), hsl(var(--chart-2)), hsl(var(--chart-1)), hsl(var(--chart-2)), hsl(var(--chart-3)));
+    background: conic-gradient(from var(--angle, 0deg), hsl(var(--primary)), hsl(var(--accent)), hsl(var(--chart-1)), hsl(var(--accent)), hsl(var(--primary)));
     animation: animated-border-spin 4s linear infinite;
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
