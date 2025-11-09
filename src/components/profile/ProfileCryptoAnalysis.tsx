@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -8,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { runProfileAnalysis } from '@/app/actions';
 import type { ProfileData, TorahCodeAnalysis } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import TorahCodeMatrix from '@/components/torah-code/TorahCodeMatrix';
 import ReactMarkdown from 'react-markdown';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
