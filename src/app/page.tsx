@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -17,21 +18,25 @@ const features = [
     icon: BrainCircuit,
     title: 'Cianotipo Psicológico',
     description: 'Obtén un perfil de personalidad profundo y evolutivo generado por IA, revelando tus patrones, arquetipos y conflictos nucleares.',
+    href: '/profile',
   },
   {
     icon: Dumbbell,
     title: 'Gimnasio Emocional',
     description: 'Practica conversaciones difíciles en un entorno de simulación seguro para fortalecer tu asertividad y comunicación.',
+    href: '/gym',
   },
   {
     icon: Star,
     title: 'Portal de Sueños',
     description: 'Interpreta el lenguaje simbólico de tus sueños con la ayuda de especialistas en análisis onírico.',
+    href: '/dreams',
   },
    {
     icon: TorahIcon,
     title: 'Oráculos de la Torá',
     description: 'Explora las profundidades de la sabiduría cabalística a través de análisis criptográficos de tu perfil en el texto sagrado.',
+    href: '/torah-code',
   },
 ];
 
