@@ -1,6 +1,7 @@
 'use client';
 import { AppLogo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
+import UserButton from '@/components/chat/user-button';
 import Link from 'next/link';
 
 export const Header = () => {
@@ -15,9 +16,7 @@ export const Header = () => {
                     <Link href="#features" className="transition-colors hover:text-foreground/80 text-foreground/60">Características</Link>
                 </nav>
                 <div className="flex flex-1 items-center justify-end space-x-4">
-                    <Button asChild>
-                        <Link href="/c">Entrar a la App</Link>
-                    </Button>
+                   <UserButton />
                 </div>
             </div>
         </header>
