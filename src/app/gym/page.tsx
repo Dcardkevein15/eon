@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
@@ -119,7 +120,7 @@ export default function EmotionalGymPage() {
     <SidebarProvider>
       <div className="flex h-screen bg-background">
         <Sidebar>
-          <ChatSidebar chats={chats || []} activeChatId={''} isLoading={chatsLoading} removeChat={() => {}} clearChats={() => {}} />
+          <ChatSidebar chats={chats || []} activeChatId={''} isLoading={chatsLoading} removeChat={() => {}} clearChats={() => {}} startNewChat={() => Promise.resolve()} />
         </Sidebar>
         <SidebarInset>
           <main className="flex-1 flex flex-col overflow-y-auto">

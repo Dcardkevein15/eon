@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
@@ -101,6 +102,7 @@ export default function MarketplacePage() {
             isLoading={chatsLoading}
             removeChat={() => {}}
             clearChats={() => {}}
+            startNewChat={() => Promise.resolve()}
           />
         </Sidebar>
         <SidebarInset className="flex-1 flex overflow-hidden">

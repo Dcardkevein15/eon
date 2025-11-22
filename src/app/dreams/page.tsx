@@ -414,7 +414,7 @@ export default function DreamWeaverPage() {
     <SidebarProvider>
       <div className="flex h-screen bg-background text-foreground">
         <Sidebar>
-          <ChatSidebar chats={chats || []} activeChatId={''} isLoading={chatsLoading} removeChat={() => {}} clearChats={() => {}} />
+          <ChatSidebar chats={chats || []} activeChatId={''} isLoading={chatsLoading} removeChat={() => {}} clearChats={() => {}} startNewChat={() => Promise.resolve()} />
         </Sidebar>
         <SidebarInset className="flex overflow-hidden">
             <aside className="w-80 border-r border-sidebar-border flex-shrink-0 hidden md:flex overflow-y-auto">
