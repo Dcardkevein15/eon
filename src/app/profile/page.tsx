@@ -21,7 +21,7 @@ import EmotionalChart from '@/components/profile/EmotionalChart';
 import BreakdownExerciseGenerator from '@/components/profile/BreakdownExerciseGenerator';
 import dynamic from 'next/dynamic';
 import { useTheme } from 'next-themes';
-import { generateProfileOnServer } from './actions';
+import { generateUserProfile } from '@/ai/flows/generate-user-profile';
 import { useToast } from '@/hooks/use-toast';
 import { motion } from 'framer-motion';
 import TextSizeControl from '@/components/profile/TextSizeControl';
@@ -45,6 +45,7 @@ export default function PsychologicalProfile() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [generationStatus, setGenerationStatus] = useState('Iniciando...');
   const [error, setError] = useState<string | null>(null);
   const [isOutdated, setIsOutdated] = useState(false);
   const [isClient, setIsClient] = useState(false);
@@ -70,16 +71,13 @@ export default function PsychologicalProfile() {
     setGenerating(true);
     setLoading(false);
     setError(null);
+    setGenerationStatus('Iniciando proceso...');
     
-    const progressInterval = setInterval(() => {
-      setProgress(prev => Math.min(prev + Math.random() * 5, 95));
-    }, 400);
-
     try {
       setProgress(10);
+      setGenerationStatus('Recopilando historial de conversaciones...');
       let fullChatHistory = '';
       if (chats && chats.length > 0) {
-        setProgress(20);
         for (const chat of chats) {
           fullChatHistory += `--- INICIO DEL CHAT: ${chat.title} ---\n`;
           const messagesQuery = query(collection(firestore, `users/${user.uid}/chats/${chat.id}/messages`), orderBy('timestamp', 'asc'));
@@ -105,18 +103,20 @@ export default function PsychologicalProfile() {
       const previousProfilesContext = cachedItem ? JSON.stringify(JSON.parse(cachedItem).profile, null, 2) : '';
       
       setProgress(60);
+      setGenerationStatus('La IA está analizando tu perfil...');
 
-      const result = await generateProfileOnServer(fullChatHistory, previousProfilesContext);
+      const result = await generateUserProfile({ fullChatHistory, previousProfilesContext });
       setProgress(90);
+      setGenerationStatus('Finalizando el informe...');
 
-      if (!result.success || !result.profile) {
-        throw new Error(result.error || 'La generación del perfil falló en el servidor.');
+      if (!result) {
+        throw new Error('La generación del perfil falló en el servidor.');
       }
       
-      const newCachedData: CachedProfile = { profile: result.profile, lastMessageTimestamp: Date.now() };
+      const newCachedData: CachedProfile = { profile: result, lastMessageTimestamp: Date.now() };
       localStorage.setItem(storageKey, JSON.stringify(newCachedData));
       
-      setProfile(result.profile);
+      setProfile(result);
       setIsOutdated(false);
       setProgress(100);
 
@@ -129,7 +129,6 @@ export default function PsychologicalProfile() {
         description: e.message || 'No se pudo generar el perfil.',
       });
     } finally {
-      clearInterval(progressInterval);
       setTimeout(() => setGenerating(false), 500);
     }
   }, [user, firestore, storageKey, chats, toast]);
@@ -262,10 +261,10 @@ export default function PsychologicalProfile() {
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <div className="w-full max-w-md bg-background/50 backdrop-blur-sm p-6 rounded-xl">
                       <h2 className="text-2xl font-semibold mb-4 bg-clip-text text-transparent bg-gradient-to-br from-chart-5 via-chart-1 to-chart-2">Generando tu Cianotipo Psicológico...</h2>
-                      <p className="text-muted-foreground mb-8">La IA está analizando tu historial para crear un informe evolutivo. Este proceso puede tardar hasta un minuto.</p>
+                      <p className="text-muted-foreground mb-4">La IA está analizando tu historial para crear un informe evolutivo.</p>
                       <div className='w-full max-w-sm mx-auto space-y-2'>
                           <Progress value={progress} className="w-full h-2" />
-                          <p className='text-center text-xs font-medium text-primary'>{Math.round(progress)}%</p>
+                          <p className='text-center text-xs font-medium text-primary'>{generationStatus} ({Math.round(progress)}%)</p>
                       </div>
                   </div>
               </div>
@@ -657,3 +656,5 @@ export default function PsychologicalProfile() {
     </div>
   );
 }
+
+    
