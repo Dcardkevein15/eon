@@ -1,10 +1,11 @@
+
 'use client';
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, Sparkles, BookOpen, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { runProfileAnalysis } from '@/app/actions';
+import { runProfileAnalysis as runProfileAnalysisFlow } from '@/ai/flows/torah-code-flow';
 import type { ProfileData, TorahCodeAnalysis } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -51,7 +52,7 @@ export default function ProfileCryptoAnalysis({ profile }: ProfileCryptoAnalysis
     setError(null);
     setResult(null);
     try {
-      const analysisResult = await runProfileAnalysis(JSON.stringify(profile));
+      const analysisResult = await runProfileAnalysisFlow({ userProfile: JSON.stringify(profile) });
       setResult(analysisResult);
     } catch (e: any) {
       console.error("Error running profile analysis:", e);

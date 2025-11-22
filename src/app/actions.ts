@@ -19,7 +19,6 @@ import { analyzeVoiceMessage as analyzeVoiceMessageFlow } from '@/ai/flows/analy
 import { analyzeDreamVoice as analyzeDreamVoiceFlow } from '@/ai/flows/analyze-dream-voice';
 import { generateArticleTitles as genTitlesFlow, dispatchArticleWriter } from '@/ai/flows/blog-flows';
 import { getRecommendedCategory as getRecommendedCategoryFlow } from '@/ai/flows/get-recommended-category';
-import { runProfileAnalysis as runProfileAnalysisFlow } from '@/ai/flows/torah-code-flow';
 
 
 const expertRoles = [
@@ -369,6 +368,4 @@ export async function generateArticleContent(input: GenerateArticleContentInput)
 
 
 // --- Torah Code Actions ---
-export async function runProfileAnalysis(userProfile: string) {
-    return runProfileAnalysisFlow({ userProfile });
-}
+// This will be moved to the client
