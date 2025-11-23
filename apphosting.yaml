@@ -7,6 +7,9 @@ runConfig:
   memoryMiB: 2048
   environmentVariables:
     FIREBASE_SERVICE_ACCOUNT_BASE64: ${secret:FIREBASE_SERVICE_ACCOUNT_BASE64}
+buildConfig:
+  cpu: 4
+  memoryMiB: 8192
 build:
   - name: fetch
     repo: ''
