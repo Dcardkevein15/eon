@@ -21,7 +21,7 @@ import EmotionalChart from '@/components/profile/EmotionalChart';
 import BreakdownExerciseGenerator from '@/components/profile/BreakdownExerciseGenerator';
 import dynamic from 'next/dynamic';
 import { useTheme } from 'next-themes';
-import { generateUserProfile } from '@/ai/flows/generate-user-profile';
+import { generateUserProfile as generateUserProfileFlow } from '@/ai/flows/generate-user-profile';
 import { useToast } from '@/hooks/use-toast';
 import { motion } from 'framer-motion';
 import TextSizeControl from '@/components/profile/TextSizeControl';
@@ -105,7 +105,7 @@ export default function PsychologicalProfile() {
       setProgress(60);
       setGenerationStatus('La IA está analizando tu perfil...');
 
-      const result = await generateUserProfile({ fullChatHistory, previousProfilesContext });
+      const result = await generateUserProfileFlow({ fullChatHistory, previousProfilesContext });
       setProgress(90);
       setGenerationStatus('Finalizando el informe...');
 
@@ -656,3 +656,5 @@ export default function PsychologicalProfile() {
     </div>
   );
 }
+
+    
