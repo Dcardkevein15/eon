@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useCallback, memo, useEffect, useMemo, useRef } from 'react';
@@ -52,9 +51,7 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
   
   const { data: messages, loading: messagesLoading } = useCollection<Message>(messagesQuery);
   
-  useEffect(() => {
-    // Load profile from localStorage whenever the chat panel is active.
-    // This ensures it always has the latest version if the user regenerates it.
+  const loadProfile = useCallback(() => {
     if (user) {
       const storageKey = `psych-profile-${user.uid}`;
       const cachedItem = localStorage.getItem(storageKey);
@@ -70,13 +67,23 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
         setProfile(null);
       }
     }
-  }, [user, chat.id]); // Re-check on user or chat change.
+  }, [user]);
 
+  // Load profile on initial mount and on chat change
+  useEffect(() => {
+    loadProfile();
+  }, [user, chat.id, loadProfile]);
+  
+  // Add an event listener to reload the profile when the window gets focus
+  useEffect(() => {
+    window.addEventListener('focus', loadProfile);
+    return () => {
+      window.removeEventListener('focus', loadProfile);
+    };
+  }, [loadProfile]);
 
   const triggerBlueprintUpdate = useCallback(async () => {
-    // This function remains as a way for the AI to have its *own* internal monologue
-    // but it's separate from the main user profile. For now, we disable it
-    // to simplify and ensure the main profile is the source of truth.
+    // This function can be expanded if the chatbot needs its own separate "thought" process.
   }, []);
   
 
