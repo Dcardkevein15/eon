@@ -114,7 +114,7 @@ function ChatPanel({ chat, appendMessage, updateChat }: ChatPanelProps) {
         historyForAI,
         user.uid,
         chat.anchorRole || null,
-        profile // Use the unified profile from localStorage
+        profile
       );
       
       if (newRole && newRole !== chat.anchorRole) {
