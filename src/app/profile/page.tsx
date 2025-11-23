@@ -656,5 +656,3 @@ export default function PsychologicalProfile() {
     </div>
   );
 }
-
-    
