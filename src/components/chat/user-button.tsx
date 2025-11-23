@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/firebase';
@@ -13,7 +14,7 @@ import {
   DropdownMenuGroup,
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
-import { LogIn, LogOut, User, Camera, Loader2, Moon, Sun, Briefcase, Route, UserCircle, Dumbbell, Star, BookOpen, Atom, BarChartHorizontal, BookOpen as TorahIcon } from 'lucide-react';
+import { LogIn, LogOut, User, Camera, Loader2, Moon, Sun, Briefcase, Route, UserCircle, Dumbbell, Star, BookOpen, Atom, BarChartHorizontal, BookOpen as TorahIcon, MessageSquarePlus } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { useStorage } from '@/firebase/storage';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -23,6 +24,7 @@ import { useTheme } from 'next-themes';
 import Link from 'next/link';
 
 const navItems = [
+    { href: "/c", icon: MessageSquarePlus, label: "Nuevo Chat" },
     { href: "/aether", icon: Atom, label: "Aether" },
     { href: "/profile", icon: UserCircle, label: "Perfil Psicológico" },
     { href: "/gym", icon: Dumbbell, label: "Gimnasio Emocional" },
