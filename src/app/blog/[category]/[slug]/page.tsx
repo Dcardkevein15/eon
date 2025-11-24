@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { generateArticleContent } from '@/app/actions';
+import { generateArticleContent } from '@/app/blog/actions';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronLeft, LogIn, Sparkles, Wand2, Share2, Clock, Star, Heart, User, Edit } from 'lucide-react';
@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import ReactMarkdown from 'react-markdown';
 import { useAuth, useFirestore, useDocument } from '@/firebase';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { doc, setDoc, serverTimestamp, updateDoc, increment, collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, updateDoc, increment, collection, query, where, getDocs, limit, Timestamp } from 'firebase/firestore';
 import type { Article, User } from '@/lib/types';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
@@ -77,7 +77,7 @@ function ArticlePageContent() {
       const result = await generateArticleContent({ category, slug, title });
       if (!result.content || !result.authorRole) throw new Error("La IA no pudo generar el contenido completo.");
       
-      const newArticleData: Omit<Article, 'id'> = { title, slug, category, content: result.content, authorRole: result.authorRole, createdAt: serverTimestamp(), avgRating: 0, ratingCount: 0 };
+      const newArticleData: Omit<Article, 'id'> = { title, slug, category, content: result.content, authorRole: result.authorRole, createdAt: serverTimestamp() as Timestamp, avgRating: 0, ratingCount: 0 };
       
       await setDoc(doc(firestore, 'articles', slug), newArticleData);
       await updateDoc(userRef, { articleGenerationCredits: increment(-1) });
@@ -111,7 +111,9 @@ function ArticlePageContent() {
         await updateDoc(userRef, { [favoriteKey]: new Date().toISOString() });
         toast({ title: "Guardado en Favoritos" });
       } else {
-        await updateDoc(userRef, { [favoriteKey]: (window as any).firebase.firestore.FieldValue.delete() });
+        const updateData: { [key: string]: any } = {};
+        updateData[favoriteKey] = (await import('firebase/firestore')).deleteField();
+        await updateDoc(userRef, updateData);
         toast({ title: "Eliminado de Favoritos" });
       }
     } catch (error) {

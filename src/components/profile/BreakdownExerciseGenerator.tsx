@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -13,7 +14,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Wand2, Loader2, X } from 'lucide-react';
 import type { BreakdownExercise, HabitLoopData } from '@/lib/types';
-import { generateBreakdownExerciseAction } from '@/app/actions';
+import { generateBreakdownExerciseAction } from '@/app/profile/actions';
 import { useToast } from '@/hooks/use-toast';
 import ReactMarkdown from 'react-markdown';
 import { Card, CardContent } from '../ui/card';

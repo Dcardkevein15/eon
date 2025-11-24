@@ -29,7 +29,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import type { SecurityRuleContext } from '@/firebase/errors';
 import SimulationControls from '@/components/gym/simulation-controls';
-import { analyzeSentimentAction, getTacticalAdviceAction } from '@/app/actions';
+import { analyzeSentimentAction, getTacticalAdviceAction } from '@/app/gym/actions';
 
 
 function SimulationPage() {

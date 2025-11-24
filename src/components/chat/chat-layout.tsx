@@ -13,6 +13,7 @@ import {
   writeBatch,
   query,
   orderBy,
+  Timestamp,
 } from 'firebase/firestore';
 
 import { useAuth, useCollection, useFirestore } from '@/firebase/provider';
@@ -28,13 +29,15 @@ import EmptyChat from '@/components/chat/empty-chat';
 import { cn } from '@/lib/utils';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
-import { determineAnchorRole } from '@/app/actions';
+import { determineAnchorRole } from '@/app/c/actions';
+import type { Omit } from 'react-hook-form';
 
 interface ChatLayoutProps {
   chatId?: string;
+  createChat: (firstMessage: Omit<Message, 'id'>) => Promise<string | undefined>;
 }
 
-function ChatLayout({ chatId }: ChatLayoutProps) {
+function ChatLayout({ chatId, createChat }: ChatLayoutProps) {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const firestore = useFirestore();
@@ -98,55 +101,6 @@ function ChatLayout({ chatId }: ChatLayoutProps) {
         }
     }
   }, [user, firestore, router]);
-
-  const createChat = useCallback(
-    async (firstMessage: Omit<Message, 'id'>): Promise<string | undefined> => {
-      if (!user || !firestore) return;
-
-      const anchorRole = await determineAnchorRole(firstMessage.content);
-
-      const newChatData = {
-        title: 'Nuevo Chat',
-        userId: user.uid,
-        createdAt: serverTimestamp(),
-        path: '',
-        latestMessageAt: firstMessage.timestamp,
-        anchorRole: anchorRole,
-      };
-      
-      const chatsCollectionRef = collection(firestore, `users/${user.uid}/chats`);
-      
-      try {
-        const newChatRef = await addDoc(chatsCollectionRef, newChatData);
-        const path = `/c/${newChatRef.id}`;
-        
-        // Use a batch to ensure atomicity
-        const batch = writeBatch(firestore);
-        batch.update(newChatRef, { path });
-        
-        const messagesColRef = collection(newChatRef, 'messages');
-        batch.set(doc(messagesColRef), firstMessage);
-
-        await batch.commit();
-
-        router.push(path);
-        return newChatRef.id;
-      } catch (serverError: any) {
-        if (serverError.code === 'permission-denied') {
-          const permissionError = new FirestorePermissionError({
-            path: chatsCollectionRef.path,
-            operation: 'create',
-            requestResourceData: newChatData,
-          } satisfies SecurityRuleContext);
-          errorEmitter.emit('permission-error', permissionError);
-        } else {
-           console.error("Error creating chat:", serverError);
-        }
-        return undefined;
-      }
-    },
-    [user, firestore, router]
-  );
   
   const appendMessage = useCallback(
     async (chatId: string, message: Omit<Message, 'id'>) => {

@@ -1,10 +1,11 @@
+
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, Suspense, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { generateArticleTitles } from '@/app/actions';
+import { generateArticleTitles } from '@/app/blog/actions';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronLeft, LogIn, RefreshCw } from 'lucide-react';

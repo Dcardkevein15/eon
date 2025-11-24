@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useState, useCallback, memo, useEffect, useMemo, useRef } from 'react';
 import type { Chat, Message, ProfileData, CachedProfile } from '@/lib/types';
-import { generateChatTitle, getAIResponse, getSmartComposeSuggestions, analyzeVoiceMessageAction } from '@/app/actions';
+import { generateChatTitle, getAIResponse, getSmartComposeSuggestions, analyzeVoiceMessageAction } from '@/app/c/actions';
 import { useToast } from '@/hooks/use-toast';
 import ChatMessages from './chat-messages';
 import ChatInput from './chat-input';
@@ -10,11 +11,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useAuth, useCollection, useFirestore } from '@/firebase/provider';
 import { collection, query, orderBy, Timestamp, doc, getDoc, setDoc, serverTimestamp, onSnapshot, updateDoc, writeBatch } from 'firebase/firestore';
-import { updatePsychologicalBlueprint } from '@/ai/flows/update-psychological-blueprint';
 import { v4 as uuidv4 } from 'uuid';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
-import type { SecurityRuleContext } from '@/firebase/errors';
 import { Button } from '@/components/ui/button';
 import { Image as ImageIcon } from 'lucide-react';
 import ImageWhiteboard from '@/components/chat/image-whiteboard';

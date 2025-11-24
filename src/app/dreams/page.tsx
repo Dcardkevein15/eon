@@ -4,7 +4,7 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import type { CachedProfile, ProfileData, DreamInterpretationDoc, Chat, DreamSpecialist, DreamAudioDraft } from '@/lib/types';
-import { interpretDreamAction, analyzeDreamVoiceAction } from '@/app/actions';
+import { interpretDreamAction, analyzeDreamVoiceAction } from '@/app/dreams/actions';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/sheet";
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth, useFirestore, useCollection } from '@/firebase';
-import { query, collection, orderBy, doc, setDoc, deleteDoc, getDocs } from 'firebase/firestore';
+import { query, collection, orderBy, doc, setDoc, deleteDoc, getDocs, Timestamp } from 'firebase/firestore';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AnimatePresence, motion } from 'framer-motion';
 import DreamSpecialistSelection from '@/components/dreams/DreamSpecialistSelection';
@@ -300,10 +300,10 @@ export default function DreamWeaverPage() {
 
   const DreamHistorySidebar = ({ dreams, isLoading, onSelectDream, onDeleteDream, onClearHistory }: { dreams: DreamInterpretationDoc[], isLoading: boolean, onSelectDream: (id: string) => void, onDeleteDream: (id: string) => void, onClearHistory: () => void }) => {
   
-    const getFormattedDate = (dateString: string | Date) => {
+    const getFormattedDate = (dateString: string | Date | Timestamp) => {
       if (!dateString) return { relative: 'Fecha desconocida', absolute: '' };
       try {
-        const date = new Date(dateString);
+        const date = dateString instanceof Timestamp ? dateString.toDate() : new Date(dateString);
         return {
             relative: formatDistanceToNow(date, { addSuffix: true, locale: es }),
             absolute: format(date, "d MMM, HH:mm", { locale: es })
@@ -315,7 +315,11 @@ export default function DreamWeaverPage() {
 
     const sortedDreams = useMemo(() => {
         if (!dreams) return [];
-        return [...dreams].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        return [...dreams].sort((a, b) => {
+             const timeA = a.createdAt instanceof Timestamp ? a.createdAt.toMillis() : new Date(a.createdAt).getTime();
+             const timeB = b.createdAt instanceof Timestamp ? b.createdAt.toMillis() : new Date(b.createdAt).getTime();
+             return timeB - timeA;
+        })
     }, [dreams]);
   
     return (
