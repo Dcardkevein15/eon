@@ -32,6 +32,24 @@ export function findELS(text: string, word: string, skip: number): number[] {
   return indices;
 }
 
+// Finds words at a specific ELS
+export function findWordsAtELS(text: string, skip: number, minLength = 3, maxLength = 7, limit = 5): { word: string, startIndex: number }[] {
+    const foundWords = [];
+    for (let i = 0; i < text.length - (minLength - 1) * skip; i++) {
+        let currentWord = '';
+        for (let j = 0; j < maxLength; j++) {
+            const index = i + j * skip;
+            if (index >= text.length) break;
+            currentWord += text[index];
+            if (j + 1 >= minLength) {
+                foundWords.push({ word: currentWord, startIndex: i });
+                if (foundWords.length >= limit * 10) return foundWords; // safety break
+            }
+        }
+    }
+    return foundWords.slice(0, limit);
+}
+
 
 // Extracts a matrix of characters around a central index
 export function extractMatrixFromIndex(text: string, centerIndex: number, size: number = 21): string[][] {
