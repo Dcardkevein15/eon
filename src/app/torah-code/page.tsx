@@ -465,7 +465,7 @@ export default function TorahCodePage() {
                                                     <div className="lg:col-span-2">
                                                         <h3 className="font-semibold text-lg mb-2 text-center text-primary">Matriz de Resonancia</h3>
                                                         <TorahCodeMatrix result={analysisResult} />
-                                                        <div className="prose dark:prose-invert max-w-none text-center mt-6">
+                                                        <div className="prose prose-sm dark:prose-invert max-w-none text-center mt-6">
                                                             <h4 className="font-semibold text-primary">Conexión con Gematria</h4>
                                                             <ReactMarkdown>{analysisResult.revelation.gematriaConnection}</ReactMarkdown>
                                                         </div>
@@ -485,7 +485,7 @@ export default function TorahCodePage() {
                                                     <CardDescription>Revelación para el {format(new Date(analysisResult.date), "PPP", { locale: es })}</CardDescription>
                                                 </CardHeader>
                                                 <CardContent className="prose prose-lg dark:prose-invert max-w-none text-center">
-                                                    <p className="font-hebrew text-4xl text-foreground mb-6">
+                                                    <p className="font-hebrew text-4xl text-foreground mb-6 break-words">
                                                         {analysisResult.temporalStrand.join(' ')}
                                                     </p>
                                                     <ReactMarkdown>{analysisResult.interpretation}</ReactMarkdown>
